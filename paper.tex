@@ -7,6 +7,10 @@
 \usepackage{fontawesome5}
 \usepackage{mathpartir}
 \usepackage{sourcecodepro}
+\usepackage{amsthm}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
 
 \lstset{
   basicstyle=\ttfamily\small,
@@ -30,9 +34,11 @@
   language=Haskell
 }
 
+\newcommand{\nat}{\mathbb{N}}
 \newcommand{\glob}{\mathop{\Box}}
 \newcommand{\cat}{\mathbb{C}}
-\newcommand{\catop}{\cat^{\mathtt{op}}}
+\newcommand{\op}{\mathtt{op}}
+\newcommand{\catop}{\cat^{\op}}
 \newcommand{\id}[1]{\mathrm{id}_{#1}}
 \newcommand{\setc}{\mathrm{Set}}
 \newcommand{\psh}{\widehat{\cat}}
@@ -50,12 +56,51 @@
 \newcommand{\arrow}[2]{#1 \Rightarrow #2}
 \newcommand{\sem}[1]{\llbracket #1 \rrbracket}
 \newcommand{\reflectname}{\Uparrow}
-\newcommand{\reflect}[2]{\reflectname_{#1}(#2)}
+\newcommand{\reflectraw}[1]{\mathop{\reflectname_{#1}}}
+\newcommand{\reflect}[3]{\reflectraw{#1}(#2, #3)}
+\newcommand{\reflectc}[2]{\mathop{\reflectname_{#1 #2}}}
+\newcommand{\performraw}[2]{\mathop{\reflectname(#1(#2))}}
+\newcommand{\perform}[5]{\performraw{#1}{#2}(#3, #4. #5)}
 \newcommand{\reifyname}{\Downarrow}
-\newcommand{\reify}[2]{\reifyname_{#1}(#2)}
-\newcommand{\lock}{\text{\faLock}}
+\newcommand{\reifyraw}[1]{\mathop{\reifyname_{#1}}}
+\newcommand{\reify}[3]{\reifyraw{#1}(#2.\,#3)}
+\newcommand{\reifyc}[2]{\mathop{\reifyname_{#1 #2}}}
+\newcommand{\outl}[1]{\mathop{\mathrm{out}_L} #1}
+\newcommand{\outr}[1]{\mathop{\mathrm{out}_R} #1}
 \newcommand{\mon}{\mathcal{T}}
 \newcommand{\ind}[1]{W_{#1}}
+\newcommand{\indintro}[4]{#2_{#1}(#3, #4)}
+\newcommand{\retname}{\mathrm{ret}}
+\newcommand{\ret}[2]{\mathop{\retname_{#1}}(#2)}
+\newcommand{\indelim}[3]{\mathop{\mathrm{rec}_{#1}} #2 \{#3\}}
+\newcommand{\indretcase}[2]{\retname(#1) \Rightarrow #2}
+\newcommand{\indcase}[4]{#1(#2, #3) \Rightarrow #4}
+\newcommand{\seq}{\,;\,}
+\newcommand{\fst}{\mathop{\pi_1}}
+\newcommand{\snd}{\mathop{\pi_2}}
+\newcommand{\inl}[1]{\mathop{\mathrm{in}_L} #1}
+\newcommand{\inr}[1]{\mathop{\mathrm{in}_R} #1}
+\newcommand{\case}[5]{\mathop{\mathrm{case}} #1 \,\{\,\inl{#2} \Rightarrow #3 \seq \inr{#4} \Rightarrow #5 \,\}}
+\newcommand{\abs}[3]{\mathop{\lambda}(#1 \types #2).\,#3}
+\newcommand{\app}[2]{#1\,#2}
+\newcommand{\types}{\mathrel{:}}
+\newcommand{\gtypes}{\mathrel{:_{\Box}}}
+\newcommand{\cempty}{\varepsilon}
+\newcommand{\ccons}[2]{#1;\,#2}
+\newcommand{\lbind}[3]{\ccons{#1}{#2\types#3}}
+\newcommand{\gbind}[3]{\ccons{#1}{#2\gtypes#3}}
+\newcommand{\cdiv}[1]{#1/\Box}
+\newcommand{\return}[1]{\mathop{\mathrm{return}} #1}
+\newcommand{\letv}[3]{\mathop{\mathrm{let}} #1 = #2 \mathop{\mathrm{in}} #3}
+\newcommand{\gbox}[1]{\mathop{\mathrm{box}} #1}
+\newcommand{\gunbox}[4]{\mathop{\mathrm{let}} (\gbox #1) = #2 \mathop{\mathrm{in}} #3}
+\newcommand{\grun}[1]{\mathop{\mathrm{run}}(#1)}
+\newcommand{\sbst}[3]{#1[#2\backslash#3]}
+\newcommand{\turnv}{\mathrel{\vdash_V}}
+\newcommand{\turnc}{\mathrel{\vdash_C}}
+\newcommand{\evmap}{\mathop{ev}}
+\newcommand{\currymap}{\mathop{\lambda}}
+\newcommand{\reducesto}{\rightsquigarrow}
 
 \newcommand{\todo}[1]{{\color{red}TODO: #1}}
 
@@ -69,7 +114,7 @@
 
 \begin{abstract}
   Algebraic effects and handlers allow the programmer to extend their
-  languages \emph{ambient monad} \textbf{--} the monad describing which
+  language's \emph{ambient monad} \textbf{--} the monad describing which
   effects ordinary functions can perform \textbf{--} with additional
   effectful operations.
 
@@ -81,7 +126,7 @@
 
   We introduce an alternative presentation of algebraic effects and
   handlers, \emph{effect reflection}, that provides, for any algebraic
-  theory $\Sigma$, an isomorphism:
+  signature $\Sigma$, an isomorphism:
   \begin{equation*}
     \ind{\Sigma}(\glob \tau) \qquad \cong \qquad \yoneda{\Sigma} \rightarrow \glob \tau
   \end{equation*}
@@ -94,10 +139,10 @@
   over bounded Lawvere theories.
 
   Effect reflection lets you work with any algebraic monad using an
-  ordinary function type, allowing monadic code to be written in direct
-  style. This provides all the benefits of typed algebraic effects and
-  handlers without requiring an effect system. We demonstrate effect
-  reflection by implementing it as a library in
+  ordinary function type, allowing effectful code to be written in
+  direct style. This provides all the benefits of typed algebraic
+  effects and handlers without requiring an effect system. We
+  demonstrate effect reflection by implementing it as a library in
   OxCaml\cite{lorenzen2024oxidizing,} and working through some classic
   examples of programming with effects.
 \end{abstract}
@@ -118,7 +163,7 @@ type 'a Effect.t +=
   | Get : int Effect.t
   | Set : int -> unit Effect.t
 
-let handle (f : unit -> 'a) : 'a =
+let handle_state (f : unit -> 'a) : 'a =
   match f () with
   | x -> fun _ -> x
   | effect Get, k -> fun s -> continue k s s
@@ -137,11 +182,12 @@ resulting in an \lstinline[style=ocaml]{Unhandled} exception being
 raised. Other languages, e.g. Koka\cite{??}, use an effect system to
 statically ensure operations are only performed when they are available.
 
-\paragraph{Locality and effect reflection} Locality captures the general idea of a value
-depending on some notion of ``location''. We can represent it in a type
-system using a comonadic \emph{global modality} $\glob$ that tracks
-which values do not depend on their location. A particularly useful
-notion of ``location'' is the ambient monad.
+\paragraph{Locality and effect reflection}
+Locality captures the general idea of a value depending on some notion
+of ``location''. We can represent it in a type system using a comonadic
+\emph{global modality} $\glob$ that tracks which values do not depend on
+their location. A particularly useful notion of ``location'' is the
+ambient monad.
 
 Treating the ambient monad as a notion of location allows a language to
 provide an isomorphism:
@@ -151,6 +197,8 @@ provide an isomorphism:
 where $M$ is any algebraic monad, $Y$ is a specific type related to that
 monad, and $\glob$ is a comonadic global modality. We call this
 isomorphism \emph{effect reflection}.
+
+\todo{Restrict the above claim to signatures}
 
 The ability to use the ordinary arrow type
 $Y \mathbin{\rightarrow} \glob X$ in place of the monad
@@ -179,13 +227,13 @@ end
 
 module State_eff = Reflection(State)
 
-let handle (f : Handler(State).t @ local -> 'a) : 'a =
-  let rec loop s : 'a Term(State).t -> 'a  = function
+let handle_state (f : Handler(State).t @ local -> 'a) (i : int) : 'a =
+  let rec loop s : 'a Term(State).t @ local -> 'a  = function
     | Return x -> x
     | Op(Get, k) -> loop s (k s)
     | Op(Set s', k) -> loop s' (k ())
   in
-  loop (State_eff.reify f)
+  loop i (State_eff.reify_local f)
 \end{lstlisting}
 which calls \lstinline[style=ocaml]{f} and passes it a local value of
 type \lstinline[style=ocaml]{Handler(State).t}. For the duration of the
@@ -193,10 +241,10 @@ call to \lstinline[style=ocaml]{f} the ambient monad is extended with
 two additional effectful operations, which can be used via reflection:
 \begin{lstlisting}[style=ocaml]
 let get (h : Handler(State).t @ local) : int =
-  State_eff.reflect (Op(Get, fun x -> x)) h
+  State_eff.perform Get h
 
 let set (h : Handler(State).t @ local) (i : int) : unit =
-  State_eff.reflect (Op(Set i, fun x -> x)) h
+  State_eff.perform (Set i) h
 \end{lstlisting}
 
 Note that the locality of the handler value ensures that these
@@ -234,16 +282,16 @@ ambient algebraic monad by the corresponding algebraic theory. The key
 constructs of effect reflection are then defined as follows:
 
 \begin{itemize}
+\item The ambient monad can be defined as a monad $\mon$ on such
+  presheaves, which maps each algebraic theory to its free algebra. We use
+  $\mon$ to define the semantics of computations.
+
 \item The global modality $\glob$ on such presheaves is defined such
   that $\glob(P)(L) = P(\initial)$. In other words, for a given presheaf
   $P$ it gives the constant presheaf that always ignores the ambient
   monad and instead returns $P$ at $\initial$, where $\initial$ is the
-  algebraic theory with no operations or equations. This basically
-  restricts a type to its terms that do not depend on the ambient monad.
-
-\item The ambient monad can be defined as a monad $\mon$ on such
-  presheaves, which maps each algebraic theory to its free algebra. We use
-  $\mon$ to define the semantics of computations.
+  algebraic theory with no operations or equations. This allows us to
+  restrict a type to its terms that do not depend on the ambient monad.
 
 \item The semantics of our handler types $Y$ are given by the Yoneda
   embedding, and our effect reflection isomorphism becomes a simple
@@ -298,7 +346,9 @@ function.
 let leak_local x =
   let (o @ local) = Some x in
   o
-(*@ \textcolor{red}{Error: This value is local and would escape its region.} @*)
+(*@ \textcolor{red}{Error: o} @*)
+       (*@ \textcolor{red}{\textasciicircum} @*)
+(*@ \textcolor{red}{This value is local and would escape its region.} @*)
 \end{lstlisting}
 
 To support functions that return local values, the region of a function
@@ -342,29 +392,37 @@ gives a record whose only field has the \lstinline[style=ocaml]{global}
 modality. The contents of the \lstinline[style=ocaml]{g} field is always
 global, for example:
 \begin{lstlisting}[style=ocaml]
-let return_global x =
-  let (r @ local) = { g = x } in
+let project_global (r @ local) =
   r.g
 \end{lstlisting}
-is allowed and gives a function of type:
+gives a function of type:
 \begin{lstlisting}[style=ocaml]
-val return_global : 'a @@ global -> 'a @@ global
+val project_global : 'a gbl @ local -> 'a @ global
 \end{lstlisting}
 Variant constructor arguments can also be annotated with modalities.
 
 Note that, whilst there is a \lstinline[style=ocaml]{global} modality,
 there is no \lstinline[style=ocaml]{local} modality. It does not make
 sense for a value which has the ability to leave a region to contain a
-value which doesn't, as when the first value leaves a region is will
-implicit cause the second one to leave that region as well. This means
+value which doesn't, as when the first value leaves a region it will
+implicitly cause the second one to leave that region as well. This means
 the \lstinline[style=ocaml]{global} mode is always deep.
 
 \subsection{Effect reflection interface}
 \label{sec:interface}
 
+The types and operations of our effect reflection API are parameterized
+by type constructors representing the operations of an algebraic
+effect. In OxCaml, such higher-kinded interfaces must be built using
+functors, so we start with a simple module type
+\lstinline[style=ocaml]{Op} to act as the parameter type for these
+functors:
 \begin{lstlisting}[style=ocaml]
 module type Op = sig type 'a t end
-
+\end{lstlisting}
+The fundamental types of the API are the \lstinline[style=ocaml]{Term}
+and \lstinline[style=ocaml]{Handler} types.
+\begin{lstlisting}[style=ocaml]
 module Term (O : Op) : sig
   type 'a t =
     | Return : 'a @@ global -> 'a t
@@ -372,25 +430,231 @@ module Term (O : Op) : sig
 end
 
 module Handler(O : Op) : sig
-  type 'a t
+  type t
 end
+\end{lstlisting}
+For an effect signature \lstinline[style=ocaml]{O},
+\lstinline[style=ocaml]{'a Term(O).t} is the type of terms in the free
+algebra of the corresponding effect -- otherwise known as the freer
+monad\cite{??}. \lstinline[style=ocaml]{Handler(O).t} is the type of
+mappings from the operations of \lstinline[style=ocaml]{O} into the
+operations of the current ambient monad. Alternatively,
+\lstinline[style=ocaml]{Handler(O).t} can be described as representing
+algebraic effect handlers that are handling the current computation --
+hence the name.
 
+The main piece of the API is a family of isomorphisms:
+\begin{equation*}
+  \text{\lstinline[style=ocaml]{'a Term(O).t}} \qquad
+  \cong \qquad \text{\lstinline[style=ocaml]{Handler(O).t @ local -> 'a}}
+\end{equation*}
+Due to the absence of mode polymorphism in OxCaml, we expose this
+isomorphism as three functions: \lstinline[style=ocaml]{reify} and
+\lstinline[style=ocaml]{reify_local} which implement the left-to-right
+direction at the \lstinline[style=ocaml]{global} and
+\lstinline[style=ocaml]{local} modes respectively; and
+\lstinline[style=ocaml]{perform}, which is equivalent to the
+right-to-left direction but makes for a more convenient primitive in
+practice. \lstinline[style=ocaml]{perform} amounts to reflection of
+individual operations as opposed to full terms.
+\begin{lstlisting}[style=ocaml]
 module Reflection (O : Op) : sig
-
   val reify : (Handler(O).t @ local -> 'a) -> 'a Term(O).t
 
-  val reflect : 'a Term(Op).t -> (Handler(O).t @ local -> 'a)
+  val reify_local :
+    (Handler(O).t @ local -> 'a) @ local -> 'a Term(O).t @ local
 
-  val reify_local : (Handler(O).t @ local -> 'a) @ local -> 'a Term(O).t @ local
+  val perform : 'a O.t -> (Handler(O).t @ local -> 'a)
+end
+\end{lstlisting}
+Using \lstinline[style=ocaml]{perform} we can implement reflection of
+terms as:
+\begin{lstlisting}[style=ocaml]
+let rec reflect t h =
+  match t with
+  | Return x -> x
+  | Op(op, k) -> reflect (k (perform op h)) h
 
-  val reflect_local : 'a Term(O).t @ local -> (Handler(O).t @ local -> 'a) @ local
+let rec reflect_local (t @ local) h =
+  match t with
+  | Return x -> x
+  | Op(op, k) -> reflect_local (k (perform op h)) h
+\end{lstlisting}
+with types:
+\begin{lstlisting}[style=ocaml]
+val reflect : 'a Term(O).t -> (Handler(O).t @ local -> 'a)
 
+val reflect_local :
+   'a Term(O).t @ local -> (Handler(O).t @ local -> 'a) @ local
+\end{lstlisting}
+
+\subsection{Example: State}
+
+As shown in the introduction we can implement an effect handler for
+state using this API. We start by defining the operations of the effect:
+\begin{lstlisting}[style=ocaml]
+module State = struct
+  type 'a t =
+    | Get : int t
+    | Set : int -> unit t
+end
+\end{lstlisting}
+Then we instantiate the reflection isomorphism for that effect and use
+it to write a handler:
+\begin{lstlisting}[style=ocaml]
+module State_eff = Reflection(State)
+
+let handle_state f i =
+  let rec loop s = function
+    | Term(State).Return x -> x
+    | Term(State).Op(Get, k) -> loop s (k s)
+    | Term(State).Op(Set s', k) -> loop s' (k ())
+  in
+  loop i (State_eff.reify_local f)
+\end{lstlisting}
+Finally we add an alias for the handler type and some convenient
+wrappers for the generic effects:
+\begin{lstlisting}[style=ocaml]
+type handler = Handler(State).t
+
+let get h =
+  State_eff.perform Get h
+
+let set h i =
+  State_eff.perform (Set i) h
+\end{lstlisting}
+Giving us the following interface:
+\begin{lstlisting}[style=ocaml]
+type handler
+
+val handle_state : (handler @ local -> 'a) @ local -> int -> 'a
+val get : handler @ local -> int
+val set : handler @ local -> int -> unit
+\end{lstlisting}
+Note that we are able to use \lstinline[style=ocaml]{reify_local} to allow
+the function passed to \lstinline[style=ocaml]{handle_state} to be local.
+
+This shows how to implement state using effect reflection, but note that
+the same interface can also be implemented direcly using mutable state
+and locality:
+\begin{lstlisting}[style=ocaml]
+type handler = int ref
+
+let handle_state f i = f (ref i)
+let get r = !r
+let set r i = r := i
+\end{lstlisting}
+This implementation gives the same behaviour as the one built using
+effect reflection. Crucially it is just as easy to reason about, which
+in turn means it is just as easy to reason about as the state monad. In
+some sense, the improved reasoning ability of the state monad over
+ordinary mutable state is precisely captured by the notion of locality.
+
+This transformation from effect relection to local mutable state works
+for any \emph{tail-resumptive} effect handler.
+
+\subsection{Lightweight effect polymorphism}
+
+The following function uses state to calculate the total of a list of
+integers:
+\begin{lstlisting}[style=ocaml]
+let total l =
+  handle_state (fun h ->
+    List.iter (fun x -> set h (get h + x)) l;
+    get h)
+\end{lstlisting}
+This relies on the locality of the function parameter of
+\lstinline[style=ocaml]{List.iter}:
+\begin{lstlisting}[style=ocaml]
+val iter : ('a -> unit) @ local -> 'a list -> unit
+\end{lstlisting}
+The \lstinline[style=ocaml]{local} annotation on the parameter ensures
+that any function passed will not escape the current region. This allows
+us to pass in a closure that closes over the
+\lstinline[style=ocaml]{local} handler \lstinline[style=ocaml]{h} and
+use it to perform some effects.
+
+This ability for higher-order functions like
+\lstinline[style=ocaml]{List.iter} to be reused with different ambient
+monads achieves the ``lightweight effect polymorphism'' described by ??
+et al.\cite{??} without requiring a separate notion of second-class
+function.
+
+\subsection{Example: Generators}
+
+A more realistic use of effect reflection is a \emph{generator}
+effect. This effect has a single operation:
+\begin{lstlisting}[style=ocaml]
+module Gen = struct
+  type 'a t =
+    | Gen : int -> unit t
+end
+\end{lstlisting}
+Along with a handler that turns computations using
+\lstinline[style=ocaml]{Gen} into streams of integers.
+\begin{lstlisting}[style=ocaml]
+module Gen_eff = Reflection(Gen)
+
+type ints =
+  | Finished
+  | More of int * (unit -> ints)
+
+let handle_gen f =
+  let rec loop = function
+    | Term(Gen).Return () -> Finished
+    | Term(Gen).Op(Gen i, k) -> More(i, k)
+  in
+  loop (Gen_eff.reify f)
+\end{lstlisting}
+
+Unlike the state handler, here we must use
+\lstinline[style=ocaml]{reify} rather than
+\lstinline[style=ocaml]{reify_local} because our intention is that the
+resulting stream of integers be a global value that can escape the
+current region. Since it closes over the continuation
+\lstinline[style=ocaml]{k}, we must use \lstinline[style=ocaml]{reify}
+and require that \lstinline[style=ocaml]{f} be global:
+\begin{lstlisting}[style=ocaml]
+val handle_gen : (Handler(Gen).t @ local -> unit) -> ints
+\end{lstlisting}
+
+\subsection{Example: Asynchronous I/O}
+
+Perhaps the most common use case for algebraic effects is for
+concurrency and asynchronous I/O. Implementing asynchronous I/O from
+scratch is beyond the scope of this paper, but we can build a simple
+version on top of an existing monadic concurrency library. Assuming we
+have a monadic future type \lstinline[style=ocaml]{'a Deferred.t} we can
+write concurrent code in direct style by using an effect with a single
+\lstinline[style=ocaml]{Await} operation that waits for a future to be
+completed:
+\begin{lstlisting}[style=ocaml]
+module Await : sig
+  type 'a t =
+    | Await : 'a Deferred.t -> 'a t
 end
 \end{lstlisting}
 
 \begin{lstlisting}[style=ocaml]
-let perform (op : 'a O.t) : 'a =
-  reflect (Op(op, fun x -> x))
+module Await_eff = Reflection(Await)
+
+let handle_await f =
+  let rec loop = function
+    | Term(Await).Return x -> Deferred.return x
+    | Term(Await).Op(Await d, k) ->
+        Deferred.bind d (fun x -> loop (k x))
+  in
+  loop (Await_eff.reify f)
+
+let await h d =
+  Await_eff.perform (Await d) h
+\end{lstlisting}
+
+Using this we can write direct-style code using asynchronous I/O:
+\begin{lstlisting}[style=ocaml]
+let copy_file h src dst =
+  let s = await h (File.read src) in
+  await h (File.write dst s)
 \end{lstlisting}
 
 \subsection{One-shot continuations}
@@ -408,8 +672,69 @@ continuations. Note that OxCaml's \lstinline[style=ocaml]{once}
 mode\cite{lorenzen2024oxidizing} allows us to enforce this restriction
 statically.
 
+\subsection{Nested effect handlers}
+
+A key feature of algebraic effects is how easy they are to compose. We
+can use state whilst using asynchronous I/O by simply nesting their
+handlers:
+\begin{lstlisting}[style=ocaml]
+handle_await (fun ch ->
+  handle_state i (fun sh ->
+    List.iter files (fun fl ->
+      let s = await ch (File.read fl) in
+      let i = int_of_string s in
+      set sh (i + get sh));
+    get sh))
+\end{lstlisting}
+
+This relies on the fact that the \lstinline[style=ocaml]{handle_state}
+uses \lstinline[style=ocaml]{reify_local} and so is able to operate on a
+local computation that closes over the local handler value
+\lstinline[style=ocaml]{ch}.
+
+If we tried to do something similar using our
+\lstinline[style=ocaml]{handle_gen} handler, then we get and error:
+\begin{lstlisting}[style=ocaml]
+handle_await (fun ch ->
+  handle_gen i (fun gh ->
+    List.iter files (fun fl ->
+      let s = await ch (File.read fl) in
+      let i = int_of_string s in
+      gen gh i)))
+(*@ \textcolor{red}{Error: let s = await ch (File.read fl) in} @*)
+                     (*@ \textcolor{red}{\textasciicircum\textasciicircum} @*)
+(*@ \textcolor{red}{ This value is local and would escape its region.} @*)
+\end{lstlisting}
+
+We could change the definition of \lstinline[style=ocaml]{handle_gen} to
+use \lstinline[style=ocaml]{reify_local} instead of
+\lstinline[style=ocaml]{reify}, but then we would lose the property that
+the generator we produce can be passed around freely. Instead we need to
+build a handler that can forward the \lstinline[style=ocaml]{Await}
+operation to different effect handlers at different points in the
+program's execution.
+
 \subsection{Effect sums}
 
+Composing handlers, like \lstinline[style=ocaml]{handle_gen}, that use
+\lstinline[style=ocaml]{reify} rather than
+\lstinline[style=ocaml]{reify_local} is a fundamentally more involved
+operation. Consider the case of generators that are able to use
+asynchronous I/O. We are given a computation that performs both
+\lstinline[style=ocaml]{Await} and \lstinline[style=ocaml]{Gen}
+operations and we'd like to turn it into a stream of integers.  We would
+like to be able to freely pass this stream around. In particular, we do
+not wish the stream to be prevented from escaping the scope of the
+current \lstinline[style=ocaml]{Await} handler.  However forcing parts
+of the stream requires performing additional
+\lstinline[style=ocaml]{Await} operations. Whenever we force part of the
+stream we'll need to provide a handler for those
+\lstinline[style=ocaml]{Await} operations.
+
+To acheive this more general form of composition, we require an
+additional capability in our effect reflection API. We need to be able
+to manipulate \lstinline[style=ocaml]{Handler} types for sums of
+effects.
 \begin{lstlisting}[style=ocaml]
 module Sum (L : Op) (R : Op) : sig
   type 'a t =
@@ -424,145 +749,582 @@ module Project(L : Op) (R : Op) : sig
 end
 \end{lstlisting}
 
-As a Lawvere theory, \lstinline[style=ocaml]{Sum(L)(R)} is the sum of
-\lstinline[style=ocaml]{L} and \lstinline[style=ocaml]{R}. This means
-that the terms of its free algebra $T_{L + R}(\tau)$ are equivalent to
-values of the initial algebra $\mu X. T_L(\tau + F_L(X)$. We can expose
-this fact via the following functions:
-\begin{lstlisting}
+\lstinline[style=ocaml]{Sum(L)(R)} is the coproduct of the effects
+\lstinline[style=ocaml]{L} and \lstinline[style=ocaml]{R}.
+
+Terms in the free algebra of the sum of two effects
+(i.e. \lstinline[style=ocaml]{Term(Sum(L)(R)).t}) are isomorphic to a
+recursive datatype that is built from the terms of one of the effects
+and the operations of the other\cite{??}. We can definet this type as:
+\begin{lstlisting}[style=ocaml]
 module Half_term (L : Op) (R : Op) : sig
   type 'a t =
     | Return : 'a @@ global -> 'a t
     | Op : 'r R.t @@ global * ('r -> Handler(L).t @ local -> 'a t) -> 'a t
+end
+\end{lstlisting}
+and expose the isomorphism between
+\lstinline[style=ocaml]{Handler(L).t @ local -> Handler(R).t @ local -> 'a}
+and \lstinline[style=ocaml]{Handler(L).t @ local -> 'a Half_term(L)(R).t}:
+\begin{lstlisting}[style=ocaml]
+module Half_reflection (L : Op) (R : Op) : sig
+  module L_eff = Reflection(L)
+  module R_eff = Reflection(R)
+  module Sum_eff = Reflection(Sum(L)(R))
+  module Proj = Project(L)(R)
 
-  let rec reflect_left : 'a Term(Sum(L)(R)).t -> (Handler(L).t @ local -> 'a Half_term(L)(R).t)
-   = function
-    | Return v -> fun _ -> Return v
-    | Op(Left op, k) -> fun l -> L.reflect (Op(op, (fun res -> reflect_left (k res) l)))
-    | Op(Right op, k) -> fun _ -> Op(op, (fun res -> reflect_left (k res)))
+  let reify (f : Handler(L).t @ local -> Handler(R).t @ local -> 'a) lh =
+    let rec loop lh = function
+      | Term(Sum(L)(R)).Return ->
+          Half_term(L)(R).Return v
+      | Term(Sum(L)(R)).Op(Left op, k) ->
+          loop lh (k (L_eff.perform op lh))
+      | Term(Sum(L)(R)).Op(Right op, k) ->
+          Half_term(L)(R).Op(op, (fun res lh -> loop lh (k res)))
+    in
+    loop (Sum_eff.reify (fun h -> f (Proj.outl h) (Proj.outr h))) lh
 
-  let rec reify_left : (Handler(L).t @ local -> 'a Half_term(L)(R).t) -> 'a Term(Sum(L)(R)).t =
-    fun h ->
-      let rec loop = function
-        | Return (Return x) -> Return x
-        | Return (Op(r, k)) -> Op(Right r, fun res -> reify_left (k res))
-        | Op(l, k) -> Op(Left l, fun res -> loop (k res))
-      in
-      loop (L.reify h)
-
+  let rec reflect (f : Handler(L).t @ local -> 'a Half_term(L)(R).t) lh rh =
+    match f lh with
+    | Return x -> x
+    | Op(op, k) -> reflect (k (R_eff.perform op rh)) lh rh
 end
 \end{lstlisting}
 
-\subsection{Examples}
+Now we can use this machinery to conveniently build a handler of
+\lstinline[style=ocaml]{Gen} that also forwards operations from
+\lstinline[style=ocaml]{Await}:
+\begin{lstlisting}[style=ocaml]
+module Await_gen_eff = Half_reflection(Await)(Gen)
 
-\subsubsection{State}
+type aints =
+  | Finished
+  | More of int * (Handler(Await).t @ local -> ints)
 
-\subsubsection{Concurrency}
+let handle_gen_in_await f ah =
+    let rec loop = function
+    | Half_term(Await)(Gen).Return () -> Finished
+    | Half_term(Await)(Gen).Op(Gen i, k) -> More(i, k ())
+  in
+  loop (Await_gen_eff.reify f)
+\end{lstlisting}
+where \lstinline[style=ocaml]{handle_gen_in_await} has the type:
+\begin{lstlisting}[style=ocaml]
+val handle_gen_in_await :
+  (Handler(Await).t @ local -> Handler(Gen).t @ local -> 'a)
+  -> Handler(Await).t @ local
+  -> aints
+\end{lstlisting}
 
-\subsubsection{Generators and concurrency}
+The literature on lexical effect handlers often ignores this issue. For
+example, \cite{??} proposed a system which only supported directly
+nesting effect handlers and had no mechanism for writing a composable
+handler for generators that could be moved between different underlying
+asynchronous I/O handlers.
+
+This is because this composition requiring forwarding is much less
+common than nesting and it fundamentally requires each use of the
+\lstinline[style=ocaml]{Await} operation to perform work proportional to
+the number of handlers it is forwarded through -- often referred to as a
+``linear search''. There has been a tendency to treat this linear search
+as some form of deficiency of algebraic effect handlers, but it is
+simply a classic trade-off between the extra expressivity allowed by an
+indirection and the runtime cost of traversing that indirection. With
+our effect reflection API we are able to use nesting for the cases that
+it supports -- avoiding the cost of the indirection -- and fall back to
+forwarding for the more general cases.
+
+\subsection{Parameterized effects and handlers}
+
+The state handlers in this paper so far have all been restricted to
+\lstinline[style=ocaml]{int} state. This is a limitation of the effect
+reflection API that we have been using. We would like to support
+\emph{parameterized effects} -- allowing a single handler to be used
+with a whole family of effects. For example, a state handler
+parameterized by the type of the state.
+
+We can support parameterized effects by adding a module type for them,
+along with parameterized versions of \lstinline[style=ocaml]{Term} and
+\lstinline[style=ocaml]{Handler}:
+\begin{lstlisting}[style=ocaml]
+module type Op1 = sig type ('a, 'e) t end
+
+module Term1 (O : Op1) : sig
+  type ('a, 'e) t =
+    | Return : 'a @@ global -> 'a t
+    | Op : ('r, 'e) O.t @@ global * ('r -> 'a t) -> 'a t
+end
+
+module Handler1(O : Op1) : sig
+  type 'e t
+end
+\end{lstlisting}
+with a corresponding parameterized version of
+\lstinline[style=ocaml]{Reflection}. We can then define a parameterized
+state effect:
+\begin{lstlisting}[style=ocaml]
+module State = struct
+  type ('a, 'b) t =
+    | Get : 'b t
+    | Set : 'b -> unit t
+end
+\end{lstlisting}
+and write a handler that provides a parameterized interface for the
+state effect:
+\begin{lstlisting}[style=ocaml]
+type 's handler
+
+val handle : ('s handler @ local -> 'a) @ local -> 's -> 'a
+val get : 's handler @ local -> 's
+val set : 's handler @ local -> 's -> unit
+\end{lstlisting}
+
+The need for a new copy of the interface for each type constructor arity
+is an artifact of OCaml's approach to higher-kinded types. Languages
+with direct support for higher-kinded types should be able to support
+parameterized effects of arbitrary arity with a single interface.
 
 \section{Presheaves for algebraic effects}
 \label{sec:semantics}
 
-Our language falls out naturally from its categorical semantics, so we
-focus on that. We intend to index the meaning of types by an ambient
-algebraic monad of effects: rather than have the semantics of each type
-be a set of elements, the semantics of each type is a mapping from the
-ambient monad to a set of elements.
+The design of effect reflection falls out naturally from a simple
+denotational semantics built on presheaves. The key idea is to index the
+meaning of types by an ambient algebraic monad of effects: rather than
+have the semantics of each type be a set of elements, the semantics of
+each type is a mapping from the ambient monad to a set of elements.
+
+\subsection{Algebraic monads}
+
+In order to index the meaning of our types by the ambient monad we need
+some way of representing that ambient monad. We restrict the ambient
+monad to be an \emph{algebraic monad}: one that can be expressed as the
+free algebra of an algebraic theory. Such monads have nice properties,
+in particular the sum of two algebraic monads always exists and is
+itself an algebraic monad.
+
+Most monads used in practice for programming are algebraic, with the
+notable exception of the continuation monad. The issue with trying to
+represent non-algebraic monads algebraically is essentially one of size:
+if you try to write down the collection of algebirac operations for the
+continuation monad you get something that is too large to be a set. This
+is closely related to the strict positivity restriction on inductive
+type definitions.
+
+We recall the definitions of algebraic signature, terms of a signature,
+algebraic theory and models of a theory.
+\begin{definition}[Algebraic signature]
+  An \emph{algebraic signature} is a set of operations with associated
+  arities.
+\end{definition}
+
+\begin{example}
+  The algebraic signature for boolean state is:
+  \begin{equation*}
+    \{ (\mathrm{get}, 2); (\mathrm{set\_true}, 1); (\mathrm{set\_false}, 1) \}
+  \end{equation*}
+\end{example}
+
+\begin{definition}[Term]
+  A \emph{term} $t$ of some algebraic signature $\Sigma$ is either a
+  free variable $x$ or $op(t_1, \ldots, t_k)$ where $op$ is an operation
+  of $\Sigma$ with arity $k$ and each $t_i$ is itself a term.
+\end{definition}
+
+\begin{definition}[Algebraic theory]
+  An algebraic theory consists of an algebraic signature $\Sigma$ and a set of
+  equations on terms of $\Sigma$.
+\end{definition}
+
+\begin{example}
+  The algebraic theory for boolean state adds the following equations to
+  the signature of boolean state:
+  \begin{align*}
+    &\mathrm{set\_true}(\mathrm{get}(x, y)) = \mathrm{set\_true}(x)
+    &\mathrm{set\_false}(\mathrm{get}(x, y)) = \mathrm{set\_false}(y) \\
+    &\mathrm{set\_true}(\mathrm{set\_true}(x)) = \mathrm{set\_true}(x)
+    &\mathrm{set\_true}(\mathrm{set\_false}(x)) = \mathrm{set\_false}(x) \\
+    &\mathrm{set\_false}(\mathrm{set\_true}(x)) = \mathrm{set\_true}(x)
+    &\mathrm{set\_false}(\mathrm{set\_false}(x)) = \mathrm{set\_false}(x) \\
+    &\mathrm{get}(\mathrm{set\_true}(x), \mathrm{set\_false}(x))) = x
+  \end{align*}
+\end{example}
+
+\begin{definition}[Model]
+
+\end{definition}
+
+Arities in algebraic signatures are often considered as natural numbers,
+but they can equivalently be just sets, with families of terms indexed
+by that set used as the arguments of that operator in a term. It is also
+convenient to allow families of operations parameterized by some set. As
+such, we can present a signature in the form:
+\begin{equation*}
+\{ op_1 \types P_1 \rightarrowtail A_1; \ldots; op_n
+\types P_n \rightarrowtail A_n \}
+\end{equation*}
+where $op \types P \rightarrowtail A$ indicates an operation $op$
+parameterised by $P$ and with arity $A$.
+
+Traditionally, algebraic signatures are restricted to the case of a
+finite set of operations each with a finite arity. Most theoretical work
+in the algebraic effects literature extends this to the case of
+countable sets of operations with countable arities, which allows us to
+construct the signature for natural number state:
+
+\begin{example}
+  The algebraic signature for natural number state is:
+  \begin{equation*}
+    \{ \mathrm{get} \types 1 \rightarrowtail \nat; \mathrm{set} \types \nat \rightarrowtail 1 \}
+  \end{equation*}
+\end{example}
+
+However, it is not sufficient to construct the signature for state
+containing a function $\nat \rightarrow \nat$. For that we must extend
+algebraic signatures further to allow for arbitrary sets of operations
+with arbitrary sets as arities. Note that we still require that these
+collections be sets, so we continue to exclude monads like the
+continuation monad.
+
+\subsection{(Bounded) Lawvere theories}
+
+We choose \emph{Lawvere theories} as our concrete representation of the
+ambient algebraic monad. Lawvere theories are a categorical
+representation of algebraic theories. However, we will mostly describe
+Lawvere theories and constructions on them in terms of their
+presentations as algebraic theories, so an understanding the details of
+Lawvere theories is not required for understanding the rest of this
+paper. We refer the interested reader to \cite{??} for a detailed
+explanation of Lawvere theories.
+
+Traditional Lawvere theories can only represent algebraic signatures
+with a finite set of operations with finite arities. We instead use a
+more general notion: \emph{bounded Lawvere theories}. These allow the
+set of operations and their arities to be any (small) set. This allows
+our effect operations to have arbitrary simple types as parameters and
+results. In Appendix \ref{??}, we prove that all the properties of
+Lawvere theories that we rely on can be extended from the finitary to
+the bounded case.
+
+Bounded Lawvere theories form a category $\lawc$ whose morphisms are
+maps from the operations of one theory to the operations of another that
+preserve the equations of the first theory according to the equations of
+the second.
+
+$\lawc$ has an initial object $\initial$, which is the algebraic theory
+with no operations. It also has coproducts $L + M$ which is the theory
+made by unioning the operations and equations of $L$ and $M$.
+
+\subsection{Presheaves}
 
 For a category $\cat$, $\psh = \setc^{\catop}$ is the category of
-presheaves over $\cat$. If $\cat$ has a terminal object $\terminal$, we
-can define the global modality $\glob \mathrel{:} [\psh, \psh]$ such that:
-\begin{equation*}
-  \glob(P)(L) = P(\terminal)
-\end{equation*}
+presheaves over $\cat$. It's objects are contravariant functors from
+$\cat$ to $\setc$ and it's morphisms are natural transformations between
+such functors.
 
-We use the ambient monad as our notion of location, so we take $\cat$ to
-be $\lawcop$, where $\lawc$ is the category of countable Lawvere
-theories. Lawvere theories are a categorical representation of algebraic
-theories. Morphisms in $\lawc$ are maps from the operations of one
-theory to the operations of another that preserve the equations of the
-first theory according to the equations of the second.  The initial
-theory is the algebraic theory with no operations. The coproduct of two
-theories is the theory made by combining the operations and equations of
-both theories.
+A common use of presheaves is where $\cat$ has finite products and is
+thought of as some form of context over which everything is
+parameterized. In our case we wish to be parameterized by a context of
+\emph{algebraic effects that can be mapped into the ambient monad}. Note
+that the effects theories in such a context are \emph{contravariant}:
+they describe effect theories that can be handled by the ambient
+monad. As such, we use
+\begin{equation*}
+  \pshlawcop = \setc^{\lawc}
+\end{equation*}
+as the basis of our semantics. The $\op$ in the definition of presheaves
+and the $\op$ due to our dependence being contravariant cancel out, but
+it is still best to think in terms of presheaves as that is a more
+precise description of what is going on here.
+
+Our semantics will use objects from $\pshlawcop$ to represent types and
+contexts, and morphisms in $\pshlawcop$ to represent terms. This allows
+their meanings to be parameterized by the ambient monad. By using
+presheaves rather than ordinary functions we ensure terms and types at a
+particular ambient monad can always be mapped naturally to a larger
+ambient monad.
+
+Categories of presheaves have products and sums, which are defined
+pointwise. We will use these as the semantics of product types and sum
+types in our denotational semantics. Such categories also have
+exponentials, which we will use as the semantics of functions types.
+
+\subsection{The free algebra monad}
 
 Given a Lawvere theory $L$, the underlying set of its free algebra forms
-a monad $T_L$ on $\setc$. $T_{\_}$ is functorial and we can use it to
-construct a monad $\mon$ on $\pshlawcop$ in the obvious way, such that:
+a monad $T_L$ on $\setc$. Given a set $A$, the values $T_L(A)$ are terms
+build using the elements of $A$ and the operations of $L$ quotiented by
+the equations in $L$.
+
+\todo{Add example}
+
+$T_{\_}$ is functorial and we can use it to construct a monad $\mon$ on
+$\pshlawcop$ such that:
 \begin{equation*}
 \mon(P)(L) = T_L(P(L))
 \end{equation*}
-We will use $\mon$ as our computation monad.
+$\mon$ is essentially the ambient monad, and in our denotational
+semantics, we will use it as our computation monad.
 
-$\lawcop$ embeds into $\pshlawcop$ via the Yoneda embedding. For each
+\subsection{The Yoneda embedding}
+
+$\lawcop$ embeds into $\pshlawcop$ via the Yoneda embedding: for each
 Lawvere theory $L$ there is a presheaf $\yoneda{L}$ in $\pshlawcop$ such
 that:
-\begin{equation*}
-\yoneda{L}(L^{\prime}) = \homset{\lawc}{L}{L^{\prime}}
-\end{equation*}
-We will use $\yoneda{L}$ to represent maps from $L$ into the ambient
-monad. Note that $\yonedaname$ preserves finite products:
-$\yoneda{L + L^{\prime}} \cong \yoneda{L} \times \yoneda{L^{\prime}}$
-where $+$ is the coproduct in $\lawc$, which is the product in
-$\lawcop$.
-
-Categories of presheaves are cartesian closed, and the exponential
-$\arrow{P}{Q}$ in $\pshlawcop$ maps $L$ to
-$\homset{\pshlawcop}{\yoneda{L} \times P}{Q}$. So, via the Yoneda lemma,
-we get the following:
 \begin{align*}
-(\arrow{\yoneda{L}}{\mon(\glob A)})(L') \quad \cong \quad &T_{(L' + L)}(A(\terminal))
+&\yoneda{L}(L^{\prime}) = \homset{\lawc}{L}{L^{\prime}} \\
+&\yoneda{L}(l^{\prime}) = \lambda f.\; l^{\prime} \circ f
 \end{align*}
+We will use $\yoneda{L}$ as the semantics for our handler types. Their
+elements are just maps from $L$ into the ambient monad.
+
+The Yoneda embedding preserves finite products, which for our
+case means:
+\begin{equation*}
+\yoneda{L + L^{\prime}} \cong \yoneda{L} \times \yoneda{L^{\prime}}
+\end{equation*}
+
+\subsection{The global modality}
+
+For any category $\cat$, if $\cat$ has a terminal object $\terminal$, we
+can define the global modality $\glob \types [\psh, \psh]$ such that:
+$\glob(P)(L) = P(\terminal)$. In the case of $\pshlawcop$ this becomes:
+\begin{equation*}
+\glob(P)(L) = P(\initial)
+\end{equation*}
+
+Within our semantics, this amounts to restricting a type to only the
+elements which do not depend on the ambient monad. This is very similar
+to the purity comonad \todo{check name} in ?? \cite{??}. In particular,
+\begin{equation*}
+  \glob \mon(P) \quad = \quad T_{\initial} \circ \glob
+  \cong \quad \glob P
+\end{equation*}
+as elements of the free algebra of the initial algebraic theory are just
+elements of the carrier set.
+
+For any non-empty Lawvere theory $L$, $\glob \yoneda{L}$ is the constant
+presheave that always returns the empty set because there are no
+morphisms from $L$ into $\initial$. In our denotational semantics this
+amounts to all non-trivial global handler types being uninhabited.
+
+\subsection{The Yoneda lemma}
+
+Via the Yoneda lemma, we get the following:
+\begin{equation*}
+(\arrow{\yoneda{L}}{\mon(\glob A)})(L') \quad \cong \quad T_{(L' + L)}(A(\terminal))
+\end{equation*}
 which will form the basis of our language's isomorphisms between arrows
 $Y \rightarrow \glob A$ and algebraic monads $M(\glob A)$.
+
+Exponentials in categories of presheaves are defined such that:
+\begin{equation*}
+\arrow{P}{Q}(L) = \homset{\pshlawcop}{\yoneda{L} \times P}{Q}
+\end{equation*}
+
+\subsection{W-types and effect sums}
+
+
+\subsection{The effect reflection isomorphism}
 
 \section{A language with effect reflection}
 \label{sec:language}
 
-We build a simple language to (mostly) achieve our aim. Rather than
-working with arbitrary algebraic monads as promised, we follow the
-finest traditions of the algebraic effects literature and restrict our
-attention to algebraic theories without equations. Our language is
-simply typed, featuring all the usual type-formers. It uses a variation
-of fine-grained call-by-value: it has separate syntax and typing
-judgements for values and computations.
+We can now build a simple language with effect reflection and give it a
+semantics in terms of presheaves. Our language is simply typed,
+featuring all the usual type-formers. It uses a variation of
+fine-grained call-by-value: it has separate syntax and typing judgements
+for values and computations. The syntax is in Fig.\ref{fig:syntax} and 
+the full typing rules are in Fig.\ref{fig:typing}.
+\begin{figure}
+\begin{align*}
+  \mathrm{types}, \tau ::=\;& \tau \times \tau \mid 1 \mid \tau + \tau
+                              \mid \tau \rightarrow \tau \mid
+                              \ind{\Sigma}(\tau) \mid \yoneda{\Sigma}
+                              \mid \glob \tau \\
+  \mathrm{contexts}, \Gamma ::=\;& \cempty \mid \lbind{\Gamma}{x}{\tau} \mid \gbind{\Gamma}{x}{\tau} \\
+  \mathrm{values}, v :=\;& x \mid (v, v) \mid \fst v \mid \snd v
+                           \mid () \mid \inl{v} \mid \inr{v} \mid \abs{x}{\tau}{c} \\
+                         &\mid \indintro{\Sigma}{op}{v}{v} \mid \ret{\Sigma}{v}
+                           \mid \gbox{v} \mid \gunbox{x}{v}{v} \mid \grun{c} \\
+                            &\mid \outl{v} \mid \outr{v} \\
+  \mathrm{computations}, c :=\;& \return{v} \mid \letv{x}{c}{c}
+                                 \mid \app{v}{v} \mid \\
+                            & \case{v}{x}{c}{x}{c} \mid \\
+                            & \indelim{\Sigma}{v}
+                              {\indretcase{x}{c} \seq
+                              \indcase{op}{x}{x}{c} \seq \ldots
+                              \seq \indcase{op}{x}{x}{c}} \\
+                            & \perform{v}{op}{v}{x}{c} \mid \reify{\Sigma}{x}{c}
+\end{align*}
+\caption{Syntax}
+\label{fig:syntax}
+\end{figure}
 
-We define algebraic signatures $\Sigma$ as finite sets of operations
+\begin{figure}
+\begin{mathpar}
+\inferrule{\\}
+{\lbind{\Gamma}{x}{\tau} \turnv x \types \tau}
+\and
+\inferrule{\Gamma \turnv v_1 \types \tau_1 \\ \Gamma \turnv v_1 \types \tau_1}
+{\Gamma \turnv (v_1, v_2) \types \tau_1 \times \tau_2}
+\and
+\inferrule{\Gamma \turnv v \types \tau_1 \times \tau_2}
+{\Gamma \turnv \fst{v} \types \tau_1}
+\and
+\inferrule{\Gamma \turnv v \types \tau_1 \times \tau_2}
+{\Gamma \turnv \snd{v} \types \tau_2}
+\and
+\inferrule{\\}
+{\Gamma \turnv () \types 1}
+\and
+\inferrule{\Gamma \turnv v \types \tau_1}
+{\Gamma \turnv \inl{v} \types \tau_1 + \tau_2}
+\and
+\inferrule{\Gamma \turnv v \types \tau_2}
+{\Gamma \turnv \inr{v} \types \tau_1 + \tau_2}
+\and
+\inferrule{\lbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2}
+{\Gamma \turnv \abs{x}{\tau_1}{c} \types \tau_1 \rightarrow \tau_2}
+\and
+\inferrule{\Gamma \turnv v \types \tau}
+{\Gamma \turnc \return{v} \types \tau}
+\and
+\inferrule{\Gamma \turnc c_1 \types \tau_1 \\
+           \lbind{\Gamma}{x}{\tau_1} \turnc c_2 \types \tau_2}
+{\Gamma \turnc \letv{x}{c_1}{c_2} \types \tau_2}
+\and
+\inferrule{\Gamma \turnv v_1 \types \tau_1 \rightarrow \tau_2 \\
+           \Gamma \turnv v_2 \types \tau_1}
+{\Gamma \turnc v_1 v_2 \types \tau_2}
+\and
+\inferrule{\Gamma \turnv v \types \tau_1 + \tau_2 \\
+           \lbind{\Gamma}{x_1}{\tau_1} \turnc c_1 \types \tau_3 \\
+           \lbind{\Gamma}{x_2}{\tau_2} \turnc c_2 \types \tau_3}
+{\Gamma \turnc \case{v}{x_1}{c_1}{x_2}{c_2} \types \tau_3}
+\end{mathpar}
+\caption{Standard typing rules}
+\label{fig:typing-standard}
+\end{figure}
+
+\begin{figure}
+\begin{mathpar}
+\inferrule{\\}
+{\gbind{\Gamma}{x}{\tau} \turnv x \types \tau}
+\and
+\inferrule{\cdiv{\Gamma} \turnv v \types \tau}
+{\Gamma \turnv \gbox{v} \types \glob \tau}
+\and
+\inferrule{\Gamma \turnv v_1 \types \glob \tau_1 \\
+           \gbind{\Gamma}{x}{\tau_1} \turnv v_2 \types \tau_2}
+{\Gamma \turnv \gunbox{x}{v_1}{v_2} \types \tau_2}
+\end{mathpar}
+\caption{Locality typing rules}
+\label{fig:typing-locality}
+\end{figure}
+
+\begin{figure}
+\begin{mathpar}
+\inferrule{op \types \tau_1 \rightarrowtail \tau_2 \in \Sigma \\
+           \Gamma \turnv v_1 \types \glob \tau_1 \\
+           \Gamma \turnv v_2 \types \glob \tau_2 \rightarrow \ind{\Sigma}(\tau)}
+{\Gamma \turnv \indintro{\Sigma}{op}{v_1}{v_2} \types \ind{\Sigma}(\tau)}
+\and
+\inferrule{\Gamma \turnv v \types \tau}
+{\Gamma \turnv \ret{\Sigma}{v} \types \ind{\Sigma}(\tau)}
+\and
+\inferrule{\Gamma \turnv v \types \ind{\Sigma}(\tau_1) \\
+           \Sigma = \{ op_1 \types \tau_{p_1} \rightarrowtail \tau_{a_1};
+             \ldots; op_n\types \tau_{p_n} \rightarrowtail \tau_{a_n} \} \\
+           \lbind{\Gamma}{x_r}{\tau_1} \turnc c_r \types \tau_2 \\
+           \lbind{\lbind{\Gamma}{x_{p_1}}{\glob \tau_{p_1}}}{x_{a_1}}{\glob \tau_{a_1} \rightarrow \tau_2} \turnc c_1 \types \tau_2 \\
+           \ldots \\
+           \lbind{\lbind{\Gamma}{x_{p_n}}{\glob \tau_{p_n}}}{x_{a_n}}{\glob \tau_{a_n} \rightarrow \tau_2} \turnc c_n \types \tau_2}
+{\Gamma \turnc \indelim{\Sigma}{v}{\indretcase{x_r}{c_r} \seq
+                                   \indcase{op_1}{x_{p_1}}{x_{a_1}}{c_1} \seq \ldots \seq
+                                   \indcase{op_n}{x_{p_n}}{x_{a_n}}{c_n}} \types \tau_2}
+\end{mathpar}
+\caption{Inductive type typing rules}
+\label{fig:typing-inductive}
+\end{figure}
+
+\begin{figure}
+\begin{mathpar}
+\inferrule{\cdiv{\Gamma} \turnc c \types \tau}
+{\Gamma \turnv \grun{c} \types \tau}
+\and
+\inferrule{\Gamma \turnv v \types \yoneda{\Sigma_1 + \Sigma_2}}
+{\Gamma \turnv \outl{v} \types \yoneda{\Sigma_1}}
+\and
+\inferrule{\Gamma \turnv v \types \yoneda{\Sigma_1 + \Sigma_2}}
+{\Gamma \turnv \outr{v} \types \yoneda{\Sigma_2}}
+\and
+\inferrule{\Gamma \turnv v_1 \types \yoneda{\Sigma} \\
+           op \types \tau_1 \rightarrowtail \tau_2 \in \Sigma \\
+           \Gamma \turnv v_2 \types \glob \tau_1 \\
+           \lbind{\Gamma}{x}{\glob \tau_2} \turnc c \types \tau_3}
+{\Gamma \turnc \; \perform{v_1}{op}{v_2}{x}{c} \types \tau_3}
+\and
+\inferrule{\lbind{\Gamma}{x}{\yoneda{\Sigma}} \turnc c \types \glob \tau}
+{\Gamma \turnc \; \reify{\Sigma}{x}{c} \types \ind{\Sigma}(\glob \tau)}
+\end{mathpar}
+\caption{Reflection typing rules}
+\label{fig:typing-reflection}
+\end{figure}
+
+
+As with other algebraic effects systems in the literature, we only
+support handlers for theories without any equations, even though our
+semantics is defined in terms of arbitrary bounded Lawvere theories. We
+define algebraic signatures $\Sigma$ as finite sets of operations
 \[
-\{ op_1 \mathop{:} \tau_{p_1} \rightarrowtail \tau_{a_1}; \ldots; op_n
-\mathop{:} \tau_{p_n} \rightarrowtail \tau_{a_n} \}
+\{ op_1 \types \tau_{p_1} \rightarrowtail \tau_{a_1}; \ldots; op_n
+\types \tau_{p_n} \rightarrowtail \tau_{a_n} \}
 \]
-An operation type
-$\tau_p \rightarrowtail \tau_a$ indicates an operation parameterised by
-$\tau_p$ and with arity $\tau_a$. Such signatures correspond to Lawvere
-theories without equations. We restrict parameters and arities to base
-types to ensure that our theories only have a countable number of
-operations of countable arities. We write $\sem{\Sigma}$ for the
-corresponding Lawvere theory, and $F_\Sigma$ for the endofunctor on
-$\setc$ for which $T_{\sem{\Sigma}}$ is the free monad.
+An operation type $\tau_p \rightarrowtail \tau_a$ indicates an operation
+parameterised by $\tau_p$ and with arity $\tau_a$. Such signatures
+correspond to bounded Lawvere theories without equations.
 
 The language provides inductive types $\ind{\Sigma}$ to directly
 represent terms of an algebraic signature $\Sigma$. $\ind{\Sigma}(\tau)$
 has a constructor $op$ with arguments of type $\tau_p$ and
 $\tau_a \rightarrow \ind{\Sigma}(\tau)$ for each operation
-$op \mathop{:} \tau_p \rightarrowtail \tau_a$ in $\Sigma$, as well as a
-constructor $ret$ with an argument of type $\tau$.
+$op \types \tau_p \rightarrowtail \tau_a$ in $\Sigma$, as well as a
+constructor $ret$ with an argument of type $\tau$. $\ind{\Sigma}$ is
+sometimes called the \emph{freer monad} of $\Sigma$ \cite{??}.
 
 The language provides types $\yoneda{\Sigma}$ to represent morphisms
 from $\sem{\Sigma}$ into the ambient monad. Using these, our desired
 isomorphism appears in the language as two operations, reflection
-$\reflect{\Sigma}{c}$ and reification $\reify{\Sigma}{v}$.
+$\reflectraw{\Sigma}{op}$ and reification $\reifyraw{\Sigma}$.
 \begin{mathpar}
-\inferrule{\Gamma \mathrel{\vdash_C} c : \ind{\Sigma}(\glob \tau)}
-{\Gamma \mathrel{\vdash_V} \; \reflect{\Sigma}{c} : \yoneda{\Sigma} \rightarrow \glob \tau}
+\inferrule{\Gamma \turnv v_1 \types \yoneda{\Sigma} \\
+           op \types \tau_1 \rightarrowtail \tau_2 \in \Sigma \\
+           \Gamma \turnv v_2 \types \glob \tau_1 \\
+           \lbind{\Gamma}{x}{\glob \tau_2} \turnc c \types \tau_3}
+{\Gamma \turnc \; \perform{v_1}{op}{v_2}{x}{c} \types \tau_3}
 \and
-\inferrule{\Gamma \mathrel{\vdash_V} v : \yoneda{\Sigma} \rightarrow \glob \tau}
-{\Gamma \mathrel{\vdash_C} \; \reify{\Sigma}{v} : \ind{\Sigma}(\glob \tau)}
+\inferrule{\lbind{\Gamma}{x}{\yoneda{\Sigma}} \turnc c \types \glob \tau}
+{\Gamma \turnc \; \reify{\Sigma}{x}{c} \types \ind{\Sigma}(\glob \tau)}
+\end{mathpar}
+
+Note that we treat reflection of individual operations
+$\performraw{v}{op}$ as primitive. We can define reflection of
+terms $\reflectraw{\Sigma}$ in terms of $\performraw{v}{op}$:
+\[
+    \reflect{\Sigma}{v}{c} := \todo{write this}
+\]
+which has this admissible typing rule:
+\begin{mathpar}
+\inferrule{\Gamma \turnv v \types \yoneda{\Sigma} \\
+           \Gamma \turnv c \types \ind{\Sigma}(\glob \tau)}
+{\Gamma \turnc \; \reflect{\Sigma}{v}{c} \types \glob \tau}
 \end{mathpar}
 
 Our denotational semantics in terms of $\pshlawcop$ is
-straightforward. For types, the translation $\sem{\tau} \mathrel{:} \pshlawcop$ is as follows:
+straightforward. We write $\sem{\Sigma}$ for the Lawvere theory
+corresponding to $\Sigma$, and $F_\Sigma$ for the endofunctor on $\setc$
+for which $T_{\sem{\Sigma}}$ is the free monad. For types, the
+translation $\sem{\tau} \mathrel{:} \pshlawcop$ is as follows:
 \begin{mathpar}
 \sem{\yoneda{\Sigma}} = \yoneda{\sem{\Sigma}} \and
 \sem{\glob \tau} = \glob \sem{\tau} \and
@@ -580,21 +1342,82 @@ result in the previous section. This isomorphism directly provides the
 semantics of reflection and reification.
 
 \begin{align*}
-&\sem{\Gamma \vdash_V v \mathop{:} \tau} \mathrel{:} \sem{\Gamma} \rightarrow \sem{\tau} \\
-&\sem{\glob \Gamma \vdash_V \mathop{\mathrm{box}} c \mathop{:} \glob \tau} = \glob \sem{\Gamma \vdash_C c \mathop{:} \tau}
+&\sem{\Gamma \turnv v \types \tau} \mathrel{:} \sem{\Gamma} \rightarrow \sem{\tau} \\
+&\sem{\glob \Gamma \turnv \gbox{v} \types \glob \tau} =
+  \glob \sem{\cdiv{\Gamma} \turnv v \types \tau} \circ \todo{weakening and globalizing}\\
+&\sem{\Gamma \turnv \gunbox{x}{v_1}{v_2} \types \tau_2} =
+  \sem{\gbind{\Gamma}{x}{\tau_1} \turnv v_2 \types \tau_2}
+  \circ \langle id_{\sem{\Gamma}}, \sem{\Gamma \turnv v_1 \types \glob \tau_1} \rangle
+&\sem{\glob \Gamma \turnv \grun{c} \types \glob \tau} =
+  \epsilon \circ \todo{removing identity monad} \circ
+  \glob \sem{\cdiv{\Gamma} \turnv v \types \tau} \circ \todo{weakening and globalizing}\\
 \end{align*}
 \begin{align*}
-&\sem{\Gamma \vdash_C c \mathop{:} \tau} \mathrel{:} \sem{\Gamma} \rightarrow \mon(\sem{\tau}) \\
-&\sem{\Gamma \vdash_C \mathop{\mathrm{return}} v \mathop{:} \tau} = \eta_{\sem{\tau}} \circ \sem{\Gamma \vdash_V v \mathop{:} \tau} \\
-&\sem{\Gamma \vdash_C \mathop{\mathrm{let}} x : \tau_1 = c_1 \mathop{\mathrm{in}} c_2\mathop{:} \tau_2} = \mu_{\sem{\tau_2}} \circ \mon(\sem{\Gamma; x \mathop{:} \tau_1 \vdash_C C_2 \mathop{:} \tau_2}) \circ t_{\sem{\Gamma}, \sem{\tau_1}} \circ \langle id_{\sem{\Gamma}}, \sem{\Gamma \vdash_C C_1 \mathop{:} \tau} \rangle \\
-&\sem{\Gamma \vdash_C \mathop{\mathrm{unbox}} c \mathop{:} \tau} = \mon(\epsilon_{\sem{\tau}}) \circ \sem{\Gamma \vdash_C c \mathop{:} \glob \tau} \\
-&\sem{\Gamma \vdash_C \reflect{\Sigma}{c} \mathop{:} \yoneda{\Sigma} \rightarrow \glob \tau} = \reflect{\Sigma\tau}{\sem{\Gamma \vdash_C c \mathop{:} \ind{\Sigma}(\glob \tau)}} \\
-&\sem{\Gamma \vdash_C \reify{\Sigma}{c} \mathop{:} \ind{\Sigma}(\glob \tau)} = \reify{\Sigma\tau}{\sem{\Gamma \vdash_C c \mathop{:} \yoneda{\Sigma} \rightarrow \glob \tau}} \\
+&\sem{\Gamma \turnc c \types \tau} \mathrel{:} \sem{\Gamma} \rightarrow \mon(\sem{\tau}) \\
+&\sem{\Gamma \turnc \return{v} \types \tau} = \eta_{\sem{\tau}} \circ \sem{\Gamma \turnv v \types \tau} \\
+&\sem{\Gamma \turnc \letv{x}{c_1}{c_2} \types \tau_2} = \mu_{\sem{\tau_2}} \circ \mon(\sem{\lbind{\Gamma}{x}{\tau_1} \turnc c_2 \types \tau_2}) \circ t_{\sem{\Gamma}, \sem{\tau_1}} \circ \langle id_{\sem{\Gamma}}, \sem{\Gamma \turnc c_1 \types \tau} \rangle \\
+&\sem{\Gamma \turnc \perform{v_1}{op}{v_2}{x}{c} \types \glob \tau} = \todo{fix}
+  \evmap \langle \reflectc{\Sigma}{\tau} \circ \eta \circ
+                   \sem{\Gamma \turnv v_1 \types \ind{\Sigma}(\glob \tau)},\,
+                 \sem{\Gamma \turnv v_2 \types \yoneda{\Sigma}} \rangle \\
+&\sem{\Gamma \turnc \reify{\Sigma}{x}{c} \types \ind{\Sigma}(\glob \tau)} =
+  \reifyc{\Sigma}{\tau} \circ \currymap(\sem{\lbind{\Gamma}{x}{\yoneda{\Sigma}} \turnc c \types \glob \tau}) \\
 \end{align*}
 where $\eta$, $\mu$ and $t$ are the unit, multiplication and strength
-respectively of $\mon$; $\epsilon$ is the counit of $\glob$;
-$\reflect{\Sigma}{}$ and $\reify{\Sigma}{}$ are the natural
-transformation in the isomorphism from the previous section.
+respectively of $\mon$; $\epsilon$ is the counit of $\glob$; $\evmap$
+and $\currymap$ are the evaluation map and currying map of exponentials;
+$\reflectc{\Sigma}{}$ and $\reifyc{\Sigma}{}$ are the natural
+transformations in the isomorphism from the previous section.
+
+\section{Operational semantics}
+\label{sec:operational}
+
+\begin{figure}
+\begin{align*}
+  \mathrm{neutral\ values}, \eta :=\;& x \mid \fst \eta \mid \snd \eta
+                                     \mid \gunbox{x}{\eta}{\omega} \mid \grun{\mu} \\
+  \mathrm{neutral\ computations}, \mu :=\;& \letv{x}{\mu}{\gamma}
+                                           \mid \app{\eta}{\omega} \mid \\
+                                   & \case{\eta}{x}{\gamma}{x}{\gamma} \mid \\
+                            & \indelim{\Sigma}{\eta}
+                              {\indretcase{x}{\gamma} \seq
+                               \indcase{op}{x}{x}{\gamma} \seq \ldots \seq
+                               \indcase{op}{x}{x}{\gamma}} \\
+                                   & \reify{\Sigma}{x}{\mu} \\
+  \mathrm{normal\ values}, \omega :=\;& \eta \mid (\omega, \omega)
+                           \mid () \mid \inl{\omega} \mid \inr{\omega} \mid \abs{x}{\tau}{\gamma} \mid \\
+                           &\indintro{\Sigma}{op}{\omega}{\omega} \mid \ret{\Sigma}{\omega} \mid \\
+                           &\gbox{\omega} \mid \outl{\omega} \mid \outr{\omega} \\
+  \mathrm{normal\ computations}, \gamma :=\;& \mu \mid \return{\omega}
+                                               \mid \perform{\eta}{op}{\omega}{x}{\gamma}
+\end{align*}
+\caption{Normal forms}
+\label{fig:normal}
+\end{figure}
+
+\begin{figure}
+\begin{align*}
+\fst{(v_1, v_2)} &\reducesto v_1 \\
+\snd{(v_1, v_2)} &\reducesto v_2 \\
+\gunbox{x}{\gbox{v_1}}{v_2} &\reducesto \sbst{v_2}{x}{v_1} \\
+\grun{\return{v}} &\reducesto v \\
+\letv{x}{\return{v}}{c} &\reducesto \sbst{c}{x}{v} \\
+\letv{x_1}{\perform{v_1}{op}{v_2}{x_2}{c_1}}{c_2} &\reducesto \perform{v_1}{op}{v_2}{x_2}{\letv{x_1}{c_1}{c_2}} \\
+\app{(\abs{x}{\tau}{c})}{v} &\reducesto \sbst{c}{x}{v} \\
+\case{(\inl{v})}{x_1}{c_1}{x_2}{c_2} &\reducesto \sbst{c_1}{x_1}{v} \\
+\case{(\inr{v})}{x_1}{c_1}{x_2}{c_2} &\reducesto \sbst{c_2}{x_2}{v} \\
+\indelim{\Sigma}{(\ret{\Sigma}{v})}{\indretcase{x}{c} \seq \ldots} &\reducesto \sbst{c}{x}{v} \\
+\indelim{\Sigma}{\indintro{\Sigma}{op}{v_1}{v_2}}{H_1 \seq \indcase{op}{x_1}{x_2}{c} \seq H_2} \\
+  \reducesto \sbst{\sbst{c}{x_1}{v_2}}{x_2}{\abs{x_a}{\tau_a}{&\letv{x_w}{\app{v_2}{x_a}}{\indelim{\Sigma}{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{c} \seq H_2}}}} \\
+\reify{\Sigma}{x}{\return{v}} &\reducesto \ret{\Sigma}{v} \\
+\reify{\Sigma}{x_1}{\perform{x_1}{op}{v}{x_2}{c}} &\reducesto \indintro{\Sigma}{op}{v}{\abs{x_2}{\reify{\Sigma}{x_1}{c}}} \\
+\reify{\Sigma}{x_1}{\perform{x_2}{op}{v}{x_3}{c}} &\reducesto \perform{x_2}{op}{v}{x_3}{\reify{\Sigma}{x_1}{c}} \qquad (x_1 \neq x_2) \\
+\perform{(\outl{v_1})}{op}{v_2}{x}{c} &\reducesto \perform{v_1}{\mathrm{left}(op)}{v_2}{x}{c} \\
+\perform{(\outr{v_1})}{op}{v_2}{x}{c} &\reducesto \perform{v_1}{\mathrm{right}(op)}{v_2}{x}{c}
+\end{align*}
+\caption{Reduction relation}
+\label{fig:reduction}
+\end{figure}
 
 \section{Implementation}
 \label{sec:implementation}
@@ -609,19 +1432,19 @@ constructor around as part of the \lstinline[style=ocaml]{handler}, and
 then use it to perform operations during reflection.
 
 \begin{lstlisting}[style=ocaml]
+module Handler (O : Op) = struct
+  type t = { perform : 'r. 'r O.t -> 'r }
+end
+
 module Reflection (O : Op) = struct
-
-  type 'a term =
-    | Return : 'a @@ global -> 'a term
-    | Op : 'r O.t @@ global * ('r -> 'a term) -> 'a term
-
-  type handler = { perform : 'r. 'r O.t -> 'r }
 
   let reify f =
     let module Handler =
       struct type 'a Effect.t += H : 'a O.t -> 'a Effect.t end
     in
-    let handler = { perform = fun o -> Effect.perform (Handler.H o) } in
+    let handler : Handler(O).t =
+      { perform = fun o -> Effect.perform (Handler.H o) }
+    in
     match f handler with
     | v -> Return v
     | effect Handler.H o, k -> Op(o, fun x -> Effect.continue k x)
@@ -686,6 +1509,28 @@ corresponding one. This search is not actually necessary...
 
 \bibliography{references}
 \bibliographystyle{plain}
+
+\section{Appendix}
+
+Previous theoretical work on algebraic effects, such as \cite{??},
+has tended to use \emph{countable Lawvere theories}. These correspond to
+monads who rank is \todo{how should I write the countable
+  cardinality}. This still restricts the parameters and arity operations
+to be countable. We instead use \emph{bounded Lawvere
+  theories}, corresponding to monads that have some cardinal as their
+rank. This allows parameters and arities of operations to be arbitrary
+simple types.
+
+Bounded Lawvere theories are not given a consistent name in the
+literature. A number of results that are proved for countable Lawvere
+theories are asserted to be true for the bounded case. As we could not
+find actual proofs for these claims we have included such proofs in
+Appendix \ref{??}. We also include a proof of an interesting property
+of bounded Lawvere theories:
+
+\todo{How to format and label this?}  {\b Bounded Lawvere theories
+  correspond precisely to those (infinitary) Lawvere theories whose
+  term monad can be expressed as a W-type}
 
 \end{document}
 
