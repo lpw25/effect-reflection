@@ -54,7 +54,7 @@
 \newcommand{\yonedaname}{y}
 \newcommand{\yoneda}[1]{y(#1)}
 \newcommand{\homset}[3]{\mathrm{Hom}_{#1}(#2, #3)}
-\newcommand{\arrow}[2]{#1 \Rightarrow #2}
+\newcommand{\arrow}[2]{{#2}^{#1}}
 \newcommand{\sem}[1]{\llbracket #1 \rrbracket}
 \newcommand{\reflectname}{\Uparrow}
 \newcommand{\reflectraw}[1]{\mathop{\reflectname_{#1}}}
@@ -79,6 +79,8 @@
 \newcommand{\seq}{\,;\,}
 \newcommand{\fst}{\mathop{\pi_1}}
 \newcommand{\snd}{\mathop{\pi_2}}
+\newcommand{\il}{\mathop{\iota_1}}
+\newcommand{\ir}{\mathop{\iota_2}}
 \newcommand{\inl}[1]{\mathop{\mathrm{in}_L} #1}
 \newcommand{\inr}[1]{\mathop{\mathrm{in}_R} #1}
 \newcommand{\case}[5]{\mathop{\mathrm{case}} #1 \,\{\,\inl{#2} \Rightarrow #3 \seq \inr{#4} \Rightarrow #5 \,\}}
@@ -106,7 +108,7 @@
 \newcommand{\mif}{\mathop{\mathrm{if}}}
 \newcommand{\mthen}{\mathop{\mathrm{then}}}
 \newcommand{\melse}{\mathop{\mathrm{else}}}
-\newcommand{\embed}[1]{\lbag #1 \rbag}
+\newcommand{\embed}[1]{\mathopen{\lbag}#1\mathclose{\rbag}}
 
 \newcommand{\todo}[1]{{\color{red}TODO: #1}}
 
@@ -1233,7 +1235,7 @@ these rules can be proved using standard techniques.
 \perform{(\outl{v_1})}{op}{v_2}{x}{c} &\reducestoc \perform{v_1}{\mathrm{left}(op)}{v_2}{x}{c} \\
 \perform{(\outr{v_1})}{op}{v_2}{x}{c} &\reducestoc \perform{v_1}{\mathrm{right}(op)}{v_2}{x}{c}
 \end{align*}
-\caption{Reduction relation}
+\caption{Reduction relations}
 \label{fig:reduction}
 \end{figure}
 \begin{figure}
@@ -1263,9 +1265,9 @@ Note that the reduction relations do not include $\eta$ expansion. They
 also do not include some conversions you might expect for computations:
 \begin{itemize}
 \item There is no rule to convert
-  $\letv{x_2}{\letv{x_1}{c_1}}{c_2}{c_3}$ to
-  $\letv{x_1}{c_1}{\letv{x_2}{c_2}{c_3}}$ or vice versa.
-\item There is no rule to convert $\letv{x}{c}{\return x}$ to $c$.
+  $\; \letv{x_2}{\letv{x_1}{c_1}}{c_2}{c_3} \;$ to
+  $\; \letv{x_1}{c_1}{\letv{x_2}{c_2}{c_3}} \;$ or vice versa.
+\item There is no rule to convert $\; \letv{x}{c}{\return x} \;$ to $c$.
 \end{itemize}
 These rules are excluded because they are not $\beta$ rules. Instead
 they are better thought of as $\nu$ rules \cite{??}: additional
@@ -1279,8 +1281,31 @@ cannot produce additional $\beta$ redexes.
 \subsection{Embedding the Simply-Typed Lambda Calculus}
 
 Using the global modality and $\grun{c}$ construct we can embed the
-Simply Typed Lambda Calculus (STLC) into this language. We define an
-embedding $\embed{\_}$ on types, contexts and terms of STLC.
+Simply Typed Lambda Calculus (STLC) into this language as values. We
+define an embedding $\embed{\_}$ on types, contexts and terms of STLC:
+\begin{equation*}
+\begin{aligned}[c]
+  &\embed{1} = 1 \\
+  &\embed{A \times B} = \embed{A} \times \embed{B} \\
+  &\embed{A \rightarrow B} = (\glob \embed{A}) \rightarrow \embed{B} \\ \\
+  &\embed{\cempty} = \cempty \\
+  &\embed{\lbind{\Gamma}{x}{A}} = \gbind{\embed{\Gamma}}{x}{\embed{A}}
+\end{aligned}
+\qquad
+\begin{aligned}[c]
+  &\embed{x} = x \\
+  &\embed{(e, f)} = (\embed{e}, \embed{f}) \\
+  &\embed{\fst{e}} = \fst{\embed{e}} \\
+  &\embed{\snd{e}} = \snd{\embed{e}} \\
+  &\embed{\abs{x}{A}{e}} =
+    \abs{x^{\prime}}{\glob \embed{A}}{\return{(\gunbox{x}{x^{\prime}}{\embed{e}})}} \\
+  &\embed{\app{f}{e}} = \grun{\app{\embed{f}}{(\gbox{\embed{e}})}}
+\end{aligned}
+\end{equation*}
+
+Note that $\reducestov$ matches the behaviour of $\beta$ reduction of
+STLC too, with each STLC reduction step corresponding to up to 3 steps
+of $\reducestov$.
 
 \section{Presheaves for algebraic effects}
 \label{sec:semantics}
@@ -1294,22 +1319,17 @@ each type is a mapping from the ambient monad to a set of elements.
 \subsection{Algebraic monads}
 
 In order to index the meaning of our types by the ambient monad we need
-some way of representing that ambient monad. We restrict the ambient
-monad to be an \emph{algebraic monad}: one that can be expressed as the
-free algebra of an algebraic theory. Such monads have nice properties,
-in particular the sum of two algebraic monads always exists and is
-itself an algebraic monad.
+some way of representing that ambient monad. As with all approaches to
+algebraic effects, we must restrict ourselves to monads that have some
+nice properties, in particular we need the sum of two of these monads to
+always exists.
 
-\todo{Check ``algebraic monad'' in the literature and informally. Maybe
-  add a footnote about the term.}
-
-Most monads used in practice for programming are algebraic, with the
-notable exception of the continuation monad. The issue with trying to
-represent non-algebraic monads algebraically is essentially one of size:
-if you try to write down the collection of algebirac operations for the
-continuation monad you get something that is too large to be a set. This
-is closely related to the strict positivity restriction on inductive
-type definitions.
+To this end, we will restrict the ambient monad to be an \emph{algebraic
+  monad}: one that can be expressed as the free algebra of an algebraic
+theory. Note that this defintion of algebraic monad is not precise:
+different choices for the definition of ``algebraic theory'' give you
+different meanings for ``algebraic monad''. We'll make our particular
+choice over the course of this section.
 
 We recall the definitions of algebraic signature, terms of a signature,
 algebraic theory and models of a theory.
@@ -1438,11 +1458,13 @@ the arities of the theory. An algebraic theory with some bound $\kappa$
 corresponds to a monad with rank $\kappa$. Thus we take monads with a
 rank as our precise definition of algebraic monad.
 
-Note that we still require that our collections of operations and their
-arities to be sets, so our definition of algebraic monad continues to
-exclude monads like the continuation monad. Most importantly, this
-definition preserves the nice properties of finitary monads required to
-support effect handlers.
+Most monads used in practice for programming are algebraic by this
+definition, with the notable exception of the continuation monad. The
+issue with trying to represent non-algebraic monads algebraically is
+essentially one of size: if you try to write down the collection of
+algebirac operations for the continuation monad you get something that
+is too large to be a set. This is closely related to the strict
+positivity restriction on inductive type definitions.
 
 \subsection{(Bounded) Lawvere theories}
 
@@ -1511,31 +1533,34 @@ it is still best to think in terms of presheaves as that is a more
 precise description of what we are doing.
 
 Our semantics will use objects from $\pshlawcop$ to represent types and
-contexts, and morphisms in $\pshlawcop$ to represent terms. This allows
+contexts, and morphisms in $\pshlawcop$ to represent values. This allows
 their meanings to be parameterized by the ambient monad. By using
 presheaves rather than ordinary functions we ensure terms and types at a
 particular ambient monad can always be mapped naturally to a larger
 ambient monad.
 
-Categories of presheaves have products and sums, which are defined
+\begin{equation*}
+\sem{\tau} \mathrel{:} \pshlawcop \qquad
+\sem{\Gamma} \mathrel{:} \pshlawcop \qquad
+\sem{\Gamma \turnv v \types \tau} \mathrel{:} \homset{\pshlawcop}{\sem{\Gamma}}{\sem{\tau}}
+\end{equation*}
+
+Categories of presheaves have products and coproducts, which are defined
 pointwise. We will use these as the semantics of product types and sum
-types in our denotational semantics. Such categories also have
-exponentials, which we will use as the semantics of functions types.
-
-\todo{fix this..}
-
-Our denotational semantics in terms of $\pshlawcop$ is
-straightforward. For types, the translation
-$\sem{\tau} \mathrel{:} \pshlawcop$ is as follows:
-\begin{mathpar}
-
-\end{mathpar}
-
+types.
 \begin{align*}
-&\sem{\Gamma \turnv v \types \tau} \mathrel{:} \sem{\Gamma} \rightarrow \sem{\tau} \\
+&\sem{1} = 1 \\
+&\sem{\tau_1 \times \tau_2} = \sem{\tau_1} \times \sem{\tau_2} \\
+&\sem{\tau_1 + \tau_2} = \sem{\tau_1} + \sem{\tau_2} \\
 \end{align*}
+The semantics of the corresponding introduction and elimination forms
+follows the usual categorical semantics of such types.
+
+We also use products for the semantics of contexts:
 \begin{align*}
-&\sem{\Gamma \turnc c \types \tau} \mathrel{:} \sem{\Gamma} \rightarrow \mon(\sem{\tau}\end{align*}
+&\sem{\cempty} = 1 \\
+&\sem{\lbind{\Gamma}{x}{\tau}} = \sem{\Gamma} \times \sem{\tau} \\
+\end{align*}
 
 \subsection{Representing computations: The free algebra monad}
 
@@ -1546,90 +1571,48 @@ interpretation of types of computations to be applications of the
 ambient monad.
 
 Given a Lawvere theory $L$, the underlying set of its free algebra forms
-a monad $T_L$ on $\setc$.  $T_{\_}$ is functorial and we can use it to
-construct a monad $\mon$ on $\pshlawcop$ such that:
+a monad $T_L$ on $\setc$. In addition to the unit of the monad, we can
+construct elements of $T_L$ using the operations of $L$. For an
+operation $op \types P \rightarrowtail A$ of a Lawvere theory $L$ and
+some set $S$, there is a function
+$op_{T_L} \types (P \times (A \rightarrow T_L(S))) \rightarrow T_L(S)$
+that constructs terms in the free algebra using $op$.
+
+$T_{\_}$ is functorial and we can use it to construct a monad $\mon$ on
+$\pshlawcop$ such that:
 \begin{equation*}
 \mon(P)(L) = T_L(P(L))
 \end{equation*}
 We call $\mon$ the \emph{free algebra monad}, and we will use it as the
 computation monad in our denotational semantics.
-
-\todo{fix this..}
-
-Our denotational semantics in terms of $\pshlawcop$ is
-straightforward. For types, the
-translation $\sem{\tau} \mathrel{:} \pshlawcop$ is as follows:
-\begin{mathpar}
-\sem{\tau_1 \rightarrow \tau_2} = \arrow{\sem{\tau_1}}{\mon(\sem{\tau_2})} \and
-\end{mathpar}
-
 \begin{align*}
-&\sem{\Gamma \turnv v \types \tau} \mathrel{:} \sem{\Gamma} \rightarrow \sem{\tau} \\
-\end{align*}
-\begin{align*}
-&\sem{\Gamma \turnc c \types \tau} \mathrel{:} \sem{\Gamma} \rightarrow \mon(\sem{\tau}) \\
-&\sem{\Gamma \turnc \return{v} \types \tau} = \eta_{\sem{\tau}} \circ \sem{\Gamma \turnv v \types \tau} \\
-&\sem{\Gamma \turnc \letv{x}{c_1}{c_2} \types \tau_2} = \mu_{\sem{\tau_2}} \circ \mon(\sem{\lbind{\Gamma}{x}{\tau_1} \turnc c_2 \types \tau_2}) \circ t_{\sem{\Gamma}, \sem{\tau_1}} \circ \langle id_{\sem{\Gamma}}, \sem{\Gamma \turnc c_1 \types \tau} \rangle \\
+  &\sem{\Gamma \turnc v \types \tau} \mathrel{:}
+    \homset{\pshlawcop}{\sem{\Gamma}}{\mon(\sem{\tau})} \\
+  &\sem{\Gamma \turnc \return{v} \types \tau} =
+    \eta_{\sem{\tau}} \circ \sem{\Gamma \turnv v \types \tau} \\
+  &\sem{\Gamma \turnc \letv{x}{c_1}{c_2} \types \tau_2} =
+    \mu_{\sem{\tau_2}}
+    \circ \mon(\sem{\lbind{\Gamma}{x}{\tau_1} \turnc c_2 \types \tau_2})
+    \circ t_{\sem{\Gamma}, \sem{\tau_1}}
+    \circ \langle id_{\sem{\Gamma}}, \sem{\Gamma \turnc c_1 \types \tau_1} \rangle
 \end{align*}
 where $\eta$, $\mu$ and $t$ are the unit, multiplication and strength
-respectively of $\mon$ $\evmap$
-and $\currymap$ are the evaluation map and currying map of exponentials.
+respectively of $\mon$.
 
-\subsection{Reflecting operations: The Yoneda embedding}
-
-We want to be able to reflect operations into the ambient monad. We can
-do that using the \emph{Yoneda embedding}. The Yoneda embedding
-$\yoneda{\_}$ is a full and faithful embedding from a category $\cat$
-into its category of presheaves $\psh$. When treating $\cat$ as a form
-of context, the elements of $y(\catobj)$ can be used as variables of
-type $\catobj$.
-
-$\lawcop$ embeds into $\pshlawcop$ via the Yoneda embedding: for each
-Lawvere theory $L$ there is a presheaf $\yoneda{L}$ in $\pshlawcop$ such
-that:
+Categories of presheaves also have exponentials, which combine with the
+free algebra monad to give us our semantics for function types.
 \begin{align*}
-&\yoneda{L}(L^{\prime}) = \homset{\lawc}{L}{L^{\prime}} \\
-&\yoneda{L}(l^{\prime}) = \lambda f.\; l^{\prime} \circ f
+  &\sem{\tau_1 \rightarrow \tau_2} = \arrow{\sem{\tau_1}}{\mon(\sem{\tau_2})} \\
+  &\sem{\Gamma \turnv \abs{x}{\tau_1}{c} \types \tau_1 \rightarrow \tau_2} =
+    \currymap(\sem{\lbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2})
+     \\
+  &\sem{\Gamma \turnc \app{v_1}{v_2} \types \tau_2} =
+    \evmap
+    \circ \langle \sem{\Gamma \turnv v_1 \types \tau_1 \rightarrow \tau_2},
+                  \sem{\Gamma \turnv v_2 \types \tau_1} \rangle
 \end{align*}
-We will use $\yoneda{L}$ as the semantics for our handler types. Their
-elements are just maps from $L$ into the ambient monad.
-
-For an operation $op \types P \rightarrowtail A$ of a Lawvere theory
-$L$, we can define the following morphism of presheaves:
-
-\todo{Write this}
-
-that reflects the operation into the ambient monad. We use this as our
-semantics of reflection.
-
-Note that the Yoneda embedding preserves finite products, which for our
-case means:
-\begin{equation*}
-\yoneda{L + L^{\prime}} \cong \yoneda{L} \times \yoneda{L^{\prime}}
-\end{equation*}
-which we use to support \todo{something}
-
-\todo{fix this..}
-
-Our denotational semantics in terms of $\pshlawcop$ is
-straightforward. We write $\sem{\Sigma}$ for the Lawvere theory
-corresponding to $\Sigma$, and $F_\Sigma$ for the endofunctor on $\setc$
-for which $T_{\sem{\Sigma}}$ is the free monad. For types, the
-translation $\sem{\tau} \mathrel{:} \pshlawcop$ is as follows:
-\begin{mathpar}
-\sem{\yoneda{\Sigma}} = \yoneda{\sem{\Sigma}} \and
-\end{mathpar}
-
-\begin{align*}
-&\sem{\Gamma \turnv v \types \tau} \mathrel{:} \sem{\Gamma} \rightarrow \sem{\tau} \\
-\end{align*}
-\begin{align*}
-&\sem{\Gamma \turnc c \types \tau} \mathrel{:} \sem{\Gamma} \rightarrow \mon(\sem{\tau}) \\
-&\sem{\Gamma \turnc \perform{v_1}{op}{v_2}{x}{c} \types \glob \tau} = \todo{fix}
-  \evmap \langle \reflectc{\Sigma}{\tau} \circ \eta \circ
-                   \sem{\Gamma \turnv v_1 \types \ind{\Sigma}(\glob \tau)},\,
-                 \sem{\Gamma \turnv v_2 \types \yoneda{\Sigma}} \rangle \\
-\end{align*}
+where $\evmap$ is the evaluation map and $\currymap$ the currying of
+exponentials.
 
 \subsection{The global modality}
 
@@ -1675,6 +1658,74 @@ translation $\sem{\tau} \mathrel{:} \pshlawcop$ is as follows:
   \glob \sem{\cdiv{\Gamma} \turnv v \types \tau} \circ \todo{weakening and globalizing}\\
 \end{align*}
 where $\epsilon$ is the counit of $\glob$.
+
+\subsection{Reflecting operations: The Yoneda embedding}
+
+We want to be able to reflect operations into the ambient monad. We can
+use the $op_{T_L}$ functions to build morphisms into $\mon$, but we
+require some way to represent operations of the ambient monad. We can do
+that by using the \emph{Yoneda embedding}. The Yoneda embedding
+$\yoneda{\_}$ is a full and faithful embedding from a category $\cat$
+into its category of presheaves $\psh$. When treating $\cat$ as a form
+of context, the elements of $y(\catobj)$ can be used to represent
+variables of type $\catobj$.
+
+$\lawcop$ embeds into $\pshlawcop$ via the Yoneda embedding: for each
+Lawvere theory $L$ there is a presheaf $\yoneda{L}$ in $\pshlawcop$ such
+that:
+\begin{align*}
+&\yoneda{L}(L^{\prime}) = \homset{\lawc}{L}{L^{\prime}} \\
+&\yoneda{L}(l^{\prime}) = \lambda f.\; l^{\prime} \circ f
+\end{align*}
+
+For an operation $op \types P \rightarrowtail A$ of a Lawvere theory $L$
+and some set $S$, we can build a morphism:
+\begin{equation*}
+op_s \types \homset{\pshlawcop}{\yoneda{L}}{\mon{S}}
+\end{equation*}
+
+We use $\yoneda{L}$ as the semantics for our handler types.
+\begin{align*}
+&\sem{\yoneda{\Sigma}} = \yoneda{\sem{\Sigma}}\\
+\end{align*}
+where $\sem{\Sigma}$ is the Lawvere theory corresponding to the
+signature $\Sigma$. If $\Sigma$ is:
+\begin{equation*}
+\{ \, op_1 \types \tau_{p_1} \rightarrowtail \tau_{a_1}; \ldots; op_n
+\types \tau_{p_n} \rightarrowtail \tau_{a_n} \, \}
+\end{equation*}
+then $\sem{\Sigma}$ is the Lawvere theory for:
+\begin{equation*}
+\{ \, op_1 \types \sem{\tau_{p_1}}(\initial) \rightarrowtail \sem{\tau_{a_1}}(\initial); \ldots; op_n
+\types \sem{\tau_{p_n}}(\initial) \rightarrowtail \sem{\tau_{a_n}}(\initial) \, \}
+\end{equation*}
+Note that by applying the types to the initial theory $\initial$ we
+restrict them to their global elements: those that do not depend on the
+current ambient monad.
+
+For an operation $op \types P \rightarrowtail A$ of a Lawvere theory
+$L$, we can define the following morphism of presheaves:
+
+\todo{Write this}
+
+that reflects the operation into the ambient monad. We use this as our
+semantics of reflection.
+
+\todo{fix this..}
+
+\begin{align*}
+&\sem{\Gamma \turnc \perform{v_1}{op}{v_2}{x}{c} \types \glob \tau} = \todo{fix}
+  \evmap \langle \reflectc{\Sigma}{\tau} \circ \eta \circ
+                   \sem{\Gamma \turnv v_1 \types \ind{\Sigma}(\glob \tau)},\,
+                 \sem{\Gamma \turnv v_2 \types \yoneda{\Sigma}} \rangle \\
+\end{align*}
+
+Note that the Yoneda embedding preserves finite products, which for our
+case means:
+\begin{equation*}
+\yoneda{L + L^{\prime}} \cong \yoneda{L} \times \yoneda{L^{\prime}}
+\end{equation*}
+which we use for the semantics of $\outl(v)$ and $\outr{v}$.
 
 \subsection{Representing effectful computations: The Yoneda lemma}
 
