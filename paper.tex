@@ -271,7 +271,8 @@ two additional effectful operations, which can be used via reflection:
 
 Note that the locality of the handler value ensures that these
 operations can only be performed when they are available in the ambient
-monad. This provides the same guarantees as using an effect system.
+monad. This provides the same guarantees as using an effect system
+without any type system machinery beyond tracking locality.
 
 \subsection{Denotational semantics} The design of effect reflection falls
 out naturally from a simple denotational semantics of algebraic
@@ -280,11 +281,11 @@ monad. Rather than the semantics of a type being a set it is instead a
 function from ambient monads to set: if you tell it what the ambient
 monad is it can tell you what its set of values is.
 
-The semantics is defined in terms of presheaves of the opposite of the
-category of \emph{bounded Lawvere theories}. Bounded Lawvere theories
-are a categorical representation of algebraic theories: we represent the
-ambient algebraic monad by the corresponding algebraic theory. The key
-constructs of effect reflection are then defined as follows:
+The semantics is defined in terms of presheaves of \emph{bounded Lawvere
+  theories}. Bounded Lawvere theories are a categorical representation
+of algebraic theories: we represent the ambient algebraic monad by the
+corresponding algebraic theory. The key constructs of effect reflection
+are then defined as follows:
 
 \begin{itemize}
 \item The ambient monad can be defined as a monad $\mon$ on such
@@ -345,21 +346,21 @@ the entire extent of the call. This means that, by default,
 \lstinline[style=oxcaml]{local} values cannot be returned from a
 function.
 \begin{lstlisting}[style=oxcaml]
-let leak_local x =
-  let (o @ local) = Some x in
-  o
-(*@ \textcolor{red}{Error: o} @*)
-       (*@ \textcolor{red}{\textasciicircum} @*)
-(*@ \textcolor{red}{This value is local and would escape its region.} @*)
+  let leak_local x =
+    let (o @ local) = Some x in
+    o
+  (*@ \textcolor{red}{Error: o} @*)
+         (*@ \textcolor{red}{\textasciicircum} @*)
+  (*@ \textcolor{red}{This value is local and would escape its region.} @*)
 \end{lstlisting}
 
 To support functions that return local values, the region of a function
 can be ended early using the \lstinline[style=oxcaml]{exclave} construct.
 \begin{lstlisting}[style=oxcaml]
-let return_local x =
-  exclave
-    (let (o @ local) = Some x in
-     o)
+  let return_local x =
+    exclave
+      (let (o @ local) = Some x in
+       o)
 \end{lstlisting}
 \lstinline[style=oxcaml]{exclave e} can only appear in tail position
 within a function.  It ends the function's region early and then
@@ -375,7 +376,7 @@ that the values it accepts or returns should be
 labelled with two modes: one for the argument and one for the return
 value.
 \begin{lstlisting}[style=oxcaml]
-val return_local : 'a @ local -> 'a option @ local
+  val return_local : 'a @ local -> 'a option @ local
 \end{lstlisting}
 For convenience, and backwards compatibility with OCaml, either mode can
 be omitted, in which case it defaults to
@@ -388,18 +389,18 @@ with \lstinline[style=oxcaml]{global} modality to indicate that the
 contents of the field are global even when the surrounding record is
 local. For example:
 \begin{lstlisting}[style=oxcaml]
-type 'a gbl = { g : 'a @@ global }
+  type 'a gbl = { g : 'a @@ global }
 \end{lstlisting}
 gives a record whose only field has the \lstinline[style=oxcaml]{global}
 modality. The contents of the \lstinline[style=oxcaml]{g} field is always
 global, for example:
 \begin{lstlisting}[style=oxcaml]
-let project_global (r @ local) =
-  r.g
+  let project_global (r @ local) =
+    r.g
 \end{lstlisting}
 gives a function of type:
 \begin{lstlisting}[style=oxcaml]
-val project_global : 'a gbl @ local -> 'a @ global
+  val project_global : 'a gbl @ local -> 'a @ global
 \end{lstlisting}
 Variant constructor arguments can also be annotated with modalities.
 
@@ -420,20 +421,20 @@ functors, so we start with a simple module type
 \lstinline[style=oxcaml]{Op} to act as the parameter type for these
 functors:
 \begin{lstlisting}[style=oxcaml]
-module type Op = sig type 'a t end
+  module type Op = sig type 'a t end
 \end{lstlisting}
 The fundamental types of the API are the \lstinline[style=oxcaml]{Term}
 and \lstinline[style=oxcaml]{Handler} types.
 \begin{lstlisting}[style=oxcaml]
-module Term (O : Op) : sig
-  type 'a t =
-    | Return : 'a @@ global -> 'a t
-    | Op : 'r O.t @@ global * ('r -> 'a t) -> 'a t
-end
+  module Term (O : Op) : sig
+    type 'a t =
+      | Return : 'a @@ global -> 'a t
+      | Op : 'r O.t @@ global * ('r -> 'a t) -> 'a t
+  end
 
-module Handler(O : Op) : sig
-  type t
-end
+  module Handler(O : Op) : sig
+    type t
+  end
 \end{lstlisting}
 For an effect signature \lstinline[style=oxcaml]{O},
 \lstinline[style=oxcaml]{'a Term(O).t} is the type of terms in the free
@@ -460,26 +461,26 @@ right-to-left direction but makes for a more convenient primitive in
 practice. \lstinline[style=oxcaml]{perform} amounts to reflection of
 individual operations as opposed to full terms.
 \begin{lstlisting}[style=oxcaml]
-module Reflection (O : Op) : sig
-  val reify : (Handler(O).t @ local -> 'a) -> 'a Term(O).t
-
-  val reify_local :
-    (Handler(O).t @ local -> 'a) @ local -> 'a Term(O).t @ local
-
-  val perform : 'a O.t -> (Handler(O).t @ local -> 'a)
-end
+  module Reflection (O : Op) : sig
+    val reify : (Handler(O).t @ local -> 'a) -> 'a Term(O).t
+  
+    val reify_local :
+      (Handler(O).t @ local -> 'a) @ local -> 'a Term(O).t @ local
+  
+    val perform : 'a O.t -> (Handler(O).t @ local -> 'a)
+  end
 \end{lstlisting}
 Using \lstinline[style=oxcaml]{perform} we can implement reflection of
 global terms as:
 \begin{lstlisting}[style=oxcaml]
-let rec reflect t h =
-  match t with
-  | Return x -> x
-  | Op(op, k) -> reflect (k (perform op h)) h
+  let rec reflect t h =
+    match t with
+    | Return x -> x
+    | Op(op, k) -> reflect (k (perform op h)) h
 \end{lstlisting}
 with type:
 \begin{lstlisting}[style=oxcaml]
-val reflect : 'a Term(O).t -> (Handler(O).t @ local -> 'a)
+  val reflect : 'a Term(O).t -> (Handler(O).t @ local -> 'a)
 \end{lstlisting}
 Reflection of local terms can be defined similarly.
 
@@ -488,43 +489,43 @@ Reflection of local terms can be defined similarly.
 As shown in the introduction we can implement an effect handler for
 state using this API. We start by defining the operations of the effect:
 \begin{lstlisting}[style=oxcaml]
-module State = struct
-  type 'a t =
-    | Get : int t
-    | Set : int -> unit t
-end
+  module State = struct
+    type 'a t =
+      | Get : int t
+      | Set : int -> unit t
+  end
 \end{lstlisting}
 Then we instantiate the reflection isomorphism for that effect and use
 it to write a handler:
 \begin{lstlisting}[style=oxcaml]
-module State_eff = Reflection(State)
+  module State_eff = Reflection(State)
 
-let handle_state f i =
-  let rec loop s = function
-    | Term(State).Return x -> x
-    | Term(State).Op(Get, k) -> loop s (k s)
-    | Term(State).Op(Set s', k) -> loop s' (k ())
-  in
-  loop i (State_eff.reify_local f)
+  let handle_state f i =
+    let rec loop s = function
+      | Term(State).Return x -> x
+      | Term(State).Op(Get, k) -> loop s (k s)
+      | Term(State).Op(Set s', k) -> loop s' (k ())
+    in
+    loop i (State_eff.reify_local f)
 \end{lstlisting}
 Finally we add an alias for the handler type and some convenient
 wrappers for the generic effects:
 \begin{lstlisting}[style=oxcaml]
-type handler = Handler(State).t
+  type handler = Handler(State).t
 
-let get h =
-  State_eff.perform Get h
+  let get h =
+    State_eff.perform Get h
 
-let set h i =
-  State_eff.perform (Set i) h
+  let set h i =
+    State_eff.perform (Set i) h
 \end{lstlisting}
 Giving us the following interface:
 \begin{lstlisting}[style=oxcaml]
-type handler
+  type handler
 
-val handle_state : (handler @ local -> 'a) @ local -> int -> 'a
-val get : handler @ local -> int
-val set : handler @ local -> int -> unit
+  val handle_state : (handler @ local -> 'a) @ local -> int -> 'a
+  val get : handler @ local -> int
+  val set : handler @ local -> int -> unit
 \end{lstlisting}
 Note that we are able to use \lstinline[style=oxcaml]{reify_local} to allow
 the function passed to \lstinline[style=oxcaml]{handle_state} to be local.
@@ -533,11 +534,11 @@ This shows how to implement state using effect reflection, but note that
 the same interface can also be implemented directly using mutable state
 and locality:
 \begin{lstlisting}[style=oxcaml]
-type handler = int ref
+  type handler = int ref
 
-let handle_state f i = f (ref i)
-let get r = !r
-let set r i = r := i
+  let handle_state f i = f (ref i)
+  let get r = !r
+  let set r i = r := i
 \end{lstlisting}
 This implementation gives the same behaviour as the one built using
 effect reflection. Crucially it is just as easy to reason about, which
@@ -553,15 +554,15 @@ for any \emph{tail-resumptive} effect handler.
 The following function uses state to calculate the total of a list of
 integers:
 \begin{lstlisting}[style=oxcaml]
-let total l =
-  handle_state (fun h ->
-    List.iter (fun x -> set h (get h + x)) l;
-    get h)
+  let total l =
+    handle_state (fun h ->
+      List.iter (fun x -> set h (get h + x)) l;
+      get h)
 \end{lstlisting}
 This relies on the locality of the function parameter of
 \lstinline[style=oxcaml]{List.iter}:
 \begin{lstlisting}[style=oxcaml]
-val iter : ('a -> unit) @ local -> 'a list -> unit
+  val iter : ('a -> unit) @ local -> 'a list -> unit
 \end{lstlisting}
 The \lstinline[style=oxcaml]{local} annotation on the parameter ensures
 that any function passed will not escape the current region. This allows
@@ -580,26 +581,26 @@ a separate notion of second-class function.
 A more realistic use of effect reflection is a \emph{generator}
 effect. This effect has a single operation:
 \begin{lstlisting}[style=oxcaml]
-module Gen = struct
-  type 'a t =
-    | Gen : int -> unit t
-end
+  module Gen = struct
+    type 'a t =
+      | Gen : int -> unit t
+  end
 \end{lstlisting}
 Along with a handler that turns computations using
 \lstinline[style=oxcaml]{Gen} into streams of integers.
 \begin{lstlisting}[style=oxcaml]
-module Gen_eff = Reflection(Gen)
+  module Gen_eff = Reflection(Gen)
 
-type ints =
-  | Finished
-  | More of int * (unit -> ints)
+  type ints =
+    | Finished
+    | More of int * (unit -> ints)
 
-let handle_gen f =
-  let rec loop = function
-    | Term(Gen).Return () -> Finished
-    | Term(Gen).Op(Gen i, k) -> More(i, k)
-  in
-  loop (Gen_eff.reify f)
+  let handle_gen f =
+    let rec loop = function
+      | Term(Gen).Return () -> Finished
+      | Term(Gen).Op(Gen i, k) -> More(i, k)
+    in
+    loop (Gen_eff.reify f)
 \end{lstlisting}
 
 Unlike the state handler, here we must use
@@ -610,7 +611,7 @@ current region. Since it closes over the continuation
 \lstinline[style=oxcaml]{k}, we must use \lstinline[style=oxcaml]{reify}
 and require that \lstinline[style=oxcaml]{f} be global:
 \begin{lstlisting}[style=oxcaml]
-val handle_gen : (Handler(Gen).t @ local -> unit) -> ints
+  val handle_gen : (Handler(Gen).t @ local -> unit) -> ints
 \end{lstlisting}
 
 \subsection{Example: Asynchronous I/O}
@@ -624,32 +625,32 @@ write concurrent code in direct style by using an effect with a single
 \lstinline[style=oxcaml]{Await} operation that waits for a future to be
 completed:
 \begin{lstlisting}[style=oxcaml]
-module Await : sig
-  type 'a t =
-    | Await : 'a Deferred.t -> 'a t
-end
+  module Await : sig
+    type 'a t =
+      | Await : 'a Deferred.t -> 'a t
+  end
 \end{lstlisting}
 
 \begin{lstlisting}[style=oxcaml]
-module Await_eff = Reflection(Await)
+  module Await_eff = Reflection(Await)
 
-let handle_await f =
-  let rec loop = function
-    | Term(Await).Return x -> Deferred.return x
-    | Term(Await).Op(Await d, k) ->
-        Deferred.bind d (fun x -> loop (k x))
-  in
-  loop (Await_eff.reify f)
+  let handle_await f =
+    let rec loop = function
+      | Term(Await).Return x -> Deferred.return x
+      | Term(Await).Op(Await d, k) ->
+          Deferred.bind d (fun x -> loop (k x))
+    in
+    loop (Await_eff.reify f)
 
-let await h d =
-  Await_eff.perform (Await d) h
+  let await h d =
+    Await_eff.perform (Await d) h
 \end{lstlisting}
 
 Using this we can write direct-style code using asynchronous I/O:
 \begin{lstlisting}[style=oxcaml]
-let copy_file h src dst =
-  let s = await h (File.read src) in
-  await h (File.write dst s)
+  let copy_file h src dst =
+    let s = await h (File.read src) in
+    await h (File.write dst s)
 \end{lstlisting}
 
 \subsection{One-shot continuations}
@@ -673,13 +674,13 @@ A key feature of algebraic effects is how easy they are to compose. We
 can use state whilst using asynchronous I/O by simply nesting their
 handlers:
 \begin{lstlisting}[style=oxcaml]
-handle_await (fun ch ->
-  handle_state i (fun sh ->
-    List.iter files (fun fl ->
-      let s = await ch (File.read fl) in
-      let i = int_of_string s in
-      set sh (i + get sh));
-    get sh))
+  handle_await (fun ch ->
+    handle_state i (fun sh ->
+      List.iter files (fun fl ->
+        let s = await ch (File.read fl) in
+        let i = int_of_string s in
+        set sh (i + get sh));
+      get sh))
 \end{lstlisting}
 
 This relies on the fact that the \lstinline[style=oxcaml]{handle_state}
@@ -690,15 +691,15 @@ local computation that closes over the local handler value
 If we tried to do something similar using our
 \lstinline[style=oxcaml]{handle_gen} handler, then we get and error:
 \begin{lstlisting}[style=oxcaml]
-handle_await (fun ch ->
-  handle_gen i (fun gh ->
-    List.iter files (fun fl ->
-      let s = await ch (File.read fl) in
-      let i = int_of_string s in
-      gen gh i)))
-(*@ \textcolor{red}{Error: let s = await ch (File.read fl) in} @*)
-                     (*@ \textcolor{red}{\textasciicircum\textasciicircum} @*)
-(*@ \textcolor{red}{ This value is local and would escape its region.} @*)
+  handle_await (fun ch ->
+    handle_gen i (fun gh ->
+      List.iter files (fun fl ->
+        let s = await ch (File.read fl) in
+        let i = int_of_string s in
+        gen gh i)))
+  (*@ \textcolor{red}{Error: let s = await ch (File.read fl) in} @*)
+                       (*@ \textcolor{red}{\textasciicircum\textasciicircum} @*)
+  (*@ \textcolor{red}{ This value is local and would escape its region.} @*)
 \end{lstlisting}
 
 We could change the definition of \lstinline[style=oxcaml]{handle_gen} to
@@ -731,17 +732,17 @@ additional capability in our effect reflection API. We need to be able
 to manipulate \lstinline[style=oxcaml]{Handler} types for sums of
 effects.
 \begin{lstlisting}[style=oxcaml]
-module Sum (L : Op) (R : Op) : sig
-  type 'a t =
-    | Left : 'a L.t -> 'a t
-    | Right : 'a R.t -> 'a t
-end
+  module Sum (L : Op) (R : Op) : sig
+    type 'a t =
+      | Left : 'a L.t -> 'a t
+      | Right : 'a R.t -> 'a t
+  end
 
-module Project(L : Op) (R : Op) : sig
-  val outl : Handler(Sum(L)(R)).t -> Handler(L).t
+  module Project(L : Op) (R : Op) : sig
+    val outl : Handler(Sum(L)(R)).t -> Handler(L).t
 
-  val outr : Handler(Sum(L)(R)).t -> Handler(R).t
-end
+    val outr : Handler(Sum(L)(R)).t -> Handler(R).t
+  end
 \end{lstlisting}
 
 \lstinline[style=oxcaml]{Sum(L)(R)} is the coproduct of the effects
@@ -752,21 +753,21 @@ recursive datatype that is built from the terms of one of the effects
 and the operations of the other\cite{hyland2006combining}. We can define
 this type and associated isomorphism as:
 \begin{lstlisting}[style=oxcaml]
-module Half_term (L : Op) (R : Op) : sig
-  type 'a t =
-    | Return : 'a @@ global -> 'a t
-    | Op : 'r R.t @@ global * ('r -> Handler(L).t @ local -> 'a t) -> 'a t
-end
+  module Half_term (L : Op) (R : Op) : sig
+    type 'a t =
+      | Return : 'a @@ global -> 'a t
+      | Op : 'r R.t @@ global * ('r -> Handler(L).t @ local -> 'a t) -> 'a t
+  end
 
-module Half_reflection (L : Op) (R : Op) : sig
-  val reify :
-    (Handler(L).t @ local -> Handler(R).t @ local -> 'a)
-    -> Handler(L).t @ local -> 'a Half_term(L)(R).t
+  module Half_reflection (L : Op) (R : Op) : sig
+    val reify :
+      (Handler(L).t @ local -> Handler(R).t @ local -> 'a)
+      -> Handler(L).t @ local -> 'a Half_term(L)(R).t
 
-  val reflect :
-    (Handler(L).t @ local -> 'a Half_term(L)(R).t)
-    -> Handler(L).t @ local -> Handler(R).t @ local -> 'a
-end
+    val reflect :
+      (Handler(L).t @ local -> 'a Half_term(L)(R).t)
+      -> Handler(L).t @ local -> Handler(R).t @ local -> 'a
+  end
 \end{lstlisting}
 
 Note that the key difference between
@@ -776,27 +777,27 @@ after an operation requires passing in a local
 \lstinline[style=oxcaml]{Handler(L).t} again.
 
 %\begin{lstlisting}[style=oxcaml]
-%module Half_reflection (L : Op) (R : Op) : sig
-%  module L_eff = Reflection(L)
-%  module R_eff = Reflection(R)
-%  module Sum_eff = Reflection(Sum(L)(R))
-%  module Proj = Project(L)(R)
+%  module Half_reflection (L : Op) (R : Op) : sig
+%    module L_eff = Reflection(L)
+%    module R_eff = Reflection(R)
+%    module Sum_eff = Reflection(Sum(L)(R))
+%    module Proj = Project(L)(R)
 %
-%  let reify (f : Handler(L).t @ local -> Handler(R).t @ local -> 'a) lh =
-%    let rec loop lh = function
-%      | Term(Sum(L)(R)).Return ->
-%          Half_term(L)(R).Return v
-%      | Term(Sum(L)(R)).Op(Left op, k) ->
-%          loop lh (k (L_eff.perform op lh))
-%      | Term(Sum(L)(R)).Op(Right op, k) ->
-%          Half_term(L)(R).Op(op, (fun res lh -> loop lh (k res)))
-%    in
-%    loop (Sum_eff.reify (fun h -> f (Proj.outl h) (Proj.outr h))) lh
+%    let reify (f : Handler(L).t @ local -> Handler(R).t @ local -> 'a) lh =
+%      let rec loop lh = function
+%        | Term(Sum(L)(R)).Return ->
+%            Half_term(L)(R).Return v
+%        | Term(Sum(L)(R)).Op(Left op, k) ->
+%            loop lh (k (L_eff.perform op lh))
+%        | Term(Sum(L)(R)).Op(Right op, k) ->
+%            Half_term(L)(R).Op(op, (fun res lh -> loop lh (k res)))
+%      in
+%      loop (Sum_eff.reify (fun h -> f (Proj.outl h) (Proj.outr h))) lh
 %
-%  let rec reflect (f : Handler(L).t @ local -> 'a Half_term(L)(R).t) lh rh =
-%    match f lh with
-%    | Return x -> x
-%    | Op(op, k) -> reflect (k (R_eff.perform op rh)) lh rh
+%    let rec reflect (f : Handler(L).t @ local -> 'a Half_term(L)(R).t) lh rh =
+%      match f lh with
+%      | Return x -> x
+%      | Op(op, k) -> reflect (k (R_eff.perform op rh)) lh rh
 %end
 %\end{lstlisting}
 
@@ -804,25 +805,25 @@ Now we can use this machinery to conveniently build a handler of
 \lstinline[style=oxcaml]{Gen} that also forwards operations from
 \lstinline[style=oxcaml]{Await}:
 \begin{lstlisting}[style=oxcaml]
-module Await_gen_eff = Half_reflection(Await)(Gen)
+  module Await_gen_eff = Half_reflection(Await)(Gen)
 
-type aints =
-  | Finished
-  | More of int * (Handler(Await).t @ local -> aints)
+  type aints =
+    | Finished
+    | More of int * (Handler(Await).t @ local -> aints)
 
-let handle_gen_in_await f ah =
-    let rec loop = function
-    | Half_term(Await)(Gen).Return () -> Finished
-    | Half_term(Await)(Gen).Op(Gen i, k) -> More(i, fun ah -> loop (k () ah))
-  in
-  loop (Await_gen_eff.reify f ah)
+  let handle_gen_in_await f ah =
+      let rec loop = function
+      | Half_term(Await)(Gen).Return () -> Finished
+      | Half_term(Await)(Gen).Op(Gen i, k) -> More(i, fun ah -> loop (k () ah))
+    in
+    loop (Await_gen_eff.reify f ah)
 \end{lstlisting}
 where \lstinline[style=oxcaml]{handle_gen_in_await} has the type:
 \begin{lstlisting}[style=oxcaml]
-val handle_gen_in_await :
-  (Handler(Await).t @ local -> Handler(Gen).t @ local -> 'a)
-  -> Handler(Await).t @ local
-  -> aints
+  val handle_gen_in_await :
+    (Handler(Await).t @ local -> Handler(Gen).t @ local -> 'a)
+    -> Handler(Await).t @ local
+    -> aints
 \end{lstlisting}
 
 The literature on lexical effect handlers often ignores this issue. For
@@ -856,36 +857,36 @@ We can support parameterized effects by adding a module type for them,
 along with parameterized versions of \lstinline[style=oxcaml]{Term} and
 \lstinline[style=oxcaml]{Handler}:
 \begin{lstlisting}[style=oxcaml]
-module type Op1 = sig type ('a, 'e) t end
+  module type Op1 = sig type ('a, 'e) t end
 
-module Term1 (O : Op1) : sig
-  type ('a, 'e) t =
-    | Return : 'a @@ global -> 'a t
-    | Op : ('r, 'e) O.t @@ global * ('r -> 'a t) -> 'a t
-end
+  module Term1 (O : Op1) : sig
+    type ('a, 'e) t =
+      | Return : 'a @@ global -> 'a t
+      | Op : ('r, 'e) O.t @@ global * ('r -> 'a t) -> 'a t
+  end
 
-module Handler1(O : Op1) : sig
-  type 'e t
-end
+  module Handler1(O : Op1) : sig
+    type 'e t
+  end
 \end{lstlisting}
 with a corresponding parameterized version of
 \lstinline[style=oxcaml]{Reflection}. We can then define a parameterized
 state effect:
 \begin{lstlisting}[style=oxcaml]
-module State = struct
-  type ('a, 'b) t =
-    | Get : 'b t
-    | Set : 'b -> unit t
-end
+  module State = struct
+    type ('a, 'b) t =
+      | Get : 'b t
+      | Set : 'b -> unit t
+  end
 \end{lstlisting}
 and write a handler that provides a parameterized interface for the
 state effect:
 \begin{lstlisting}[style=oxcaml]
-type 's handler
+  type 's handler
 
-val handle : ('s handler @ local -> 'a) @ local -> 's -> 'a
-val get : 's handler @ local -> 's
-val set : 's handler @ local -> 's -> unit
+  val handle : ('s handler @ local -> 'a) @ local -> 's -> 'a
+  val get : 's handler @ local -> 's
+  val set : 's handler @ local -> 's -> unit
 \end{lstlisting}
 
 The need for a new copy of the interface for each type constructor arity
