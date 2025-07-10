@@ -255,9 +255,10 @@ OCaml one above:
   end
 
   module State_eff = Reflection(State)
+  open Term(State)
 
   let handle_state (f : Handler(State).t @ local -> 'a) (i : int) : 'a =
-    let rec loop s : 'a Term(State).t @ local -> 'a  = function
+    let rec loop (s : int) : 'a Term(State).t @ local -> 'a  = function
       | Return x -> x
       | Op(Get, k) -> loop s (k s)
       | Op(Set s', k) -> loop s' (k ())
@@ -357,7 +358,7 @@ returns, so local values cannot be returned from functions.
     o
   (*@ \textcolor{red}{Error: o} @*)
          (*@ \textcolor{red}{\textasciicircum} @*)
-  (*@ \textcolor{red}{This value is local and would escape its region.} @*)
+  (*@ \textcolor{red}{This value escapes its region.} @*)
 \end{lstlisting}
 
 The \lstinline[style=oxcaml]{exclave} construct allows functions to
@@ -475,10 +476,10 @@ individual operations as opposed to full terms.
 \begin{lstlisting}[style=oxcaml]
   module Reflection (O : Op) : sig
     val reify : (Handler(O).t @ local -> 'a) -> 'a Term(O).t
-  
+
     val reify_local :
       (Handler(O).t @ local -> 'a) @ local -> 'a Term(O).t @ local
-  
+
     val perform : 'a O.t -> (Handler(O).t @ local -> 'a)
   end
 \end{lstlisting}
@@ -511,12 +512,13 @@ Then we instantiate the reflection isomorphism for that effect and use
 it to write a handler:
 \begin{lstlisting}[style=oxcaml]
   module State_eff = Reflection(State)
+  open Term(State)
 
-  let handle_state f i =
-    let rec loop s = function
-      | Term(State).Return x -> x
-      | Term(State).Op(Get, k) -> loop s (k s)
-      | Term(State).Op(Set s', k) -> loop s' (k ())
+  let handle_state i f =
+    let rec loop (s : int) = function
+      | Return x -> x
+      | Op(Get, k) -> loop s (k s)
+      | Op(Set s', k) -> loop s' (k ())
     in
     loop i (State_eff.reify_local f)
 \end{lstlisting}
@@ -535,7 +537,7 @@ Giving us the following interface:
 \begin{lstlisting}[style=oxcaml]
   type handler
 
-  val handle_state : (handler @ local -> 'a) @ local -> int -> 'a
+  val handle_state : int -> (handler @ local -> 'a) @ local -> 'a
   val get : handler @ local -> int
   val set : handler @ local -> int -> unit
 \end{lstlisting}
@@ -548,7 +550,7 @@ and locality:
 \begin{lstlisting}[style=oxcaml]
   type handler = int ref
 
-  let handle_state f i = f (ref i)
+  let handle_state i f = f (ref i)
   let get r = !r
   let set r i = r := i
 \end{lstlisting}
@@ -567,7 +569,7 @@ The following function uses state to calculate the total of a list of
 integers:
 \begin{lstlisting}[style=oxcaml]
   let total l =
-    handle_state (fun h ->
+    handle_state 0 (fun h ->
       List.iter (fun x -> set h (get h + x)) l;
       get h)
 \end{lstlisting}
@@ -603,6 +605,7 @@ Along with a handler that turns computations using
 \lstinline[style=oxcaml]{Gen} into streams of integers.
 \begin{lstlisting}[style=oxcaml]
   module Gen_eff = Reflection(Gen)
+  open Term(Gen)
 
   type ints =
     | Finished
@@ -610,10 +613,11 @@ Along with a handler that turns computations using
 
   let handle_gen f =
     let rec loop = function
-      | Term(Gen).Return () -> Finished
-      | Term(Gen).Op(Gen i, k) -> More(i, k)
+      | Return () -> Finished
+      | Op(Gen i, k) -> More(i, fun () -> loop (k ()))
     in
     loop (Gen_eff.reify f)
+
 \end{lstlisting}
 
 Unlike the state handler, here we must use
@@ -646,11 +650,12 @@ completed:
 
 \begin{lstlisting}[style=oxcaml]
   module Await_eff = Reflection(Await)
+  open Term(Await)
 
   let handle_await f =
     let rec loop = function
-      | Term(Await).Return x -> Deferred.return x
-      | Term(Await).Op(Await d, k) ->
+      | Return x -> Deferred.return x
+      | Op(Await d, k) ->
           Deferred.bind d (fun x -> loop (k x))
     in
     loop (Await_eff.reify f)
@@ -689,10 +694,10 @@ handlers:
 \begin{lstlisting}[style=oxcaml]
   handle_await (fun ch ->
     handle_state i (fun sh ->
-      List.iter files (fun fl ->
+      List.iter (fun fl ->
         let s = await ch (File.read fl) in
         let i = int_of_string s in
-        set sh (i + get sh));
+        set sh (i + get sh)) files;
       get sh))
 \end{lstlisting}
 
@@ -705,11 +710,11 @@ If we tried to do something similar using our
 \lstinline[style=oxcaml]{handle_gen} handler, then we get an error:
 \begin{lstlisting}[style=oxcaml]
   handle_await (fun ch ->
-    handle_gen i (fun gh ->
-      List.iter files (fun fl ->
+    handle_gen (fun gh ->
+      List.iter (fun fl ->
         let s = await ch (File.read fl) in
         let i = int_of_string s in
-        gen gh i)))
+        gen gh i) files))
   (*@ \textcolor{red}{Error: let s = await ch (File.read fl) in} @*)
                        (*@ \textcolor{red}{\textasciicircum\textasciicircum} @*)
   (*@ \textcolor{red}{ This value is local and would escape its region.} @*)
@@ -752,9 +757,9 @@ effects.
   end
 
   module Project(L : Op) (R : Op) : sig
-    val outl : Handler(Sum(L)(R)).t -> Handler(L).t
+    val outl : Handler(Sum(L)(R)).t @ local -> Handler(L).t @ local
 
-    val outr : Handler(Sum(L)(R)).t -> Handler(R).t
+    val outr : Handler(Sum(L)(R)).t @ local -> Handler(R).t @ local
   end
 \end{lstlisting}
 
@@ -789,36 +794,12 @@ Note that the key difference between
 after an operation requires passing in a local
 \lstinline[style=oxcaml]{Handler(L).t} again.
 
-%\begin{lstlisting}[style=oxcaml]
-%  module Half_reflection (L : Op) (R : Op) : sig
-%    module L_eff = Reflection(L)
-%    module R_eff = Reflection(R)
-%    module Sum_eff = Reflection(Sum(L)(R))
-%    module Proj = Project(L)(R)
-%
-%    let reify (f : Handler(L).t @ local -> Handler(R).t @ local -> 'a) lh =
-%      let rec loop lh = function
-%        | Term(Sum(L)(R)).Return ->
-%            Half_term(L)(R).Return v
-%        | Term(Sum(L)(R)).Op(Left op, k) ->
-%            loop lh (k (L_eff.perform op lh))
-%        | Term(Sum(L)(R)).Op(Right op, k) ->
-%            Half_term(L)(R).Op(op, (fun res lh -> loop lh (k res)))
-%      in
-%      loop (Sum_eff.reify (fun h -> f (Proj.outl h) (Proj.outr h))) lh
-%
-%    let rec reflect (f : Handler(L).t @ local -> 'a Half_term(L)(R).t) lh rh =
-%      match f lh with
-%      | Return x -> x
-%      | Op(op, k) -> reflect (k (R_eff.perform op rh)) lh rh
-%end
-%\end{lstlisting}
-
 Now we can use this machinery to conveniently build a handler of
 \lstinline[style=oxcaml]{Gen} that also forwards operations from
 \lstinline[style=oxcaml]{Await}:
 \begin{lstlisting}[style=oxcaml]
   module Await_gen_eff = Half_reflection(Await)(Gen)
+  open Half_term(Await)(Gen)
 
   type aints =
     | Finished
@@ -826,15 +807,15 @@ Now we can use this machinery to conveniently build a handler of
 
   let handle_gen_in_await f ah =
       let rec loop = function
-      | Half_term(Await)(Gen).Return () -> Finished
-      | Half_term(Await)(Gen).Op(Gen i, k) -> More(i, fun ah -> loop (k () ah))
+      | Return () -> Finished
+      | Op(Gen i, k) -> More(i, fun ah -> loop (k () ah))
     in
     loop (Await_gen_eff.reify f ah)
 \end{lstlisting}
 where \lstinline[style=oxcaml]{handle_gen_in_await} has the type:
 \begin{lstlisting}[style=oxcaml]
   val handle_gen_in_await :
-    (Handler(Await).t @ local -> Handler(Gen).t @ local -> 'a)
+    (Handler(Await).t @ local -> Handler(Gen).t @ local -> unit)
     -> Handler(Await).t @ local
     -> aints
 \end{lstlisting}
@@ -874,8 +855,8 @@ along with parameterized versions of \lstinline[style=oxcaml]{Term} and
 
   module Term1 (O : Op1) : sig
     type ('a, 'e) t =
-      | Return : 'a @@ global -> 'a t
-      | Op : ('r, 'e) O.t @@ global * ('r -> 'a t) -> 'a t
+      | Return : 'a @@ global -> ('a, 'e) t
+      | Op : ('r, 'e) O.t @@ global * ('r -> ('a, 'e) t) -> ('a, 'e) t
   end
 
   module Handler1(O : Op1) : sig
@@ -887,9 +868,9 @@ with a corresponding parameterized version of
 state effect:
 \begin{lstlisting}[style=oxcaml]
   module State = struct
-    type ('a, 'b) t =
-      | Get : 'b t
-      | Set : 'b -> unit t
+    type ('a, 's) t =
+      | Get : ('s, 's) t
+      | Set : 's -> (unit, 's) t
   end
 \end{lstlisting}
 and write a handler that provides a parameterized interface for the
@@ -897,7 +878,7 @@ state effect:
 \begin{lstlisting}[style=oxcaml]
   type 's handler
 
-  val handle : ('s handler @ local -> 'a) @ local -> 's -> 'a
+  val handle_state : 's -> ('s handler @ local -> 'a) @ local -> 'a
   val get : 's handler @ local -> 's
   val set : 's handler @ local -> 's -> unit
 \end{lstlisting}
@@ -1851,11 +1832,16 @@ $\reifyc{\Sigma}{}$ gives us our semantics for reification.
 
 We can implement the interface from Section \ref{sec:interface} directly
 in terms of OCaml's untracked effect
-handlers~\cite{Sivaramakrishnan2021retrofitting}. The trick is to
-generate a fresh effect constructor for each reification, pass that
-constructor around as part of the \lstinline[style=oxcaml]{handler}, and
-then use it to perform operations during reflection. The full implementation
-is given in Fig.\ref{fig:implementation}.
+handlers~\cite{Sivaramakrishnan2021retrofitting}\footnote{For
+  convenience, we use the new handler syntax from OCaml 5.3. However,
+  the most recently released version of OxCaml is based on OCaml 5.2 so
+  the actual implementation uses
+  \lstinline[style=oxcaml]{Effect.Deep.match_with} instead}. The trick
+is to generate a fresh effect constructor for each reification, pass
+that constructor around as part of the
+\lstinline[style=oxcaml]{handler}, and then use it to perform operations
+during reflection. The full implementation is given in
+Fig.\ref{fig:implementation}.
 
 \begin{figure}
 \begin{lstlisting}[style=oxcaml]
@@ -1866,26 +1852,28 @@ module Handler (O : Op) = struct
 end
 
 module Reflection (O : Op) = struct
+  open Term(O)
+  open Handler(O)
 
   let reify f =
-    let module Handler =
-      struct type 'a Effect.t += H : 'a O.t -> 'a Effect.t end
+    let module Eff =
+      struct type 'a Effect.t += C : 'a O.t -> 'a Effect.t end
     in
-    let handler : Handler(O).t =
-      { perform = fun o -> Effect.perform (Handler.H o) }
+    let handler =
+      { perform = fun o -> Effect.perform (Eff.C o) }
     in
     match f handler with
     | v -> Return v
-    | effect Handler.H o, k -> Op(o, fun x -> Effect.continue k x)
+    | effect Eff.C o, k -> Op(o, fun x -> Effect.continue k x)
 
   let reify_local f = exclave
-    let module Handler =
-      struct type 'a Effect.t += H : 'a O.t -> 'a Effect.t end
+    let module Eff =
+      struct type 'a Effect.t += C : 'a O.t -> 'a Effect.t end
     in
-    let handler = { perform = fun o -> Effect.perform (Handler.H o) } in
+    let handler = { perform = fun o -> Effect.perform (Eff.C o) } in
     match f handler with
     | v -> Return v
-    | effect Handler.H o, k -> Op(o, fun x -> Effect.continue k x)
+    | effect Eff.C o, k -> Op(o, fun x -> Effect.continue k x)
 
   let perform t =
    fun h -> h.perform t
@@ -1893,12 +1881,13 @@ module Reflection (O : Op) = struct
 end
 
 module Project (L : Op) (R : Op) = struct
+  open Sum(L)(R)
 
-  let outl {perform} =
-    {perform = fun op -> perform (Sum(L)(R).Left op)}
+  let outl ({perform} : Handler(Sum(L)(R)).t) : Handler(L).t =
+    exclave {perform = fun op -> perform (Left op)}
 
-  let outr {perform} =
-    {perform = fun op -> perform (Sum(L)(R).Right op)}
+  let outr ({perform} : Handler(Sum(L)(R)).t) : Handler(R).t =
+    exclave {perform = fun op -> perform (Right op)}
 
 end
 \end{lstlisting}
@@ -1921,7 +1910,6 @@ traversing the stack. This optimization maintains the same interface
 while providing constant-time operation dispatch. It is roughly the
 implementation technique described by Ma et al.~\cite{ma2024lexical}.
 
-\pagebreak
 \section{Related work}
 \label{sec:related-work}
 
