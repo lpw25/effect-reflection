@@ -93,6 +93,7 @@
 \newcommand{\lbind}[3]{\ccons{#1}{#2\types#3}}
 \newcommand{\gbind}[3]{\ccons{#1}{#2\gtypes#3}}
 \newcommand{\cdiv}[1]{#1/\Box}
+\newcommand{\bdiv}[1]{\cdiv{\mathop{!_{#1}}}}
 \newcommand{\return}[1]{\mathop{\mathrm{return}} #1}
 \newcommand{\letv}[3]{\mathop{\mathrm{let}} #1 = #2 \mathop{\mathrm{in}} #3}
 \newcommand{\gbox}[1]{\mathop{\mathrm{box}} #1}
@@ -138,13 +139,13 @@
     \yoneda{\Sigma} \rightarrow \glob \tau
   \end{equation*}
   where $\ind{\Sigma}(\glob \tau)$ is the free algebra of $\Sigma$ at
-  $\glob \tau$ \textbf{--} sometimes called the \emph{freer monad} of
-  $\Sigma$, $\yoneda{\Sigma}$ is a type representing how to inject terms
-  of $\Sigma$ into the current ambient monad, and $\glob$ is a comonadic
-  \emph{global modality} used to track which values do not depend on the
-  ambient monad. This isomorphism emerges naturally from a denotational
-  semantics for algebraic effects in terms of presheaves over bounded
-  Lawvere theories.
+  $\glob \tau$, $\yoneda{\Sigma}$ is a type representing how to inject
+  terms of $\Sigma$ into the current ambient monad, and $\glob$ is a
+  comonadic \emph{global modality} used to track which values do not
+  depend on the ambient monad. $\ind{\Sigma}$ is sometimes called the
+  \emph{freer monad} of $\Sigma$. This isomorphism emerges naturally
+  from a denotational semantics for algebraic effects in terms of
+  presheaves over bounded Lawvere theories.
 
   Effect reflection provides all the expressiveness of typed algebraic
   effects without requiring language-level support for effect systems. We
@@ -207,23 +208,34 @@ class functions.
 
 \subsection{Locality and effect reflection}
 Locality captures the general idea of a value depending on some notion
-of ``location''. We can represent it in a type system using a comonadic
-\emph{global modality} $\glob$ that tracks which values do not depend on
-their location. Our key insight is that the ambient monad can be viewed
-as a form of location and controlled using $\glob$.
+of ``location''. Our key insight is that the ambient monad can be viewed
+as a form of location, allowing us to reuse existing type system
+features for tracking locality.
 
-Based on this insight, we present \emph{effect reflection}, providing,
-for any algebraic signature $\Sigma$ and type $\tau$, an isomorphism:
+We can represent locality in a type system using a comonadic
+\emph{global modality} $\glob$ that tracks which values do \emph{not}
+depend on their location. Values of an ordinary type $\tau$ are assumed
+to potentially depend on the current location, whereas values of the
+global type $\glob \tau$ are known not to.
+
+In our setting being global means not depending on the ambient
+monad. For example, $A \rightarrow B$ represents computations that may
+use operations from the ambient monad, while $\glob (A \rightarrow B)$
+contains only pure computations that ignore the ambient monad.
+
+Based on this relationship between locality and effects, we present
+\emph{effect reflection}, providing, for any algebraic signature
+$\Sigma$ and type $\tau$, an isomorphism:
 \begin{equation*}
   \ind{\Sigma}(\glob \tau)
   \qquad \cong \qquad
   \yoneda{\Sigma} \rightarrow \glob \tau
 \end{equation*}
 where $\ind{\Sigma}(\glob \tau)$ is an inductive type representing the
-free algebra of $\Sigma$ at $\glob \tau$ \textbf{--} sometimes called
-the \emph{freer monad} of $\Sigma$, and $\yoneda{\Sigma}$ is a type
-representing how to inject terms of $\Sigma$ into the current ambient
-monad.
+free algebra of $\Sigma$ at $\glob \tau$, and $\yoneda{\Sigma}$ is a
+type representing how to inject terms of $\Sigma$ into the current
+ambient monad. $\ind{\Sigma}$ is sometimes called the \emph{freer monad}
+of $\Sigma$~\cite{kiselyov2015freer}.
 
 This isomorphism reveals that effectful computations can be represented
 as ordinary functions, enabling direct-style programming with full
@@ -242,7 +254,7 @@ e.g. \lstinline[style=oxcaml]{t @ local -> s @ local}.
 Using this support, we can provide effect reflection as a simple API.
 We represent algebraic signatures as modules with a single type
 constructor, providing $\ind{\Sigma}$ as
-\lstinline[style=oxcaml]{'a Term(Sigma).t} and $\yoneda{Sigma}$ as
+\lstinline[style=oxcaml]{'a Term(Sigma).t} and $\yoneda{\Sigma}$ as
 \lstinline[style=oxcaml]{Handler(Sigma).t}.
 
 For example, we can use it to write an effect handler equivalent to the
@@ -255,7 +267,6 @@ OCaml one above:
   end
 
   module State_eff = Reflection(State)
-  open Term(State)
 
   let handle_state (f : Handler(State).t @ local -> 'a) (i : int) : 'a =
     let rec loop (s : int) : 'a Term(State).t @ local -> 'a  = function
@@ -294,8 +305,8 @@ effects precise.
 
 The key idea is to index the semantics by the ambient monad: rather than
 interpreting types as sets, we interpret them as functions from ambient
-monads to sets. We represent ambient monads using their corresponding
-algebraic theories in the framework of bounded Lawvere theories.
+monads to sets. We represent ambient monads by their corresponding
+algebraic theories using bounded Lawvere theories.
 
 The key constructs of effect reflection are then defined as follows:
 \begin{itemize}
@@ -349,7 +360,7 @@ a variety of different properties, but here we are only interested in
 one of them: \emph{locality}. Ignoring the other axes, a mode is either
 \lstinline[style=oxcaml]{local} or \lstinline[style=oxcaml]{global}.
 
-Locality tracks whether a value can 'escape' the current
+Locality tracks whether a value can escape the current
 \emph{region}. By default, the current region ends when a function
 returns, so local values cannot be returned from functions.
 \begin{lstlisting}[style=oxcaml]
@@ -360,7 +371,6 @@ returns, so local values cannot be returned from functions.
          (*@ \textcolor{red}{\textasciicircum} @*)
   (*@ \textcolor{red}{This value escapes its region.} @*)
 \end{lstlisting}
-
 The \lstinline[style=oxcaml]{exclave} construct allows functions to
 return local values.
 \begin{lstlisting}[style=oxcaml]
@@ -389,12 +399,13 @@ For convenience, and backwards compatibility with OCaml, either mode can
 be omitted, in which case it defaults to
 \lstinline[style=oxcaml]{global}.
 
-By default, modes are deep: a local \lstinline[style=oxcaml]{string list}
-is a local list of local strings. However, the depth that a mode applies
-can be controlled via \emph{modalities}. Record fields can be annotated
-with \lstinline[style=oxcaml]{global} modality to indicate that the
-contents of the field are global even when the surrounding record is
-local. For example:
+By default, modes are deep: a local
+\lstinline[style=oxcaml]{string list} is a local list of local
+strings. However, the depth that a mode applies can be controlled via
+\emph{modalities}. Record fields can be annotated with the
+\lstinline[style=oxcaml]{global} modality to indicate that the contents
+of the field are global even when the surrounding record is local. For
+example:
 \begin{lstlisting}[style=oxcaml]
   type 'a gbl = { g : 'a @@ global }
 \end{lstlisting}
@@ -452,12 +463,12 @@ $\yoneda{\Sigma}$
 For an effect signature \lstinline[style=oxcaml]{O},
 \lstinline[style=oxcaml]{'a Term(O).t} is the type of terms in the free
 algebra of the corresponding effect -- otherwise known as the freer
-monad~\cite{kiselyov2015freer}. \lstinline[style=oxcaml]{Handler(O).t} is
-the type of mappings from the operations of \lstinline[style=oxcaml]{O}
-into the operations of the current ambient monad. Alternatively,
-\lstinline[style=oxcaml]{Handler(O).t} can be described as representing
-algebraic effect handlers that are handling the current computation --
-hence the name.
+monad~\cite{kiselyov2015freer}. \lstinline[style=oxcaml]{Handler(O).t}
+is the type of mappings from the operations of
+\lstinline[style=oxcaml]{O} into the operations of the current ambient
+monad. Alternatively, \lstinline[style=oxcaml]{Handler(O).t} can be
+described as representing algebraic effect handlers that are handling
+the current computation.
 
 The main piece of the API is a family of isomorphisms:
 \begin{equation*}
@@ -692,10 +703,10 @@ A key feature of algebraic effects is how easy they are to compose. We
 can use state whilst using asynchronous I/O by simply nesting their
 handlers:
 \begin{lstlisting}[style=oxcaml]
-  handle_await (fun ch ->
+  handle_await (fun ah ->
     handle_state i (fun sh ->
       List.iter (fun fl ->
-        let s = await ch (File.read fl) in
+        let s = await ah (File.read fl) in
         let i = int_of_string s in
         set sh (i + get sh)) files;
       get sh))
@@ -703,19 +714,19 @@ handlers:
 
 This relies on the fact that the \lstinline[style=oxcaml]{handle_state}
 uses \lstinline[style=oxcaml]{reify_local} and so is able to operate on a
-local computation that closes over the local handler value
-\lstinline[style=oxcaml]{ch}.
+local computation that closes over the local await handler value
+\lstinline[style=oxcaml]{ah}.
 
 If we tried to do something similar using our
 \lstinline[style=oxcaml]{handle_gen} handler, then we get an error:
 \begin{lstlisting}[style=oxcaml]
-  handle_await (fun ch ->
+  handle_await (fun ah ->
     handle_gen (fun gh ->
       List.iter (fun fl ->
-        let s = await ch (File.read fl) in
+        let s = await ah (File.read fl) in
         let i = int_of_string s in
         gen gh i) files))
-  (*@ \textcolor{red}{Error: let s = await ch (File.read fl) in} @*)
+  (*@ \textcolor{red}{Error: let s = await ah (File.read fl) in} @*)
                        (*@ \textcolor{red}{\textasciicircum\textasciicircum} @*)
   (*@ \textcolor{red}{ This value is local and would escape its region.} @*)
 \end{lstlisting}
@@ -741,9 +752,9 @@ like to be able to freely pass this stream around. In particular, we do
 not wish the stream to be prevented from escaping the scope of the
 current \lstinline[style=oxcaml]{Await} handler.  However forcing parts
 of the stream requires performing additional
-\lstinline[style=oxcaml]{Await} operations. Whenever we force part of the
-stream we'll need to provide a handler for those
-\lstinline[style=oxcaml]{Await} operations.
+\lstinline[style=oxcaml]{Await} operations, so whenever we force part of
+the stream we'll need to provide a handler for those
+\lstinline[style=oxcaml]{Await} operations again.
 
 To achieve this more general form of composition, we require an
 additional capability in our effect reflection API. We need to be able
@@ -826,14 +837,14 @@ supported directly nesting effect handlers and had no mechanism for
 writing a composable handler for generators that could be moved between
 different underlying asynchronous I/O handlers.
 
-This is because this composition requiring forwarding is much less
-common than nesting and it fundamentally requires each use of the
-\lstinline[style=oxcaml]{Await} operation to perform work proportional to
-the number of handlers it is forwarded through -- often referred to as a
-``linear search''. There has been a tendency to treat this linear search
-as some form of deficiency of algebraic effect handlers, but it is
-simply a classic trade-off between the extra expressivity allowed by an
-indirection and the runtime cost of traversing that indirection. With
+This is because composition requiring forwarding is much less common
+than nesting and it fundamentally requires each use of the
+\lstinline[style=oxcaml]{Await} operation to perform work proportional
+to the number of handlers it is forwarded through -- often referred to
+as a ``linear search''. There has been a tendency to treat this linear
+search as some form of deficiency of algebraic effect handlers, but it
+is simply a classic trade-off between the extra expressivity allowed by
+an indirection and the runtime cost of traversing that indirection. With
 our effect reflection API we are able to use nesting for the cases that
 it supports -- avoiding the cost of the indirection -- and fall back to
 forwarding for the more general cases.
@@ -955,7 +966,7 @@ rules for the base language are shown in Fig.\ref{fig:typing-standard}.
            \lbind{\Gamma}{x_2}{\tau_2} \turnc c_2 \types \tau_3}
 {\Gamma \turnc \case{v}{x_1}{c_1}{x_2}{c_2} \types \tau_3}
 \end{mathpar}
-\caption{Standard syntax and typing rules}
+\caption{Basic syntax and typing rules}
 \label{fig:typing-standard}
 \end{figure}
 
@@ -1020,7 +1031,7 @@ Fig.\ref{fig:typing-locality}
 
 Effect reflection requires, for any signature $\Sigma$ that is being
 reflected, an inductive type $\ind{\Sigma}$ to represent the free
-algebra of $\Sigma$. $\ind{\Sigma}$ is sometimes called the \emph{freer
+algebras of $\Sigma$. $\ind{\Sigma}$ is sometimes called the \emph{freer
   monad} of $\Sigma$~\cite{kiselyov2015freer}.
 
 As is standard for algebraic effects systems, we only support handlers
@@ -1046,11 +1057,12 @@ parameterized by $\tau_p$ and with arity $\tau_a$.
 We also allow the sum of two signatures $\Sigma_1 + \Sigma_2$ to be used
 as a signature. It has operations:
 \begin{align*}
-\{ \; &\mathrm{left}(op_{1,1}) \types \tau_{p_{1,1}} \rightarrowtail \tau_{a_{1,1}} \seq
-        \ldots \seq
-        \mathrm{left}(op_{1, n}) \types \tau_{p_{1, n}} \rightarrowtail \tau_{a_{1, n}} \\
-      &\mathrm{right}(op_{2, 1}) \types \tau_{p_{2, 1}} \rightarrowtail \tau_{a_{2,1}} \seq
-        \ldots \seq
+\{ \; &\mathrm{left}(op_{1,1}) \types \tau_{p_{1,1}} \rightarrowtail \tau_{a_{1,1}}
+        \seq \ldots \seq
+        \mathrm{left}(op_{1, n}) \types \tau_{p_{1, n}} \rightarrowtail \tau_{a_{1, n}}
+        \seq \\
+      &\mathrm{right}(op_{2, 1}) \types \tau_{p_{2, 1}} \rightarrowtail \tau_{a_{2,1}}
+        \seq \ldots \seq
         \mathrm{right}(op_{2, m}) \types \tau_{p_{2, m}} \rightarrowtail \tau_{a_{2, m}}
         \; \}
 \end{align*}
@@ -1060,8 +1072,8 @@ of $\Sigma_2$.
 
 For each operation $op \types \tau_p \rightarrowtail \tau_a$,
 $\ind{\Sigma}(\tau)$ has a constructor $\indintro{\Sigma}{op}{v_p}{v_k}$
-where $v_p \types \tau_p$ and
-$v_k \types \tau_a \rightarrow \ind{\Sigma}(\tau)$. $\ind{\Sigma}(\tau)$
+where $v_p \types \glob \tau_p$ and
+$v_k \types \glob \tau_a \rightarrow \ind{\Sigma}(\tau)$. $\ind{\Sigma}(\tau)$
 also has a constructor $\ret{\Sigma}{v}$ where $v \types \tau$.
 
 The eliminator for $\ind{\Sigma}$ is written
@@ -1117,7 +1129,8 @@ Fig.\ref{fig:typing-inductive}.
   The following value of type $\ind{\Sigma_{bs}}$ represents a
   reified computation that negates the value of the state:
   \begin{align*}
-    &\indintro{\Sigma_{bs}}{get}{()}{\abs{x_a}{1 + 1}{\\
+    &\indintro{\Sigma_{bs}}{get}{()}{\\
+      &\quad\abs{x_a}{1 + 1}{\\
         &\qquad \letv{x_n}{\app{\mathit{negate}}{x_a}}{\\
           &\qquad \indintro{\Sigma_{bs}}{set}{x_n}{\abs{x_u}{1}{\ret{\Sigma_{bs}}{x_u}}}}}}
   \end{align*}
@@ -1129,12 +1142,12 @@ Fig.\ref{fig:typing-inductive}.
 The language provides a type $\yoneda{\Sigma}$ for each $\Sigma$ to
 represent mappings from the operations of $\Sigma$ into the current
 ambient monad. Effect reflection appears in the language as two
-operations: reflection and reification. Reflection
-$\reflectraw{\Sigma}{op}$ uses a value of type $\yoneda{\Sigma}$ to map
+constructs: reflection and reification. Reflection
+$\performraw{v}{op}$ uses a value of type $\yoneda{\Sigma}$ to map
 the operation $op$ from $\Sigma$ into the ambient monad.  Reification
 $\reifyraw{\Sigma}$ extends the ambient monad with the operations from
 $\Sigma$, providing a value of type $\yoneda{\Sigma}$ for constructing
-those operations via reflection.  These operations implement the core
+those operations via reflection.  These constructs implement the core
 isomorphism of effect reflection: reification can convert functions
 $\yoneda{\Sigma} \rightarrow \glob \tau$ into terms $\ind{\Sigma}(\glob
 \tau)$, while reflection provides the inverse direction. Their syntax
@@ -1342,7 +1355,7 @@ algebraic theory and models of a theory.
 \end{definition}
 
 \begin{example}
-  The algebraic signature for boolean state is:
+  The algebraic signature for boolean state $\Sigma_{bs}$ is:
   \begin{equation*}
     \{ (\mathrm{get}, 2); (\mathrm{set\_true}, 1); (\mathrm{set\_false}, 1) \}
   \end{equation*}
@@ -1360,8 +1373,8 @@ algebraic theory and models of a theory.
 \end{definition}
 
 \begin{example}
-  The algebraic theory for boolean state adds the following equations to
-  the signature of boolean state:
+  The algebraic theory for boolean state $L_{bs}$ adds the following
+  equations to the signature of boolean state $\Sigma_{bs}$:
   \begin{align*}
     &\mathrm{set\_true}(\mathrm{get}(x, y)) = \mathrm{set\_true}(x)
     &\mathrm{set\_false}(\mathrm{get}(x, y)) = \mathrm{set\_false}(y) \\
@@ -1383,8 +1396,8 @@ algebraic theory and models of a theory.
 \end{definition}
 
 \begin{example}
-  We can model the theory of boolean state using the carrier set
-  $2 \rightarrow 2$ and interpreting the operations with:
+  We can model the theory of boolean state $L_{bs}$ using the carrier
+  set $2 \rightarrow 2$ and interpreting the operations with:
   \begin{align*}
     &\mathrm{get}(x, y) = \lambda s.\, \mif s \mthen x(s) \melse y(s) \\
     &\mathrm{set\_true}(x) = \lambda s.\, x(\mathrm{true}) \\
@@ -1405,40 +1418,57 @@ where $op \types P \rightarrowtail A$ indicates an operation $op$
 parameterized by $P$ and with arity $A$.
 
 \begin{example}
-  The algebraic signature for boolean state can be written as:
+  The algebraic signature for boolean state $\Sigma_{bs}$ can be written
+  as:
   \begin{equation*}
     \{ \mathrm{get} \types 1 \rightarrowtail 2; \mathrm{set} \types 2 \rightarrowtail 1 \}
   \end{equation*}
 \end{example}
 
-Given a Lawvere theory $L$ and a set $A$ we can construct the free
-model, or \emph{free algebra}, $T_L(A)$. The values $T_L(A)$ are terms
-built using the elements of $A$ and the operations of $L$ quotiented by
-the equations in $L$. $T_L$ is a monad and $T$ is one half of an
-equivalence between algebraic theories and algebraic monads.
+Given an algebraic theory $L$ and a set $A$ we can construct
+the free model, or \emph{free algebra}, $T_L(A)$. The values $T_L(A)$
+are terms built using the elements of $A$ and the operations of $L$
+quotiented by the equations in $L$. $T_L$ is a monad and $T$ is one half
+of an equivalence between algebraic theories and algebraic monads.
 
 \begin{example}
-  The free algebras of the theory of boolean state are equivalent
-  to the type:
+  The free algebras of the signature of boolean state $T_{\Sigma_{bs}}$
+  are equivalent to the type:
   \begin{lstlisting}[style=oxcaml]
   type 'a t =
     | Return of 'a
     | Get of unit * (bool -> 'a t)
     | Set of bool * (unit -> 'a t)
   \end{lstlisting}
+  The free algebras of the theory of boolean state $T_{L_{bs}}$ are
+  equivalent to the above type quotiented by the equations of $L_{bs}$.
+\end{example}
+
+For an algebraic signature $\Sigma$ the free algebra $T_{\Sigma}$ is the
+free monad of an endofunctor $F_{\Sigma}$. The values of $F_{\Sigma}(A)$
+are of the form $op(a_1, \ldots, a_k)$ where $op$ is an operation of
+$\Sigma$ with arity $k$ and each $a_i$ is an element of $A$.
+\begin{example}
+  $F_{\Sigma_{bs}}$ is equivalent to the type:
+  \begin{lstlisting}[style=oxcaml]
+  type 'a t =
+    | Get of unit * (bool -> 'a)
+    | Set of bool * (unit -> 'a)
+  \end{lstlisting}
 \end{example}
 
 Traditional algebraic signatures are restricted to the case of a finite
 set of operations each with a finite arity, but programming languages
 require more generality. $\nat$ state needs countable arities, while
-$\nat \rightarrow \nat$ state requires uncountable arities.
-For these we must extend algebraic signatures to allow for arbitrary
-sets of operations with arbitrary sets as arities. Such algebraic
-theories are called \emph{bounded infinitary algebraic theories} because
-for each such theory there is some regular cardinal $\kappa$ that is a
-bound on the arities of the theory. An algebraic theory with some bound
-$\kappa$ corresponds to a monad with rank $\kappa$. Thus we take monads
-with a rank as our precise definition of algebraic monad.
+$\nat \rightarrow \nat$ state requires uncountable arities.  For these
+we must extend algebraic signatures to allow for arbitrary sets of
+operations with arbitrary sets as arities. Such algebraic theories are
+called \emph{bounded infinitary algebraic theories}. They are
+``bounded'' because for each such theory there is some regular cardinal
+$\kappa$ that is a bound on the arities of the theory. An algebraic
+theory with some bound $\kappa$ corresponds to a monad with rank
+$\kappa$. Thus we take monads with a rank as our precise definition of
+algebraic monad.
 
 Most monads used in practice for programming are algebraic by this
 definition, with the notable exception of the continuation monad. The
@@ -1458,10 +1488,10 @@ particular choice of operations and equations.
 \begin{definition}
   A \emph{Lawvere theory} is a category $L$ with finite products in
   which every object is isomorphic to some finite cartesian product
-  $x^n = x \times \ldots \times x$ of a distinguished object $x$.
+  $X^n = X \times \ldots \times X$ of a distinguished object $X$.
 \end{definition}
 The objects of a Lawvere theory correspond to the different possible
-arities and the morphisms $x^n \rightarrow x$ correspond to terms
+arities and the morphisms $X^n \rightarrow X$ correspond to terms
 of $L$ with $n$ free variables quotiented by the equations in $L$. A
 model of a Lawvere theory $L$ is a product-preserving functor
 $L \rightarrow \setc$.
@@ -1473,7 +1503,7 @@ we can extend the definition to get something that corresponds to
 \begin{definition}
   A \emph{Bounded Lawvere theory} is a small category $L$ with small
   products in which every object is isomorphic to some small cartesian
-  product $\Pi_S x$ of a distinguished object $x$.
+  product $\Pi_S X$ of a distinguished object $X$.
 \end{definition}
 Note that the ``bounded'' aspect of the definition comes from the
 restriction that the category be small.
@@ -1489,8 +1519,9 @@ of another that preserve the equations of the first theory according to
 the equations of the second.
 
 $\lawc$ has an initial object $\initial$, which is the algebraic theory
-with no operations. It also has coproducts $L + M$ which is the theory
-made by unioning the operations and equations of $L$ and $M$.
+with no operations. It also has coproducts $L + L^{\prime}$ which is the
+theory made by unioning the operations and equations of $L$ and
+$L^{\prime}$.
 
 \subsection{Presheaves}
 
@@ -1531,31 +1562,31 @@ ambient monad.
 Categories of presheaves have products and coproducts, which are defined
 pointwise. We will use these as the semantics of product types and sum
 types.
-\begin{align*}
-&\sem{1} = 1 \\
-&\sem{\tau_1 \times \tau_2} = \sem{\tau_1} \times \sem{\tau_2} \\
-&\sem{\tau_1 + \tau_2} = \sem{\tau_1} + \sem{\tau_2} \\
-\end{align*}
+\begin{equation*}
+\sem{1} = 1 \qquad
+\sem{\tau_1 \times \tau_2} = \sem{\tau_1} \times \sem{\tau_2} \qquad
+\sem{\tau_1 + \tau_2} = \sem{\tau_1} + \sem{\tau_2} \qquad
+\end{equation*}
 The semantics of the corresponding introduction and elimination forms
 follows the usual categorical semantics of such types.
 
 We also use products for the semantics of contexts:
-\begin{align*}
-&\sem{\cempty} = 1 \\
-&\sem{\lbind{\Gamma}{x}{\tau}} = \sem{\Gamma} \times \sem{\tau} \\
-\end{align*}
+\begin{equation*}
+\sem{\cempty} = 1 \qquad
+\sem{\lbind{\Gamma}{x}{\tau}} = \sem{\Gamma} \times \sem{\tau}
+\end{equation*}
 
 \subsection{Representing computations: The free algebras monad}
 
 Our aim is to have a semantics where the meaning of types is indexed by
 the ambient monad -- or more precisely by the algebraic theory whose
 free algebras are the ambient monad. In particular, we would like the
-interpretation of types of computations to be applications of the
-ambient monad.
+interpretation of computation types to be applications of the ambient
+monad.
 
-Given a Lawvere theory $L$, the underlying set of its free algebras form
-a monad $T_L$ on $\setc$. In addition to the unit of the monad, we can
-construct elements of $T_L$ using the operations of $L$. For an
+Given a Lawvere theory $L$, the underlying sets of its free algebras
+form a monad $T_L$ on $\setc$. In addition to the unit of the monad, we
+can construct elements of $T_L$ using the operations of $L$. For an
 operation $op \types P \rightarrowtail A$ of a Lawvere theory $L$ and
 some set $S$, there is a function
 $op_{T_L} \types (P \times (A \rightarrow T_L(S))) \rightarrow T_L(S)$
@@ -1584,18 +1615,9 @@ respectively of $\mon$.
 
 Categories of presheaves also have exponentials, which combine with the
 free algebras monad to give us our semantics for function types.
-\begin{align*}
-  &\sem{\tau_1 \rightarrow \tau_2} = \arrow{\sem{\tau_1}}{\mon(\sem{\tau_2})} \\
-  &\sem{\Gamma \turnv \abs{x}{\tau_1}{c} \types \tau_1 \rightarrow \tau_2} =
-    \currymap(\sem{\lbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2})
-     \\
-  &\sem{\Gamma \turnc \app{v_1}{v_2} \types \tau_2} =
-    \evmap
-    \circ \langle \sem{\Gamma \turnv v_1 \types \tau_1 \rightarrow \tau_2},
-                  \sem{\Gamma \turnv v_2 \types \tau_1} \rangle
-\end{align*}
-where $\evmap$ is the evaluation map and $\currymap$ the currying of
-exponentials.
+\begin{equation*}
+  \sem{\tau_1 \rightarrow \tau_2} = \arrow{\sem{\tau_1}}{\mon(\sem{\tau_2})}
+\end{equation*}
 
 \subsection{The global modality}
 
@@ -1627,7 +1649,7 @@ $\glob$ bindings.
 &\sem{\gbind{\Gamma}{x}{\tau} \turnv x \types \tau} = \epsilon \circ \snd \\
 &\sem{\Gamma \turnv \gbox{v} \types \glob \tau} =
   \glob \sem{\cdiv{\Gamma} \turnv v \types \tau}
-  \circ \eta \circ \cdiv{\Gamma} \\
+  \circ \eta \circ \bdiv{\Gamma} \\
 &\sem{\Gamma \turnv \gunbox{x}{v_1}{v_2} \types \tau_2} =
   \sem{\gbind{\Gamma}{x}{\tau_1} \turnv v_2 \types \tau_2}
   \circ \langle id_{\sem{\Gamma}},
@@ -1635,10 +1657,10 @@ $\glob$ bindings.
 &\sem{\Gamma \turnv \grun{c} \types \glob \tau} =
   \rho_{\sem{\tau}}
   \circ \glob \sem{\cdiv{\Gamma} \turnc c \types \tau}
-  \circ \eta \circ \cdiv{\Gamma}\\
+  \circ \eta \circ \bdiv{\Gamma}\\
 \end{align*}
 where $\epsilon$ and $\eta$ are the counit and comultiplication of
-$\glob$, $\cdiv{\Gamma} \types \Gamma \rightarrow \cdiv{\Gamma}$ is the
+$\glob$, $\bdiv{\Gamma} \types \Gamma \rightarrow \cdiv{\Gamma}$ is the
 morphism that projects the global bindings from $\Gamma$, and $\rho_P$
 is the isomorphism from $\glob \mon(P)$ to $\glob P$.
 
@@ -1662,20 +1684,20 @@ that:
 \end{align*}
 
 For an operation $op \types P \rightarrowtail A$ of a Lawvere theory $L$
-and some set $S$, we can build a morphism:
+and some presheaf $P$, we can build a morphism:
 \begin{align*}
-&op_{\mon{S}} \types
+&op_{\mon{P}} \types
   \homset{\pshlawcop}
-         {\yoneda{L} \times \glob P \times \arrow{\glob A}{\mon{S}}}
-         {\mon{S}} \\
-&{(op_{\mon{S}})}_{L^\prime}
+         {\yoneda{L} \times \glob P \times \arrow{\glob A}{(\mon{P})}}
+         {\mon{P}} \\
+&{(op_{\mon{P}})}_{L^\prime}
   = \lambda(y, p, k). (y(op))_{T_{L^\prime}}(p, \lambda a. k_{L^\prime}(id_{L^\prime}, a))
 \end{align*}
 which uses an element of $\yoneda{L}$ to map $op$ into the ambient monad
 and then uses that to construct a term in the free algebras monad.
 
 We use $\yoneda{L}$ as the semantics for our handler types, and
-$op_{\mon{S}}$ as the semantics for reflection.
+$op_{\mon{P}}$ as the semantics for reflection.
 \begin{align*}
 &\sem{\yoneda{\Sigma}} = \yoneda{\sem{\Sigma}} \\
 &\sem{\Gamma \turnc \perform{v_1}{op}{v_2}{x}{c} \types \tau} = \\
@@ -1727,7 +1749,7 @@ global modality we get:
 \end{equation*}
 
 In terms of our semantics, this means that computations of type
-$\glob \tau$ with a single variable of type $\yoneda{\Sigma}$ are
+$\glob \tau$ with a single free variable of type $\yoneda{\Sigma}$ are
 isomorphic to values of the free algebra of $\sem{\Sigma}$ at
 $\sem{\tau}(\initial)$.
 
@@ -1749,11 +1771,10 @@ lemma~\cite{hyland2006combining}.
   \end{equation*}
 \end{lemma}
 where $\mu X.G(X)$ is the initial algebra of some polynomial endofunctor
-$G$, and $F_\Sigma$ is the endofunctor on $\setc$ for which $T_{\Sigma}$
-is the free monad. This lemma is crucial because it shows that
-computations using both ambient effects $L$ and signature $\Sigma$ can
-be reorganized as a recursive structure that separates the two effect
-sources -- exactly what effect handlers need.
+$G$. This lemma is crucial because it shows that computations using both
+ambient effects $L$ and the signature $\Sigma$ can be reorganized as a
+recursive structure that separates the two effect sources -- exactly
+what effect handlers need.
 
 Effect reification works by exposing $\mu X.T_L(S + F_\Sigma(X))$ to the
 user via an inductive type. Categories of presheaves have initial
@@ -1885,7 +1906,7 @@ operation is reflected we perform a linear search up the stack of
 handlers until we find the corresponding one. This search is not
 actually necessary: there is a one-to-one relationship between the
 handlers and the handler values used to reflect operations. The linear
-search can be eliminated by extending the OxCaml runtime to support
+search could be eliminated by extending the OxCaml runtime to support
 direct references to handlers. By allowing local values to point
 directly to the fiber structures that implement effect handlers,
 operations can jump immediately to the correct handler without
@@ -1895,11 +1916,6 @@ implementation technique described by Ma et al.~\cite{ma2024lexical}.
 
 \section{Related work}
 \label{sec:related-work}
-
-Effect reflection draws from several lines of research in programming
-language theory. We discuss the most relevant connections, highlighting
-how our approach relates to and differs from existing work on effect
-handlers, monadic reflection, and semantic foundations.
 
 \subsection{Lexical and named effect handlers}
 
@@ -1961,9 +1977,8 @@ Our presheaf semantics are closely related to presheaf semantics for
 higher-order abstract syntax~\cite{hu2022category}. In both cases
 presheaves are used to index the semantics of types and terms by some
 notion of context, with the Yoneda embedding used to access this context
-and the global modality used to control it.
+and the global modality used to control dependence on it.
 
-\pagebreak
 \bibliography{references}
 \bibliographystyle{plain}
 
