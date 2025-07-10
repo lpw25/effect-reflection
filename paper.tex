@@ -888,23 +888,6 @@ is an artefact of OCaml's approach to higher-kinded types. Languages
 with direct support for higher-kinded types should be able to support
 parameterized effects of arbitrary arity with a single interface.
 
-\subsection{Summary}
-
-This section has demonstrated how effect reflection provides a practical
-and expressive approach to algebraic effects through a simple library
-API. The key benefits include: safety guarantees through locality
-without requiring specialized effect systems, seamless composition of
-effects through nesting for common cases, support for more complex
-composition patterns through effect forwarding when needed, and the
-ability to achieve lightweight effect polymorphism with first-class
-functions. The examples show that effect reflection can handle the full
-spectrum of algebraic effects—from simple state management to complex
-asynchronous I/O and generators—while maintaining the direct-style
-programming that makes algebraic effects appealing. Most importantly,
-the approach scales from basic usage to sophisticated effect composition
-without requiring programmers to learn complex type system machinery
-beyond locality tracking.
-
 \section{A language with effect reflection}
 \label{sec:language}
 
