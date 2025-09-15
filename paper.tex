@@ -849,56 +849,6 @@ our effect reflection API we are able to use nesting for the cases that
 it supports -- avoiding the cost of the indirection -- and fall back to
 forwarding for the more general cases.
 
-\subsection{Parameterized effects and handlers}
-
-The state handlers in this paper so far have all been restricted to
-\lstinline[style=oxcaml]{int} state. This is a limitation of the effect
-reflection API that we have been using. We would like to support
-\emph{parameterized effects} -- allowing a single handler to be used
-with a whole family of effects. For example, a state handler
-parameterized by the type of the state.
-
-We can support parameterized effects by adding a module type for them,
-along with parameterized versions of \lstinline[style=oxcaml]{Term} and
-\lstinline[style=oxcaml]{Handler}:
-\begin{lstlisting}[style=oxcaml]
-  module type Op1 = sig type ('a, 'e) t end
-
-  module Term1 (O : Op1) : sig
-    type ('a, 'e) t =
-      | Return : 'a @@ global -> ('a, 'e) t
-      | Op : ('r, 'e) O.t @@ global * ('r -> ('a, 'e) t) -> ('a, 'e) t
-  end
-
-  module Handler1(O : Op1) : sig
-    type 'e t
-  end
-\end{lstlisting}
-with a corresponding parameterized version of
-\lstinline[style=oxcaml]{Reflection}. We can then define a parameterized
-state effect:
-\begin{lstlisting}[style=oxcaml]
-  module State = struct
-    type ('a, 's) t =
-      | Get : ('s, 's) t
-      | Set : 's -> (unit, 's) t
-  end
-\end{lstlisting}
-and write a handler that provides a parameterized interface for the
-state effect:
-\begin{lstlisting}[style=oxcaml]
-  type 's handler
-
-  val handle_state : 's -> ('s handler @ local -> 'a) @ local -> 'a
-  val get : 's handler @ local -> 's
-  val set : 's handler @ local -> 's -> unit
-\end{lstlisting}
-
-The need for a new copy of the interface for each type constructor arity
-is an artefact of OCaml's approach to higher-kinded types. Languages
-with direct support for higher-kinded types should be able to support
-parameterized effects of arbitrary arity with a single interface.
-
 \section{A language with effect reflection}
 \label{sec:language}
 
