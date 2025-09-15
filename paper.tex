@@ -774,80 +774,38 @@ effects.
   end
 \end{lstlisting}
 
-\lstinline[style=oxcaml]{Sum(L)(R)} is the coproduct of the effects
-\lstinline[style=oxcaml]{L} and \lstinline[style=oxcaml]{R}. Terms in
-the free algebras of the sum of two effects
-(i.e. \lstinline[style=oxcaml]{Term(Sum(L)(R)).t}) are isomorphic to a
-recursive datatype that is built from the terms of one of the effects
-and the operations of the other~\cite{hyland2006combining}. We can define
-this type and associated isomorphism as:
+We can now write our desired handler for the
+\lstinline[style=oxcaml]{Gen} effect by instead writing a handler for
+\lstinline[style=oxcaml]{Sum(Await)(Gen)} that forwards all the
+\lstinline[style=oxcaml]{Await} operations on to another handler.
+
 \begin{lstlisting}[style=oxcaml]
-  module Half_term (L : Op) (R : Op) : sig
-    type 'a t =
-      | Return : 'a @@ global -> 'a t
-      | Op : 'r R.t @@ global * ('r -> Handler(L).t @ local -> 'a t) -> 'a t
-  end
-
-  module Half_reflection (L : Op) (R : Op) : sig
-    val reify :
-      (Handler(L).t @ local -> Handler(R).t @ local -> 'a)
-      -> Handler(L).t @ local -> 'a Half_term(L)(R).t
-
-    val reflect :
-      (Handler(L).t @ local -> 'a Half_term(L)(R).t)
-      -> Handler(L).t @ local -> Handler(R).t @ local -> 'a
-  end
-\end{lstlisting}
-
-Note that the key difference between
-\lstinline[style=oxcaml]{Half_term(L)(R).t} and
-\lstinline[style=oxcaml]{Term(R).t} is that continuing the computation
-after an operation requires passing in a local
-\lstinline[style=oxcaml]{Handler(L).t} again.
-
-Now we can use this machinery to conveniently build a handler of
-\lstinline[style=oxcaml]{Gen} that also forwards operations from
-\lstinline[style=oxcaml]{Await}:
-\begin{lstlisting}[style=oxcaml]
-  module Await_gen_eff = Half_reflection(Await)(Gen)
-  open Half_term(Await)(Gen)
+  module Eff = Reflection(Sum(Await)(Gen))
+  module Proj = Project(Await)(Gen)
 
   type aints =
     | Finished
     | More of int * (Handler(Await).t @ local -> aints)
 
   let handle_gen_in_await f ah =
-      let rec loop = function
+    let rec loop ah = function
       | Return () -> Finished
-      | Op(Gen i, k) -> More(i, fun ah -> loop (k () ah))
+      | Op(Left op, k) -> loop ah (k (perform ah op))
+      | Op(Right(Gen i), k) -> More(i, fun ah -> loop ah (k ()))
     in
-    loop (Await_gen_eff.reify f ah)
-\end{lstlisting}
-where \lstinline[style=oxcaml]{handle_gen_in_await} has the type:
-\begin{lstlisting}[style=oxcaml]
-  val handle_gen_in_await :
-    (Handler(Await).t @ local -> Handler(Gen).t @ local -> unit)
-    -> Handler(Await).t @ local
-    -> aints
+    loop ah (Eff.reify (fun h -> f (Proj.outl h) (Proj.outr h))
 \end{lstlisting}
 
-The literature on lexical effect handlers often ignores this issue. For
-example, Xie et al.~\cite{xie2020effect} proposed a system which only
-supported directly nesting effect handlers and had no mechanism for
-writing a composable handler for generators that could be moved between
-different underlying asynchronous I/O handlers.
-
-This is because composition requiring forwarding is much less common
-than nesting and it fundamentally requires each use of the
-\lstinline[style=oxcaml]{Await} operation to perform work proportional
-to the number of handlers it is forwarded through -- often referred to
-as a ``linear search''. There has been a tendency to treat this linear
-search as some form of deficiency of algebraic effect handlers, but it
-is simply a classic trade-off between the extra expressivity allowed by
-an indirection and the runtime cost of traversing that indirection. With
-our effect reflection API we are able to use nesting for the cases that
-it supports -- avoiding the cost of the indirection -- and fall back to
-forwarding for the more general cases.
+The need for effect forwarding is a general short-coming with lexical
+handlers that applies to all such systems. Examples like this
+fundamentally require that performing an \lstinline[style=oxcaml]{Await}
+operation to does work proportional to the number of handlers it is
+forwarded through. Lexical handlers do a constant amount of work to
+perform operations and so cannot handle such examples
+directly. Non-lexical effect handlers *always* do work proportional to
+the number of nested handlers, allowing them to support such examples
+directly but paying a higher cost for the cases that do not need
+forwarding.
 
 \section{A language with effect reflection}
 \label{sec:language}
