@@ -343,14 +343,15 @@ The key constructs of effect reflection are then defined as follows:
 \section{Effect reflection in practice}
 \label{sec:practice}
 
-We can provide effect reflection as a simple library API in OxCaml. In
-this section we describe this API and show how to use it to write a
-number of typical examples of algebraic effects.
+We provide effect reflection as a simple library API in OxCaml. In this
+section we describe this API and show how to use it to write typical
+examples of algebraic effects.
 
 \subsection{Locality in OxCaml}
 
 The effect reflection API relies on OxCaml's support for tracking
-locality in types, so let's start with an overview of that support.
+locality in types, which we describe here. For a full treatment see
+Lorenzen et al.~\cite{lorenzen2024oxidizing}.
 
 Values in OxCaml are associated with both a type -- which describes how
 values can be introduced and eliminated -- and a \emph{mode} -- which
@@ -381,17 +382,13 @@ return local values.
 \end{lstlisting}
 \lstinline[style=oxcaml]{exclave e} can only appear in tail position
 within a function.  It ends the function's region early and then
-executes the expression
-\lstinline[style=oxcaml]{e}. \lstinline[style=oxcaml]{e} is essentially
-executed within the region of the caller of the function and any local
-values created within it can be safely returned to that caller.
+executes the expression \lstinline[style=oxcaml]{e}. Since
+\lstinline[style=oxcaml]{e} is executed within the region of the caller
+of the function, any local values created within it can be safely
+returned to that caller.
 
-The place where modes appear within the type algebra is on arrow
-types. A function being \lstinline[style=oxcaml]{global} doesn't tell you
-that the values it accepts or returns should be
-\lstinline[style=oxcaml]{global} too, so instead the arrow type is
-labelled with two modes: one for the argument and one for the return
-value.
+Arrow types are labelled with two modes: one for the argument and one
+for the return value.
 \begin{lstlisting}[style=oxcaml]
   val return_local : 'a @ local -> 'a option @ local
 \end{lstlisting}
@@ -425,9 +422,10 @@ Variant constructor arguments can also be annotated with modalities.
 Note that, whilst there is a \lstinline[style=oxcaml]{global} modality,
 there is no \lstinline[style=oxcaml]{local} modality. It does not make
 sense for a value which has the ability to leave a region to contain a
-value which doesn't, as when the first value leaves a region it will
-implicitly cause the second one to leave that region as well. This means
-the \lstinline[style=oxcaml]{global} mode is always deep.
+value which doesn't have that ability: when the first value leaves a
+region it will implicitly cause the second one to leave that region as
+well. This means the \lstinline[style=oxcaml]{global} mode is always
+deep.
 
 \subsection{Effect reflection interface}
 \label{sec:interface}
@@ -435,7 +433,7 @@ the \lstinline[style=oxcaml]{global} mode is always deep.
 The types and operations of our effect reflection API are parameterized
 by type constructors representing the operations of an algebraic
 effect. In OxCaml, such higher-kinded interfaces must be built using
-functors, so we start with a simple module type
+functors. We start with a simple module type
 \lstinline[style=oxcaml]{Op} to act as the parameter type for these
 functors:
 \begin{lstlisting}[style=oxcaml]
@@ -464,26 +462,15 @@ For an effect signature \lstinline[style=oxcaml]{O},
 \lstinline[style=oxcaml]{'a Term(O).t} is the type of terms in the free
 algebra of the corresponding effect -- otherwise known as the freer
 monad~\cite{kiselyov2015freer}. \lstinline[style=oxcaml]{Handler(O).t}
-is the type of mappings from the operations of
-\lstinline[style=oxcaml]{O} into the operations of the current ambient
-monad. Alternatively, \lstinline[style=oxcaml]{Handler(O).t} can be
-described as representing algebraic effect handlers that are handling
-the current computation.
+represents the algebraic effect handlers that are handling the current
+computation.
 
 The main piece of the API is a family of isomorphisms:
 \begin{equation*}
   \text{\lstinline[style=oxcaml]{'a Term(O).t}} \qquad
   \cong \qquad \text{\lstinline[style=oxcaml]{Handler(O).t @ local -> 'a}}
 \end{equation*}
-Due to the absence of mode polymorphism in OxCaml, we expose this
-isomorphism as three functions: \lstinline[style=oxcaml]{reify} and
-\lstinline[style=oxcaml]{reify_local} which implement the left-to-right
-direction at the \lstinline[style=oxcaml]{global} and
-\lstinline[style=oxcaml]{local} modes respectively; and
-\lstinline[style=oxcaml]{perform}, which is equivalent to the
-right-to-left direction but makes for a more convenient primitive in
-practice. \lstinline[style=oxcaml]{perform} amounts to reflection of
-individual operations as opposed to full terms.
+We expose this isomorphism as three functions:
 \begin{lstlisting}[style=oxcaml]
   module Reflection (O : Op) : sig
     val reify : (Handler(O).t @ local -> 'a) -> 'a Term(O).t
@@ -494,8 +481,17 @@ individual operations as opposed to full terms.
     val perform : 'a O.t -> (Handler(O).t @ local -> 'a)
   end
 \end{lstlisting}
-Using \lstinline[style=oxcaml]{perform} we can implement reflection of
-global terms as:
+\lstinline[style=oxcaml]{reify} and
+\lstinline[style=oxcaml]{reify_local} implement the left-to-right
+direction. We need two separate functions because OxCaml lacks any form
+of mode polymorphism.
+
+\lstinline[style=oxcaml]{perform} is equivalent to the right-to-left
+direction but makes for a more convenient primitive in
+practice. \lstinline[style=oxcaml]{perform} amounts to reflection of
+individual operations as opposed to full terms. Using
+\lstinline[style=oxcaml]{perform} we can implement reflection of global
+terms as:
 \begin{lstlisting}[style=oxcaml]
   let rec reflect t h =
     match t with
