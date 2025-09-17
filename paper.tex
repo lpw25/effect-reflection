@@ -110,6 +110,7 @@
 \newcommand{\mthen}{\mathop{\mathrm{then}}}
 \newcommand{\melse}{\mathop{\mathrm{else}}}
 \newcommand{\embed}[1]{\mathopen{\lbag}#1\mathclose{\rbag}}
+\newcommand{\ctxeq}{\cong_{\mathrm{ctx}}}
 
 \newcommand{\todo}[1]{{\color{red}TODO: #1}}
 
@@ -1126,8 +1127,7 @@ We define the operational semantics as a pair of mutually defined
 reduction relations $\reducestov$ and $\reducestoc$ for values and
 computations respectively shown in Fig.\ref{fig:reduction}. The
 definitions of normal forms for values and computations are given in
-Fig.\ref{fig:normal}. Subject reduction and strong normalization of
-these rules can be proved using standard techniques.
+Fig.\ref{fig:normal}.
 
 \begin{figure}
 \begin{align*}
@@ -1174,6 +1174,27 @@ these rules can be proved using standard techniques.
 \caption{Normal forms}
 \label{fig:normal}
 \end{figure}
+
+We prove subject reduction for this semantics in
+Appendix~\ref{apdx:subject-reduction} by straightforward induction on
+the reduction relations.
+\begin{lemma}
+\label{lemma:subject-reduction}
+  \begin{equation*}
+    \Gamma \turnv v_1 \types \tau
+    \wedge v_1 \reducestov v_2 \implies \Gamma \turnv v_2 \types \tau
+  \end{equation*}
+\end{lemma}
+
+These reduction relations are strongly normalizing. We prove this via
+Tait computability\cite{??} in
+Appendix~\ref{apdx:strong-normalization}. This is made more involved by
+the presence of infinitary inductive types, which requires us to
+\todo{something something Knaster-Tarski}.
+\begin{lemma}
+\label{lemma:strong-normalization}
+\todo{Find simplest formal description of strong normalization}
+\end{lemma}
 
 Note that the reduction relations do not include $\eta$ expansion. They
 also do not include some conversions you might expect for computations:
@@ -1733,6 +1754,30 @@ $\reifyc{\Sigma}{}$ gives us our semantics for reification.
   \reifyc{\Sigma}{\tau} \circ \currymap(\sem{\lbind{\Gamma}{x}{\yoneda{\Sigma}} \turnc c \types \glob \tau}) \\
 \end{align*}
 
+\subsection{Properties of the denotational semantics}
+
+The denotational semantics is sound:
+\begin{lemma}
+\label{lemma:soundness}
+  \begin{equation*}
+    \Gamma \turnv v_1 \types \tau
+    \wedge v_1 \reducestov v_2
+    \implies \sem{\Gamma \turnv v_1 \types \tau}
+           = \sem{\Gamma \turnv v_2 \types \tau}
+  \end{equation*}
+\end{lemma}
+and adequate for contextual equality $\ctxeq$:
+\begin{lemma}
+\label{lemma:adequacy}
+  \begin{equation*}
+    \sem{\turnv v_1 \types \tau} = \sem{\turnv v_2 \types \tau}
+    \implies v_1 \ctxeq v_2
+  \end{equation*}
+\end{lemma}
+
+We present the full semantics, precisely define contextual equality, and
+prove these properties in Appendix~\ref{apdx:denotational}.
+
 \section{Implementation}
 \label{sec:implementation}
 
@@ -1886,4 +1931,16 @@ and the global modality used to control dependence on it.
 \bibliography{references}
 \bibliographystyle{plain}
 
+\appendix
+\section{Operational semantics}
+\subsection{Subject reduction}
+\label{apdx:subject-reduction}
+\subsection{Strong normalization}
+\label{apdx:strong-normalization}
+\section{Denotational semantics}
+\label{apdx:denotational}
+\subsection{Soundness}
+\subsection{Contextual equivalence}
+\subsection{Compositionality}
+\subsection{Adequacy}
 \end{document}
