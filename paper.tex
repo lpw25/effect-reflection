@@ -139,14 +139,16 @@
     \qquad \cong \qquad
     \yoneda{\Sigma} \rightarrow \glob \tau
   \end{equation*}
+
   where $\ind{\Sigma}(\glob \tau)$ is the free algebra of $\Sigma$ at
   $\glob \tau$, $\yoneda{\Sigma}$ is a type representing how to inject
   terms of $\Sigma$ into the current ambient monad, and $\glob$ is a
   comonadic \emph{global modality} used to track which values do not
   depend on the ambient monad. $\ind{\Sigma}$ is sometimes called the
   \emph{freer monad} of $\Sigma$. This isomorphism emerges naturally
-  from a denotational semantics for algebraic effects in terms of
-  presheaves over bounded Lawvere theories.
+  from the \emph{ambient monad model}, a novel semantic model of
+  algebraic effect handlers in terms of presheaves over bounded Lawvere
+  theories.
 
   Effect reflection provides all the expressiveness of typed algebraic
   effects without requiring language-level support for effect systems. We
@@ -272,8 +274,8 @@ OCaml one above:
   let handle_state (f : Handler(State).t @ local -> 'a) (i : int) : 'a =
     let rec loop (s : int) : 'a Term(State).t @ local -> 'a  = function
       | Return x -> x
-      | Op(Get, k) -> loop s (k s)
-      | Op(Set s', k) -> loop s' (k ())
+      | Op(Get, k) -> loop s (State_eff.continue_local k s)
+      | Op(Set s', k) -> loop s' (State_eff.continue_local k ())
     in
     loop i (State_eff.reify_local f)
 \end{lstlisting}
@@ -297,12 +299,12 @@ prevents this handler value from escaping the scope of
 \lstinline[style=oxcaml]{get} or \lstinline[style=oxcaml]{set} from
 being called outside that scope.
 
-\subsection{Denotational semantics}
+\subsection{The ambient monad model}
 
-This design emerges naturally from a denotational semantics where types
-are interpreted as presheaves over \emph{bounded Lawvere theories} -- a
-categorical framework that makes the connection between locality and
-effects precise.
+This design emerges naturally from a semantic model of algenbraic
+effects where types are interpreted as presheaves over \emph{bounded
+  Lawvere theories} -- a categorical framework that makes the connection
+between locality and effects precise.
 
 The key idea is to index the semantics by the ambient monad: rather than
 interpreting types as sets, we interpret them as functions from ambient
@@ -311,7 +313,7 @@ algebraic theories using bounded Lawvere theories.
 
 The key constructs of effect reflection are then defined as follows:
 \begin{itemize}
-\item The ambient monad can be defined as a monad $\mon$ on such
+\item Computations can be represented as a monad $\mon$ on such
   presheaves, which maps each algebraic theory to its free algebras.
 
 \item The global modality $\glob P$ is defined as the constant presheaf
@@ -323,8 +325,7 @@ The key constructs of effect reflection are then defined as follows:
   the Yoneda embedding
 
 \item The effect reflection isomorphism becomes a simple consequence of
-  the Yoneda lemma and some properties of the sums of algebraic
-  theories.
+  the Yoneda lemma and a key property of the sums of algebraic theories.
 \end{itemize}
 
 \subsection{Structure of the paper} We proceed as follows:
@@ -443,28 +444,38 @@ functors:
 The fundamental types of the API are the \lstinline[style=oxcaml]{Term}
 and \lstinline[style=oxcaml]{Handler} types.
 \begin{lstlisting}[style=oxcaml]
+  module Continuation(O : Op) : sig
+    type ('a, 'b) t
+  end
+
   module Term (O : Op) : sig
     type 'a t =
       | Return : 'a @@ global -> 'a t
-      | Op : 'r O.t @@ global * ('r -> 'a t) -> 'a t
+      | Op : 'r O.t @@ global * ('r, 'a) Continuation(O).t -> 'a t
   end
 
   module Handler(O : Op) : sig
     type t
   end
 \end{lstlisting}
-These types directly implement the types from our core isomorphism:
+These types directly implement the types from our core isomorphism.
 \lstinline[style=oxcaml]{'a Term(Sigma).t} corresponds to
-$\ind{\Sigma}(\glob \tau)$, while
-\lstinline[style=oxcaml]{Handler(Sigma).t} corresponds to
-$\yoneda{\Sigma}$
-
-For an effect signature \lstinline[style=oxcaml]{O},
-\lstinline[style=oxcaml]{'a Term(O).t} is the type of terms in the free
-algebra of the corresponding effect -- otherwise known as the freer
-monad~\cite{kiselyov2015freer}. \lstinline[style=oxcaml]{Handler(O).t}
-represents the algebraic effect handlers that are handling the current
+$\ind{\Sigma}(\glob \tau)$ and represents terms in the free algebra of
+\lstinline[style=oxcaml]{Sigma}. \lstinline[style=oxcaml]{Handler(Sigma).t}
+corresponds to $\yoneda{\Sigma}$ and represents algebraic effect
+handlers handling \lstinline[style=oxcaml]{Sigma} in the current
 computation.
+
+\lstinline[style=oxcaml]{('a, 'b) Continuation(Sigma).t} is equivalent
+to \lstinline[style=oxcaml]{'a -> 'b Term(Sigma).t} when global and
+equivalent to \lstinline[style=oxcaml]{'a -> 'b Term(Sigma).t @ local}
+when local. This ensures that the global modality distributes over
+\lstinline[style=oxcaml]{Term(Sigma).t}, which is an important property
+of $\ind{\Sigma}$. The need for it is an artifact of OxCaml's approach
+to locality: the global modality does not distribute over the function
+arrow in OxCaml. In the language we describe in
+Section~\ref{sec:language} it is replaced with an ordinary function
+type.
 
 The main piece of the API is a family of isomorphisms:
 \begin{equation*}
@@ -476,28 +487,31 @@ We expose this isomorphism as three functions:
   module Reflection (O : Op) : sig
     val reify : (Handler(O).t @ local -> 'a) -> 'a Term(O).t
 
+    val continue : ('a, 'b) Continuation(O).t -> 'a -> 'b Term(O).t
+
     val reify_local :
       (Handler(O).t @ local -> 'a) @ local -> 'a Term(O).t @ local
+
+    val continue_local :
+      ('a, 'b) Continuation(O).t @ local -> 'a -> 'b Term(O).t @ local
 
     val perform : 'a O.t -> (Handler(O).t @ local -> 'a)
   end
 \end{lstlisting}
 \lstinline[style=oxcaml]{reify} and
 \lstinline[style=oxcaml]{reify_local} implement the left-to-right
-direction. We need two separate functions because OxCaml lacks any form
-of mode polymorphism.
+direction of the isomorphism. We need two separate functions because
+OxCaml lacks any form of mode polymorphism.
 
 \lstinline[style=oxcaml]{perform} is equivalent to the right-to-left
-direction but makes for a more convenient primitive in
-practice. \lstinline[style=oxcaml]{perform} amounts to reflection of
-individual operations as opposed to full terms. Using
-\lstinline[style=oxcaml]{perform} we can implement reflection of global
-terms as:
+direction of the isomorphism but is a more convenient primitive in
+practice. It amounts to reflection of individual operations as opposed
+to full terms. We can implement reflection of global full terms as:
 \begin{lstlisting}[style=oxcaml]
   let rec reflect t h =
     match t with
     | Return x -> x
-    | Op(op, k) -> reflect (k (perform op h)) h
+    | Op(op, k) -> reflect (continue_local k (perform op h)) h
 \end{lstlisting}
 with type:
 \begin{lstlisting}[style=oxcaml]
@@ -525,8 +539,8 @@ it to write a handler:
   let handle_state i f =
     let rec loop (s : int) = function
       | Return x -> x
-      | Op(Get, k) -> loop s (k s)
-      | Op(Set s', k) -> loop s' (k ())
+      | Op(Get, k) -> loop s (State_eff.continue_local k s)
+      | Op(Set s', k) -> loop s' (State_eff.continue_localk ())
     in
     loop i (State_eff.reify_local f)
 \end{lstlisting}
@@ -549,12 +563,13 @@ Giving us the following interface:
   val get : handler @ local -> int
   val set : handler @ local -> int -> unit
 \end{lstlisting}
-Note that we are able to use \lstinline[style=oxcaml]{reify_local} to allow
-the function passed to \lstinline[style=oxcaml]{handle_state} to be local.
+Note that we are able to use \lstinline[style=oxcaml]{reify_local} to
+allow the function passed to \lstinline[style=oxcaml]{handle_state} to
+be local.
 
 This shows how to implement state using effect reflection, but note that
-the same interface can also be implemented directly using mutable state
-and locality:
+the same interface can also be implemented directly in OxCaml using
+mutable state and locality:
 \begin{lstlisting}[style=oxcaml]
   type handler = int ref
 
@@ -564,12 +579,13 @@ and locality:
 \end{lstlisting}
 This implementation gives the same behaviour as the one built using
 effect reflection. Crucially it is just as easy to reason about, which
-in turn means it is just as easy to reason about as the state monad. In
-some sense, the improved reasoning ability of the state monad over
-ordinary mutable state is precisely captured by the notion of locality.
+in turn means it is just as easy to reason about as the state
+monad. This shows that the improved reasoning ability of the state monad
+over ordinary mutable state is precisely captured by the notion of
+locality.
 
 This transformation from effect reflection to local mutable state works
-for any \emph{tail-resumptive} effect handler.
+for any \emph{tail-resumptive}\cite{??} effect handler.
 
 \subsection{Lightweight effect polymorphism}
 
@@ -622,10 +638,9 @@ Along with a handler that turns computations using
   let handle_gen f =
     let rec loop = function
       | Return () -> Finished
-      | Op(Gen i, k) -> More(i, fun () -> loop (k ()))
+      | Op(Gen i, k) -> More(i, fun () -> loop (Gen_eff.continue k ()))
     in
     loop (Gen_eff.reify f)
-
 \end{lstlisting}
 
 Unlike the state handler, here we must use
@@ -664,7 +679,7 @@ completed:
     let rec loop = function
       | Return x -> Deferred.return x
       | Op(Await d, k) ->
-          Deferred.bind d (fun x -> loop (k x))
+          Deferred.bind d (fun x -> loop (Await_eff.continue k x))
     in
     loop (Await_eff.reify f)
 
@@ -696,8 +711,8 @@ statically.
 
 \subsection{Nested effect handlers}
 
-A key feature of algebraic effects is how easy they are to compose. We
-can use state whilst using asynchronous I/O by simply nesting their
+A key feature of algebraic effects is how easily they compose. We can
+use state whilst using asynchronous I/O by simply nesting their
 handlers:
 \begin{lstlisting}[style=oxcaml]
   handle_await (fun ah ->
@@ -728,19 +743,19 @@ If we tried to do something similar using our
   (*@ \textcolor{red}{ This value is local and would escape its region.} @*)
 \end{lstlisting}
 
-We could change the definition of \lstinline[style=oxcaml]{handle_gen} to
-use \lstinline[style=oxcaml]{reify_local} instead of
-\lstinline[style=oxcaml]{reify}, but then we would lose the property that
-the generator we produce can be passed around freely. Instead we need to
-build a handler that can forward the \lstinline[style=oxcaml]{Await}
-operation to different effect handlers at different points in the
-program's execution.
+We could change the definition of \lstinline[style=oxcaml]{handle_gen}
+to use \lstinline[style=oxcaml]{reify_local} instead of
+\lstinline[style=oxcaml]{reify}, but then we would lose the property
+that the generator we produce can be passed around freely. Instead we
+need to build a handler that can \emph{forward} the
+\lstinline[style=oxcaml]{Await} operation to different effect handlers
+at different points in the program's execution.
 
 \subsection{Effect sums and effect forwarding}
 
-Composing handlers, like \lstinline[style=oxcaml]{handle_gen}, that use
+Composing handlers like \lstinline[style=oxcaml]{handle_gen}, that use
 \lstinline[style=oxcaml]{reify} rather than
-\lstinline[style=oxcaml]{reify_local} is a fundamentally more involved
+\lstinline[style=oxcaml]{reify_local}, is a fundamentally more involved
 operation. Consider the case of generators that are able to use
 asynchronous I/O. We are given a computation that performs both
 \lstinline[style=oxcaml]{Await} and \lstinline[style=oxcaml]{Gen}
@@ -787,16 +802,17 @@ We can now write our desired handler for the
   let handle_gen_in_await f ah =
     let rec loop ah = function
       | Return () -> Finished
-      | Op(Left op, k) -> loop ah (k (perform ah op))
-      | Op(Right(Gen i), k) -> More(i, fun ah -> loop ah (k ()))
+      | Op(Left op, k) -> loop ah (Eff.continue k (perform ah op))
+      | Op(Right(Gen i), k) ->
+          More(i, fun ah -> loop ah (Eff.continue k ()))
     in
     loop ah (Eff.reify (fun h -> f (Proj.outl h) (Proj.outr h))
 \end{lstlisting}
 
-The need for effect forwarding is a general short-coming with lexical
+The need for effect forwarding is a general short-coming of lexical
 handlers that applies to all such systems. Examples like this
 fundamentally require that performing an \lstinline[style=oxcaml]{Await}
-operation to does work proportional to the number of handlers it is
+operation does work proportional to the number of handlers it is
 forwarded through. Lexical handlers do a constant amount of work to
 perform operations and so cannot handle such examples
 directly. Non-lexical effect handlers *always* do work proportional to
@@ -1135,8 +1151,8 @@ Fig.\ref{fig:normal}.
 \snd{(v_1, v_2)} &\reducestov v_2 \\
 \gunbox{x}{\gbox{v_1}}{v_2} &\reducestov \sbst{v_2}{x}{v_1} \\
 \grun{\return{v}} &\reducestov v \\
-\letv{x}{\return{v}}{c} &\reducestov \sbst{c}{x}{v} \\
-\letv{x_1}{\perform{v_1}{op}{v_2}{x_2}{c_1}}{c_2} &\reducestov \perform{v_1}{op}{v_2}{x_2}{\letv{x_1}{c_1}{c_2}} \\
+\letv{x}{\return{v}}{c} &\reducestoc \sbst{c}{x}{v} \\
+\letv{x_1}{\perform{v_1}{op}{v_2}{x_2}{c_1}}{c_2} &\reducestoc \perform{v_1}{op}{v_2}{x_2}{\letv{x_1}{c_1}{c_2}} \\
 \app{(\abs{x}{\tau}{c})}{v} &\reducestoc \sbst{c}{x}{v} \\
 \case{(\inl{v})}{x_1}{c_1}{x_2}{c_2} &\reducestoc \sbst{c_1}{x_1}{v} \\
 \case{(\inr{v})}{x_1}{c_1}{x_2}{c_2} &\reducestoc \sbst{c_2}{x_2}{v} \\
@@ -1246,16 +1262,18 @@ corresponding to up to 3 steps of $\reducestov$.
 \label{fig:stlc}
 \end{figure}
 
-\section{Presheaves for algebraic effects}
+\section{The ambient monad model}
 \label{sec:semantics}
 
-The design of effect reflection falls out naturally from a simple
-denotational semantics built on presheaves. This semantic foundation not
-only validates our approach but also makes the connection between
-locality and effects precise. The key idea is to index the meaning of
-types by an ambient algebraic monad of effects: rather than have the
-semantics of each type be a set of elements, the semantics of each type
-is a mapping from the ambient monad to a set of elements.
+The design of effect reflection falls out naturally from a novel
+semantic model built on presheaves. This semantic foundation not only
+validates our approach but also makes the connection between locality
+and effects precise. The key idea is to index the meaning of types by an
+ambient algebraic monad of effects: rather than have the semantics of
+each type be a set of elements, the semantics of each type is a mapping
+from the ambient monad to a set of elements. We give a denotational
+semantics to the language from Section~\ref{sec:language} using this
+model.
 
 \subsection{Algebraic monads}
 
@@ -1466,17 +1484,17 @@ As such, we use
 \begin{equation*}
   \pshlawcop = \setc^{\lawc}
 \end{equation*}
-as the basis of our semantics. The $\op$ in the definition of presheaves
-and the $\op$ due to our dependence being contravariant cancel out, but
-it is still best to think in terms of presheaves as that is a more
-precise description of what we are doing.
+as the basis of the ambient monad model. The $\op$ in the definition of
+presheaves and the $\op$ due to our dependence being contravariant
+cancel out, but it is still best to think in terms of presheaves as that
+is a more precise description of what we are doing.
 
-Our semantics will use objects from $\pshlawcop$ to represent types and
-contexts, and morphisms in $\pshlawcop$ to represent values. This allows
-their meanings to be parameterized by the ambient monad. By using
-presheaves rather than ordinary functions we ensure terms and types at a
-particular ambient monad can always be mapped naturally to a larger
-ambient monad.
+The ambient monad model uses objects from $\pshlawcop$ to represent
+types and contexts, and morphisms in $\pshlawcop$ to represent
+values. This allows their meanings to be parameterized by the ambient
+monad. By using presheaves rather than ordinary functions we ensure
+terms and types at a particular ambient monad can always be mapped
+naturally to a larger ambient monad.
 
 \begin{equation*}
 \sem{\tau} \mathrel{:} \pshlawcop \qquad
@@ -1522,8 +1540,8 @@ $\pshlawcop$ such that:
 \begin{equation*}
 \mon(P)(L) = T_L(P(L))
 \end{equation*}
-We call $\mon$ the \emph{free algebras monad}, and we will use it as the
-computation monad in our denotational semantics.
+We call $\mon$ the \emph{free algebras monad}, and it is the
+representation of computations in the ambient monad model.
 \begin{align*}
   &\sem{\Gamma \turnc v \types \tau} \mathrel{:}
     \homset{\pshlawcop}{\sem{\Gamma}}{\mon(\sem{\tau})} \\
@@ -1555,9 +1573,9 @@ $\glob(P)(L) = P(\terminal)$. In the case of $\pshlawcop$ this becomes:
 $\glob$ forms a comonad on $\pshlawcop$. $\glob$ also distributes over
 products: $\glob (P \times Q) = (\glob P) \times (\glob Q)$
 
-Within our semantics, this amounts to restricting a type to only the
-elements which do not depend on the ambient monad. This is very similar
-to the purity comonad of Choudhury and
+Within the abient monad model, this amounts to restricting a type to
+only the elements which do not depend on the ambient monad. This is very
+similar to the purity comonad of Choudhury and
 Krishnaswami~\cite{choudhury2020recovering}. In particular,
 \begin{equation*}
   \glob \mon(P) \quad = \quad T_{\initial} \circ \glob P
@@ -1720,8 +1738,7 @@ and observe the following variation on Lemma \ref{lemma:sums}.
   \end{equation*}
 \end{lemma}
 
-We use these initial algebras as the denotational semantics of
-$\ind{\Sigma}$:
+We use these initial algebras as the semantics of $\ind{\Sigma}$:
 \begin{mathpar}
 \sem{\ind{\Sigma}(\tau)} = \ind{\sem{\Sigma}}(\sem{\tau})
 \end{mathpar}
@@ -1935,6 +1952,108 @@ and the global modality used to control dependence on it.
 \section{Operational semantics}
 \subsection{Subject reduction}
 \label{apdx:subject-reduction}
+
+We prove subject reduction (Lemma~\ref{lemma:subject-reduction}):
+\begin{equation*}
+  \Gamma \turnv v_1 \types \tau
+  \wedge v_1 \reducestov v_2 \implies \Gamma \turnv v_2 \types \tau
+\end{equation*}
+by mutual induction over the two reduction relations. The reduction
+relations are the least reflexive, transitive congruences closed under
+the rules in Fig.~\ref{fig:reduction}.
+
+The reflexivity case is immediate and the transitive case follows
+directly by induction. As all the typing rules are entirely
+compositional, the congruence cases also all follow direectly by
+induction. This leaves only the rules from Fig.~\ref{fig:reduction}.
+
+Note that the typing rules are syntax directed with the exception of the
+two var rules, which are distinguished by how the variable is bound in
+the context. Since none of the left-hand sides of our reduction rules is
+a variable, there is always only a single typing rule that we need to
+consider.
+
+The cases for the products rules:
+\begin{align*}
+\fst{(v_1, v_2)} &\reducestov v_1 \\
+\snd{(v_1, v_2)} &\reducestov v_2 \\
+\end{align*}
+follow immediately by inversion on the typing rule.
+
+\begin{equation*}
+\gunbox{x}{\gbox{v_1}}{v_2} \reducestov \sbst{v_2}{x}{v_1}
+\end{equation*}
+\todo{Requires substitution rule of a term under $\cdiv{\Gamma}$ for a
+  boxed binding}.
+
+The case for the $\grun$ rule
+\begin{equation*}
+\grun{\return{v}} \reducestov v
+\end{equation*}
+\todo{Requires weakening from $\cdiv{\Gamma}$ to $\Gamma$}.
+
+The case for the let-return rule:
+\begin{equation*}
+\letv{x}{\return{v}}{c} \reducestoc \sbst{c}{x}{v}
+\end{equation*}
+\todo{Requires ordinary substitution lemma}.
+
+The case for the let-perform rule:
+\begin{equation*}
+\letv{x_1}{\perform{v_1}{op}{v_2}{x_2}{c_1}}{c_2} \reducestoc \perform{v_1}{op}{v_2}{x_2}{\letv{x_1}{c_1}{c_2}}
+\end{equation*}
+follows immediately by inversion on the typing rule.
+
+The case for the standard beta rule:
+\begin{equation*}
+\app{(\abs{x}{\tau}{c})}{v} \reducestoc \sbst{c}{x}{v}
+\end{equation*}
+\todo{Requires ordinary substitution lemma}.
+
+The cases for the case rules:
+\begin{align*}
+\case{(\inl{v})}{x_1}{c_1}{x_2}{c_2} &\reducestoc \sbst{c_1}{x_1}{v}
+\case{(\inr{v})}{x_1}{c_1}{x_2}{c_2} &\reducestoc \sbst{c_2}{x_2}{v}
+\end{align*}
+\todo{Requires ordinary substitution lemma}.
+
+The case for the $\retname$ rule:
+\begin{equation*}
+\indelim{\Sigma}{(\ret{\Sigma}{v})}{\indretcase{x}{c} \seq \ldots} \reducestoc \sbst{c}{x}{v}
+\end{equation*}
+\todo{Requires ordinary substitution lemma}.
+
+The case for the $\indintro{\Sigma}{op}{\_}{\_}$ rule:
+\begin{align*}
+&\indelim{\Sigma}{\indintro{\Sigma}{op}{v_1}{v_2}}{H_1 \seq \indcase{op}{x_1}{x_2}{c} \seq H_2} \\
+&\qquad \reducestoc \sbst{\sbst{c}{x_1}{v_1}}{x_2}{\abs{x_a}{\tau_a}{\letv{x_w}{\app{v_2}{x_a}}{\indelim{\Sigma}{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{c} \seq H_2}}}}
+\end{align*}
+\todo{Requires ordinary substitution lemma}.
+
+The case for the return rule:
+\begin{equation*}
+\reify{\Sigma}{x}{\return{v}} \reducestoc \return{\ret{\Sigma}{v}}
+\end{equation*}
+\todo{Requires strengthening by local bindings of handlers for global values,
+  which doesn't actually hold because you can have global terms that ignore their
+  inputs}.
+
+\begin{equation*}
+\reify{\Sigma}{x_1}{\perform{x_1}{op}{v}{x_2}{c}} \reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{x_2}{\reify{\Sigma}{x_1}{c}}}}
+\end{equation*}
+
+\begin{equation*}
+\reify{\Sigma}{x_1}{\perform{x_2}{op}{v}{x_3}{c}} \reducestoc \perform{x_2}{op}{v}{x_3}{\reify{\Sigma}{x_1}{c}} \qquad (x_1 \neq x_2)
+\end{equation*}
+
+\begin{equation*}
+\perform{(\outl{v_1})}{op}{v_2}{x}{c} \reducestoc \perform{v_1}{\mathrm{left}(op)}{v_2}{x}{c}
+\end{equation*}
+
+\begin{equation*}
+\perform{(\outr{v_1})}{op}{v_2}{x}{c} \reducestoc \perform{v_1}{\mathrm{right}(op)}{v_2}{x}{c}
+\end{equation*}
+
 \subsection{Strong normalization}
 \label{apdx:strong-normalization}
 \section{Denotational semantics}
