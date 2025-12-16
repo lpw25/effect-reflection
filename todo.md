@@ -12,32 +12,24 @@
   repeating it, to give us some more space.
 
 - In Section 1, replace the overview of the paper with an explicit list
-  of contributions based on the list in the previous section of this
-  rebuttal.
+  of contributions based on the list from the rebuttal.
 
 - Include the shift from countable to bounded Lawvere theories as a
   contribution.
 
 # Section 3
 
-- Change W types to require that their result is global
-
-- Change language to use global environments instead of boxes in W-types
-  and perform computations.
-
-- Change W-types to use open terms instead of functions in constructors.
-
-- Add crisp version of case.
-
 - Add crisp version of rec.
+
+- Add a modality nonterminal to the syntax ranging over box and an
+  identity modality. Use this for bindings in the context. Then also
+  use it for case and rec to avoid needing to duplicate so many things.
 
 # Section 4
 
 - Add additional citations to section 4. There are currently no
   citations for the general background material (e.g. Lawvere theories)
-  or the semantics of algebraic effects. (I get the impression Reviewer
-  B also had some specific citations in mind for these sections, and
-  we'd certainly appreciate any suggestions).
+  or the semantics of algebraic effects.
 
 - Add the following lemmas about Psh(Law^op):
 
@@ -57,6 +49,10 @@
     * The Yoneda Lemma
 
     * Lemmas 4.7 and 4.8
+
+- Add the semantics for the crisp version of case
+
+- Add the semantics for the crisp induction on W types
 
 # Section 5
 
@@ -91,7 +87,6 @@
 
 # Misc
 
-- Add an artifact to the submission. It will, as suggested by Reviewer
-  B, be essentially just the contents Figure 8 plus some build rules and
-  instructions.
+- Add an artifact to the submission. Just the contents Figure 8 plus
+  some build rules and instructions.
 
