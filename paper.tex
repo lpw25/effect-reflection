@@ -9,6 +9,10 @@
 \usepackage{sourcecodepro}
 \usepackage{amsthm}
 
+\DeclareFontFamily{U}{min}{}
+\DeclareFontShape{U}{min}{m}{n}{<-> udmj30}{}
+\newcommand{\yo}{\!\text{\usefont{U}{min}{m}{n}\symbol{'207}}\!}
+
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
 
@@ -36,6 +40,8 @@
 
 \newcommand{\nat}{\mathbb{N}}
 \newcommand{\glob}{\mathop{\Box}}
+\newcommand{\nothing}{\text{\textvisiblespace}}
+\newcommand{\arr}{\rightarrow}
 \newcommand{\cat}{\mathbb{C}}
 \newcommand{\catobj}{C}
 \newcommand{\op}{\mathtt{op}}
@@ -51,21 +57,22 @@
 \newcommand{\freef}{Free}
 \newcommand{\constfname}{\Omega}
 \newcommand{\constf}[1]{\constfname #1}
-\newcommand{\yonedaname}{y}
-\newcommand{\yoneda}[1]{y(#1)}
+\newcommand{\yonedaname}{\yo}
+\newcommand{\yoneda}[1]{\yonedaname(#1)}
 \newcommand{\homset}[3]{\mathrm{Hom}_{#1}(#2, #3)}
 \newcommand{\arrow}[2]{{#2}^{#1}}
 \newcommand{\sem}[1]{\llbracket #1 \rrbracket}
-\newcommand{\reflectname}{\Uparrow}
+\newcommand{\reflectname}{\mathord{\Uparrow}}
 \newcommand{\reflectraw}[1]{\mathop{\reflectname_{#1}}}
 \newcommand{\reflect}[3]{\reflectraw{#1}(#2, #3)}
 \newcommand{\reflectc}[2]{\mathop{\reflectname_{#1 #2}}}
 \newcommand{\performraw}[2]{\mathop{\reflectname(#1(#2))}}
-\newcommand{\perform}[5]{\performraw{#1}{#2}(#3, #4. #5)}
+\newcommand{\perform}[3]{\performraw{#1}{#2}(#3)}
 \newcommand{\reifyname}{\Downarrow}
 \newcommand{\reifyraw}[1]{\mathop{\reifyname_{#1}}}
 \newcommand{\reify}[3]{\reifyraw{#1}(#2.\,#3)}
 \newcommand{\reifyc}[2]{\mathop{\reifyname_{#1 #2}}}
+\newcommand{\loc}{\ell}
 \newcommand{\outlname}{\mathrm{out}_L}
 \newcommand{\outl}[1]{\mathop{\outlname} #1}
 \newcommand{\outrname}{\mathrm{out}_R}
@@ -77,13 +84,12 @@
 \newcommand{\ret}[2]{\mathop{\retname_{#1}}(#2)}
 \newcommand{\indelimname}{\mathrm{rec}}
 \newcommand{\indelim}[3]{\mathop{\indelimname_{#1}} #2 \,\{#3\}}
-\newcommand{\indelimboxname}{\indelimname^{\glob}}
+\newcommand{\indelimboxname}{\indelimname^{\Box}}
 \newcommand{\indelimbox}[3]{\mathop{\indelimboxname_{#1}} #2 \,\{#3\}}
 \newcommand{\indelimmname}{\indelimname^{m}}
 \newcommand{\indelimm}[3]{\mathop{\indelimmname_{#1}} #2 \,\{#3\}}
 \newcommand{\indretcase}[2]{\retname(#1) \Rightarrow #2}
 \newcommand{\indcase}[4]{#1(#2, #3) \Rightarrow #4}
-\newcommand{\letret}[4]{\mathop{\mathrm{let}} (\ret{#1}{#2}) = #3 \mathop{\mathrm{in}} #4}
 \newcommand{\seq}{\,;\,}
 \newcommand{\fst}{\mathop{\pi_1}}
 \newcommand{\snd}{\mathop{\pi_2}}
@@ -93,13 +99,13 @@
 \newcommand{\case}[5]{\mathop{\casename} #1 \,\{\,\inl{#2} \Rightarrow #3 \seq \inr{#4} \Rightarrow #5 \,\}}
 \newcommand{\casemname}{\casename^{m}}
 \newcommand{\casem}[5]{\mathop{\casemname} #1 \,\{\,\inl{#2} \Rightarrow #3 \seq \inr{#4} \Rightarrow #5 \,\}}
-\newcommand{\caseboxname}{\casename^{\glob}}
+\newcommand{\caseboxname}{\casename^{\Box}}
 \newcommand{\casebox}[5]{\mathop{\caseboxname} #1 \,\{\,\inl{#2} \Rightarrow #3 \seq \inr{#4} \Rightarrow #5 \,\}}
+\newcommand{\types}{\mathrel{:}}
+\newcommand{\gtypes}{\mathrel{:_{\Box}}}
+\newcommand{\mtypes}{\mathrel{:_{m}}}
 \newcommand{\abs}[3]{\mathop{\lambda}(#1 \types #2).\,#3}
 \newcommand{\app}[2]{#1\,#2}
-\newcommand{\types}{\mathrel{:}}
-\newcommand{\mtypes}{\mathrel{:_{m}}}
-\newcommand{\gtypes}{\mathrel{:_{\Box}}}
 \newcommand{\cempty}{\varepsilon}
 \newcommand{\ccons}[2]{#1;\,#2}
 \newcommand{\lbind}[3]{\ccons{#1}{#2\types#3}}
@@ -107,14 +113,15 @@
 \newcommand{\gbind}[3]{\ccons{#1}{#2\gtypes#3}}
 \newcommand{\cdiv}[1]{#1/\Box}
 \newcommand{\cmdiv}[1]{#1/m}
-\newcommand{\cldiv}[1]{#1/\text{\textvisiblespace}}}
+\newcommand{\cldiv}[1]{#1/\nothing}
 \newcommand{\bdiv}[1]{\cdiv{\mathop{!_{#1}}}}
 \newcommand{\return}[1]{\mathop{\mathrm{return}} #1}
 \newcommand{\letv}[3]{\mathop{\mathrm{let}} #1 = #2 \mathop{\mathrm{in}} #3}
 \newcommand{\gbox}[1]{\mathop{\mathrm{box}} #1}
 \newcommand{\gunbox}[3]{\mathop{\mathrm{let}} (\gbox{#1}) = #2 \mathop{\mathrm{in}} #3}
 \newcommand{\grun}[1]{\mathop{\mathrm{run}}(#1)}
-\newcommand{\sbst}[3]{#1[#2\backslash#3]}
+\newcommand{\sub}[2]{[#1\backslash#2]}
+\newcommand{\sbst}[3]{#1\sub{#2}{#3}}
 \newcommand{\turnv}{\mathrel{\vdash_V}}
 \newcommand{\turnc}{\mathrel{\vdash_C}}
 \newcommand{\evmap}{\mathop{ev}}
@@ -152,7 +159,7 @@
   \begin{equation*}
     \ind{\Sigma}(\tau)
     \qquad \cong \qquad
-    \yoneda{\Sigma} \rightarrow \glob \tau
+    \yoneda{\Sigma} \arr \glob \tau
   \end{equation*}
 
   where $\ind{\Sigma}(\tau)$ is the free algebra of $\Sigma$ at
@@ -163,7 +170,7 @@
   \emph{freer monad} of $\Sigma$. This isomorphism emerges naturally
   from the \emph{ambient monad model}, a novel semantic model of
   algebraic effect handlers in terms of presheaves over bounded Lawvere
-  theories.
+  theories. It is a corollary of the Yoneda lemma in that model.
 
   Effect reflection provides all the expressiveness of typed algebraic
   effects without requiring language-level support for effect systems. We
@@ -237,8 +244,8 @@ to potentially depend on the current location, whereas values of the
 global type $\glob \tau$ are known not to.
 
 In our setting being global means not depending on the ambient
-monad. For example, $A \rightarrow B$ represents computations that may
-use operations from the ambient monad, while $\glob (A \rightarrow B)$
+monad. For example, $A \arr B$ represents computations that may
+use operations from the ambient monad, while $\glob (A \arr B)$
 contains only pure computations that ignore the ambient monad.
 
 Based on this relationship between locality and effects, we present
@@ -247,7 +254,7 @@ $\Sigma$ and type $\tau$, an isomorphism:
 \begin{equation*}
   \ind{\Sigma}(\tau)
   \qquad \cong \qquad
-  \yoneda{\Sigma} \rightarrow \glob \tau
+  \yoneda{\Sigma} \arr \glob \tau
 \end{equation*}
 where $\ind{\Sigma}(\tau)$ is an inductive type representing the
 free algebra of $\Sigma$ at $\tau$, and $\yoneda{\Sigma}$ is a
@@ -838,11 +845,10 @@ not need forwarding.
 \section{A language with effect reflection}
 \label{sec:language}
 
-The design of effect reflection falls out naturally from a denotational
-semantics in terms of presheaves. To make this connection precise and
-demonstrate the key properties of effect reflection, we present a
-simply-typed calculus that directly incorporates the constructs needed
-for effect reflection.
+The design of effect reflection falls out naturally from the ambient
+monad model. To make this connection precise and demonstrate the key
+properties of effect reflection, we present a simply-typed calculus that
+directly incorporates the constructs needed for effect reflection.
 
 \subsection{The base language}
 
@@ -853,17 +859,21 @@ rules for the base language are shown in Fig.\ref{fig:typing-standard}.
 \begin{figure}
 \begin{align*}
   \mathrm{types}, \tau ::=\;& \tau \times \tau \mid 1 \mid \tau + \tau
-                              \mid \tau \rightarrow \tau \mid \ldots \\
-  \mathrm{contexts}, \Gamma ::=\;& \cempty \mid \mbind{\Gamma}{x}{\tau} \mid \ldots \\
-  \mathrm{values}, v :=\;& x \mid (v, v) \mid \fst v \mid \snd v
-                           \mid () \mid \inl{v} \mid \inr{v} \mid \abs{x}{\tau}{c}
-                           \mid \case{v}{x}{v}{x}{v} \ldots \\
+                              \mid \tau \arr \tau \mid \ldots \\
+  \mathrm{contexts}, \Gamma ::=\;& \cempty \mid \lbind{\Gamma}{x}{\tau} \mid \ldots \\
+  \mathrm{values}, v :=\;& x \mid \abs{x}{\tau}{c}
+                           \mid (v, v) \mid \fst v \mid \snd v \mid () \\
+                           \mid& \inl{v} \mid \inr{v} \mid \case{v}{x}{v}{x}{v}
+                           \mid \ldots \\
   \mathrm{computations}, c :=\;& \return{v} \mid \letv{x}{c}{c}
                                  \mid \app{v}{v} \mid \ldots
 \end{align*}
 \begin{mathpar}
 \inferrule{\\}
-{\lbind{\Gamma}{x}{\tau} \turnv x \types \tau}
+{\ccons{\lbind{\Gamma_1}{x}{\tau}}{\Gamma_2} \turnv x \types \tau}
+\and
+\inferrule{\lbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2}
+{\Gamma \turnv \abs{x}{\tau_1}{c} \types \tau_1 \arr \tau_2}
 \and
 \inferrule{\Gamma \turnv v_1 \types \tau_1 \\ \Gamma \turnv v_1 \types \tau_1}
 {\Gamma \turnv (v_1, v_2) \types \tau_1 \times \tau_2}
@@ -888,9 +898,6 @@ rules for the base language are shown in Fig.\ref{fig:typing-standard}.
            \lbind{\Gamma}{x_2}{\tau_2} \turnv v_3 \types \tau_3}
 {\Gamma \turnv \case{v_1}{x_1}{v_2}{x_2}{v_3} \types \tau_3}
 \and
-\inferrule{\lbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2}
-{\Gamma \turnv \abs{x}{\tau_1}{c} \types \tau_1 \rightarrow \tau_2}
-\and
 \inferrule{\Gamma \turnv v \types \tau}
 {\Gamma \turnc \return{v} \types \tau}
 \and
@@ -898,7 +905,7 @@ rules for the base language are shown in Fig.\ref{fig:typing-standard}.
            \lbind{\Gamma}{x}{\tau_1} \turnc c_2 \types \tau_2}
 {\Gamma \turnc \letv{x}{c_1}{c_2} \types \tau_2}
 \and
-\inferrule{\Gamma \turnv v_1 \types \tau_1 \rightarrow \tau_2 \\
+\inferrule{\Gamma \turnv v_1 \types \tau_1 \arr \tau_2 \\
            \Gamma \turnv v_2 \types \tau_1}
 {\Gamma \turnc v_1 v_2 \types \tau_2}
 \end{mathpar}
@@ -906,19 +913,27 @@ rules for the base language are shown in Fig.\ref{fig:typing-standard}.
 \label{fig:typing-standard}
 \end{figure}
 
+For convenience we allow some simple pattern forms in variable binding
+positions. We allow $()$ to be used in place of a variable when binding
+a unit value, and we allow $(x_1, x_2)$ to be used in place of a single
+variable when binding a product value. Unit patterns are encoded as just
+an unused variable, whilst product bindings are encoded using a variable
+$x_0$ and applying the substitutions
+$\sub{x_1}{\fst{x_0}}\sub{x_2}{\snd{x_0}}$ to the body of the binding.
+
 Note that $\casename$ -- the eliminator for sum types -- is a value
 rather than a computation. We can define a computation version as:
 \begin{align*}
     &\case{v}{x_1}{c_1}{x_2}{c_2} := \\
-    &\qquad (\case{v}{x_1}{\abs{\_}{1}{c_1}}{x_2}{\abs{\_}{1}{c_2}}) \; ()
+    &\qquad (\case{v}{x_1}{\abs{()}{1}{c_1}}{x_2}{\abs{()}{1}{c_2}}) \; ()
 \end{align*}
 
 \subsection{Locality}
 
 We track locality in the language via a global comonadic modality
 $\glob$. In our setting being global means not depending on the ambient
-monad. For example, $1 \rightarrow 1$ represents computations that may
-use operations from the ambient monad, while $\glob (1 \rightarrow 1)$
+monad. For example, $1 \arr 1$ represents computations that may
+use operations from the ambient monad, while $\glob (1 \arr 1)$
 contains only pure computations that ignore the ambient monad.
 
 When using $\gbox{v}$ to build a value with a global type, we can only
@@ -928,7 +943,9 @@ binding form that requires a global type and then we restrict the
 context in which we type $v$ to only include such bindings. The new
 global binding form is written $\gbind{\Gamma}{x}{\tau}$ and represents
 a value in the context of type $\glob \tau$. We create global bindings
-in the context using the elimination form: $\gunbox{x}{v_1}{v_2}$.
+in the context using the elimination form: $\gunbox{x}{v_1}{v_2}$. As
+with $\casename$, this elimination form is a value, but we can define a
+computation version directly in terms of it.
 
 Restricting the context is implemented via an operation on contexts
 $\cdiv{\Gamma}$ that removes all local bindings, leaving only the global
@@ -953,7 +970,11 @@ which we realize via $\caseboxname$, a global form of the
 $\casename$ construct, which allows you to match on a global sum and get
 out global components.
 
-We also add a modalities category, $m$, to the syntax, which is either
+For convenience we allow $(\gbox{x})$ to be used as a pattern in
+variable binding positions. These are treated as binding a variable
+$x_0$ and prefixing the body of the binding with $\gunbox{x}{x_0}{}$.
+
+We add a modalities category, $m$, to the formal syntax, which is either
 blank space or $\glob$, to make it easier to describe rules that are
 parametric in the presence or absence of the global modality. As part of
 this, the $\cdiv{\Gamma}$ operation is extended to work on modalities
@@ -964,14 +985,14 @@ Fig.\ref{fig:typing-locality}
 \begin{figure}
 \begin{align*}
   \mathrm{types}, \tau ::=\;& \ldots \mid \glob \tau \mid \ldots \\
+  \mathrm{modalities}, m ::=\;& \nothing \mid \glob \\
   \mathrm{contexts}, \Gamma ::=\;& \ldots \mid \gbind{\Gamma}{x}{\tau} \\
-  \mathrm{values}, v :=\;& \ldots \mid \gbox{v} \mid \gunbox{x}{v}{v} \mid
-                           \casebox{v}{x}{v}{x}{v} \mid \grun{c} \mid \ldots \\
-  \mathrm{modalities}, m ::=\;& \text{\textvisiblespace} \mid \glob
+  \mathrm{values}, v ::=\;& \ldots \mid \gbox{v} \mid \gunbox{x}{v}{v} \mid
+                           \casebox{v}{x}{v}{x}{v} \mid \grun{c} \ldots \\
 \end{align*}
 \begin{mathpar}
 \inferrule{\\}
-{\gbind{\Gamma}{x}{\tau} \turnv x \types \tau}
+{\ccons{\mbind{\Gamma_1}{x}{\tau}}{\Gamma_2} \turnv x \types \tau}
 \and
 \inferrule{\cdiv{\Gamma} \turnv v \types \tau}
 {\Gamma \turnv \gbox{v} \types \glob \tau}
@@ -980,10 +1001,10 @@ Fig.\ref{fig:typing-locality}
            \gbind{\Gamma}{x}{\tau_1} \turnv v_2 \types \tau_2}
 {\Gamma \turnv \gunbox{x}{v_1}{v_2} \types \tau_2}
 \and
-\inferrule{\cdiv{\Gamma} \turnv v_1 \types \tau_1 + \tau_2 \\
-           \gbind{\Gamma}{x_1}{\tau_1} \turnv v_2 \types \tau_3 \\
-           \gbind{\Gamma}{x_2}{\tau_2} \turnv v_3 \types \tau_3}
-{\Gamma \turnv \casebox{v_1}{x_1}{v_2}{x_2}{v_3} \types \tau_3}
+\inferrule{\cmdiv{\Gamma} \turnv v_1 \types \tau_1 + \tau_2 \\
+           \mbind{\Gamma}{x_1}{\tau_1} \turnv v_2 \types \tau_3 \\
+           \mbind{\Gamma}{x_2}{\tau_2} \turnv v_3 \types \tau_3}
+{\Gamma \turnv \casem{v_1}{x_1}{v_2}{x_2}{v_3} \types \tau_3}
 \and
 \inferrule{\cdiv{\Gamma} \turnc c \types \tau}
 {\Gamma \turnv \grun{c} \types \tau}
@@ -1037,9 +1058,9 @@ of $\Sigma_2$.
 
 For each operation $op \types \tau_p \rightarrowtail \tau_a$,
 $\ind{\Sigma}(\tau)$ has a constructor $\indintro{\Sigma}{op}{v_p}{v_k}$
-where $v_p \types \glob \tau_p$ and
-$v_k \types \glob \tau_a \rightarrow \ind{\Sigma}(\tau)$. $\ind{\Sigma}(\tau)$
-also has a constructor $\ret{\Sigma}{v}$ where $v \types \glob \tau$.
+where $v_p \gtypes \tau_p$ and
+$v_k \types \glob \tau_a \arr \ind{\Sigma}(\tau)$. $\ind{\Sigma}(\tau)$
+also has a constructor $\ret{\Sigma}{v}$ where $v \gtypes \tau$.
 
 The eliminator for $\ind{\Sigma}$ is written
 \begin{align*}
@@ -1060,16 +1081,6 @@ via $\indelimboxname$, a global form of the $\indelimname$ construct,
 which allows you to match on a global inductive type and get out global
 components.
 
-For convenience, we also define the following abbreviation:
-\begin{align*}
-    \letret{\Sigma}{x}{c_1}{c_2} := \quad &\letv{x_s}{c_1}{\\
-        &\indelim{\Sigma}{x_s}{ \\
-        &\qquad \indretcase{x}{c_2} \seq \\
-        &\qquad \indcase{op_1}{x_{p_1}}{x_{k_1}}{\return{\indintro{\Sigma}{op_1}{x_{p_1}}{x_{k_1}}}} \seq \\
-        &\qquad \ldots \seq \\
-        &\qquad \indcase{op_n}{x_{p_n}}{x_{k_n}}{\return{\indintro{\Sigma}{op_n}{x_{p_n}}{x_{k_n}}}}}}
-\end{align*}
-
 \begin{figure}
 \begin{align*}
   \mathrm{types}, \tau ::=\;& \ldots \mid \ind{\Sigma}(\tau) \mid \ldots \\
@@ -1086,7 +1097,7 @@ For convenience, we also define the following abbreviation:
 \begin{mathpar}
 \inferrule{op \types \tau_1 \rightarrowtail \tau_2 \in \Sigma \\
            \cdiv{\Gamma} \turnv v_1 \types \tau_1 \\
-           \Gamma \turnv v_2 \types \glob \tau_2 \rightarrow \ind{\Sigma}(\tau)}
+           \Gamma \turnv v_2 \types \glob \tau_2 \arr \ind{\Sigma}(\tau)}
 {\Gamma \turnv \indintro{\Sigma}{op}{v_1}{v_2} \types \ind{\Sigma}(\tau)}
 \and
 \inferrule{\cdiv{\Gamma} \turnv v \types \tau}
@@ -1096,9 +1107,9 @@ For convenience, we also define the following abbreviation:
            \Sigma = \{ op_1 \types \tau_{p_1} \rightarrowtail \tau_{a_1};
              \ldots; op_n\types \tau_{p_n} \rightarrowtail \tau_{a_n} \} \\
            \gbind{\Gamma}{x_r}{\tau_1} \turnv v_r \types \tau_2 \\
-           \mbind{\gbind{\Gamma}{x_{p_1}}{\tau_{p_1}}}{x_{k_1}}{\glob \tau_{a_1} \rightarrow \tau_2} \turnv v_1 \types \tau_2 \\
+           \mbind{\gbind{\Gamma}{x_{p_1}}{\tau_{p_1}}}{x_{k_1}}{\glob \tau_{a_1} \arr \tau_2} \turnv v_1 \types \tau_2 \\
            \ldots \\
-           \mbind{\gbind{\Gamma}{x_{p_n}}{\tau_{p_n}}}{x_{k_n}}{\glob \tau_{a_n} \rightarrow \tau_2} \turnv v_n \types \tau_2}
+           \mbind{\gbind{\Gamma}{x_{p_n}}{\tau_{p_n}}}{x_{k_n}}{\glob \tau_{a_n} \arr \tau_2} \turnv v_n \types \tau_2}
 {\Gamma \turnv \indelimm{\Sigma}{v_s}{\indretcase{x_r}{v_r} \seq
                                    \indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} \seq \ldots \seq
                                    \indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}} \types \tau_2}
@@ -1113,14 +1124,12 @@ For convenience, we also define the following abbreviation:
   reified computation that negates the value of the state:
   \begin{align*}
     &\indintro{\Sigma_{bs}}{get}{()}{\\
-      &\quad\abs{x_a}{1 + 1}{\\
-        &\qquad \letv{x_n}{\app{\mathit{negate}}{x_a}}{\\
-          &\qquad \indintro{\Sigma_{bs}}{set}{x_n}{\abs{x_u}{1}{\ret{\Sigma_{bs}}{x_u}}}}}}
+      &\quad\abs{(\gbox{x_a})}{\glob (1 + 1)}{\\
+          &\qquad \indintro{\Sigma_{bs}}{set}{\grun{\app{\mathit{negate}}{x_a}}}
+            {\abs{(\gbox{x_r})}{\glob 1}{\ret{\Sigma_{bs}}{x_r}}}}}
   \end{align*}
   where $\mathit{negate}$ is the function that negates a boolean.
 \end{example}
-
-\todo{The above is missing boxing operations}
 
 \subsection{Effect reflection}
 
@@ -1128,13 +1137,13 @@ The language provides a type $\yoneda{\Sigma}$ for each $\Sigma$ to
 represent mappings from the operations of $\Sigma$ into the current
 ambient monad. Effect reflection appears in the language as two
 constructs: reflection and reification. Reflection $\performraw{v}{op}$
-uses a value of type $\yoneda{\Sigma}$ to map the operation $op$ from
+uses a value $v \types \yoneda{\Sigma}$ to map the operation $op$ from
 $\Sigma$ into the ambient monad.  Reification $\reifyraw{\Sigma}$
 extends the ambient monad with the operations from $\Sigma$, providing a
 value of type $\yoneda{\Sigma}$ for constructing those operations via
 reflection.  These constructs implement the core isomorphism of effect
 reflection: reification can convert functions
-$\yoneda{\Sigma} \rightarrow \glob \tau$ into terms
+$\yoneda{\Sigma} \arr \glob \tau$ into terms
 $\ind{\Sigma}(\tau)$, while reflection provides the inverse
 direction. Their syntax and typing rules are shown in
 Fig.\ref{fig:typing-reflection}.
@@ -1142,10 +1151,14 @@ Fig.\ref{fig:typing-reflection}.
 \begin{figure}
 \begin{align*}
   \mathrm{types}, \tau ::=\;& \ldots \mid \yoneda{\Sigma} \mid \ldots \\
-  \mathrm{values}, v :=\;& \ldots \mid \outl{v} \mid \outr{v} \\
-  \mathrm{computations}, c :=\;& \ldots \perform{v}{op}{v}{x}{c} \mid \reify{\Sigma}{x}{c}
+  \mathrm{contexts}, \Gamma ::=\;& \ldots \mid \lbind{\Gamma}{\loc}{\Sigma} \\
+  \mathrm{values}, v :=\;& \ldots \mid \loc \mid \outl{v} \mid \outr{v} \\
+  \mathrm{computations}, c :=\;& \ldots \perform{v}{op}{v} \mid \reify{\Sigma}{\loc}{c}
 \end{align*}
 \begin{mathpar}
+\inferrule{\\}
+{\ccons{\lbind{\Gamma_1}{\loc}{\Sigma}}{\Gamma_2} \turnv \loc \types \yoneda{\Sigma}}
+\and
 \inferrule{\Gamma \turnv v \types \yoneda{\Sigma_1 + \Sigma_2}}
 {\Gamma \turnv \outl{v} \types \yoneda{\Sigma_1}}
 \and
@@ -1154,16 +1167,21 @@ Fig.\ref{fig:typing-reflection}.
 \and
 \inferrule{\Gamma \turnv v_1 \types \yoneda{\Sigma} \\
            op \types \tau_1 \rightarrowtail \tau_2 \in \Sigma \\
-           \cdiv{\Gamma} \turnv v_2 \types \tau_1 \\
-           \lbind{\Gamma}{x}{\glob \tau_2} \turnc c \types \tau_3}
-{\Gamma \turnc \; \perform{v_1}{op}{v_2}{x}{c} \types \tau_3}
+           \cdiv{\Gamma} \turnv v_2 \types \tau_1}
+{\Gamma \turnc \; \perform{v_1}{op}{v_2} \types \glob \tau_2}
 \and
-\inferrule{\lbind{\Gamma}{x}{\yoneda{\Sigma}} \turnc c \types \glob \tau}
-{\Gamma \turnc \; \reify{\Sigma}{x}{c} \types \ind{\Sigma}(\tau)}
+\inferrule{\lbind{\Gamma}{\loc}{\Sigma} \turnc c \types \glob \tau}
+{\Gamma \turnc \; \reify{\Sigma}{\loc}{c} \types \ind{\Sigma}(\tau)}
 \end{mathpar}
 \caption{Effect reflection syntax and typing rules}
 \label{fig:typing-reflection}
 \end{figure}
+
+We introduce a separate set of variables $\loc$ for the bindings
+introduced by reification. This makes it easier to define the desired
+reduction rules and normal forms. We give them their own binding form
+$\loc \types \Sigma$ in the context, which are also removed by the
+$\cdiv{}$ operation
 
 Note that we treat reflection of individual operations
 $\performraw{v}{op}$ as primitive. We can define reflection of
@@ -1171,12 +1189,12 @@ terms $\reflectraw{\Sigma}$ in terms of $\performraw{v}{op}$:
 \begin{align*}
     \reflect{\Sigma}{v}{c} := \quad &\letv{x_w}{c}{\\
         &\indelim{\Sigma}{x_w}{ \\
-        &\qquad \indretcase{x_r}{\return{x_r}} \seq \\
+        &\qquad \indretcase{x_r}{\return{(\gbox{x_r}})} \seq \\
         &\qquad \indcase{op_1}{x_{p_1}}{x_{k_1}}
-          {\perform{v}{op_1}{x_{p_1}}{x_{a_1}}{(\app{x_{k_1}}{x_{a_1}})}} \seq \\
+          {\letv{x_{a_1}}{\perform{v}{op_1}{x_{p_1}}}{\app{x_{k_1}}{x_{a_1}}}} \seq \\
         &\qquad \ldots \seq \\
         &\qquad \indcase{op_n}{x_{p_n}}{x_{k_n}}
-          {\perform{v}{op_n}{x_{p_n}}{x_{a_n}}{(\app{x_{k_n}}{x_{a_n}})}}}}
+          {\letv{x_{a_n}}{\perform{v}{op_n}{x_{p_n}}}{\app{x_{k_n}}{x_{a_n}}}}}}
 \end{align*}
 which has this admissible typing rule:
 \begin{mathpar}
@@ -1190,12 +1208,12 @@ for $\Sigma_1 + \Sigma_2$ into mappings for $\Sigma_1$ and $\Sigma_2$
 respectively.
 
 \begin{example}
-  The value from Example~\ref{example:negate} can be constructed via reflection as:
+  The value from Example~\ref{example:negate} can also be constructed
+  via reflection:
   \begin{align*}
-    &\reify{\Sigma_{bs}}{x_h}{\\
-      &\qquad \perform{x_h}{get}{()}{x_a}{\\
-        &\qquad \qquad \letv{x_n}{\app{\mathit{negate}}{x_a}}{\\
-          &\qquad \qquad \perform{x_h}{set}{x_n}{x_u}{\return{x_u}}}}}
+    &\reify{\Sigma_{bs}}{\loc}{\\
+      &\qquad \letv{(\gbox{x})}{\perform{\loc}{get}{}}{\\
+      &\qquad \perform{\loc}{set}{\grun{\app{\mathit{negate}}{x}}}}}
   \end{align*}
   where $\mathit{negate}$ is the function that negates a boolean.
 \end{example}
@@ -1218,20 +1236,19 @@ Fig.\ref{fig:normal}.
 \casem{(\inr{v_1})}{x_1}{v_2}{x_2}{v_3} &\reducestov \sbst{v_3}{x_2}{v_1} \\
 \gunbox{x}{\gbox{v_1}}{v_2} &\reducestov \sbst{v_2}{x}{v_1} \\
 \grun{\return{v}} &\reducestov v \\
-\grun{\letv{x_1}{c_1}{c_2}} &\reducestov \grun{\sbst{c_2}{x_1}{\grun{c_1}}} \\
 \indelimm{\Sigma}{(\ret{\Sigma}{v_s})}{\indretcase{x}{v_r} \seq \ldots} &\reducestov \sbst{v_r}{x}{v_s} \\
-\indelimm{\Sigma}{(\indintro{\Sigma}{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} \reducestov \\
-  \sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{\abs{x_a}{\tau_a}{&\letv{x_w}{\app{v_2}{x_a}}{\return{\indelimm{\Sigma}{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2}}}}} \\
+\indelimm{\Sigma}{(\indintro{\Sigma}{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} &\reducestov \\
+  \sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{\abs{x_a}{\tau_a}{\letv{x_w}{\app{v_2}{x_a}&}{\return{(\indelimm{\Sigma}{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}} \\
+\app{(\abs{x}{\tau}{c})}{v} &\reducestoc \sbst{c}{x}{v} \\
 \letv{x}{\return{v}}{c} &\reducestoc \sbst{c}{x}{v} \\
 \letv{x_2}{\letv{x_1}{c_1}{c_2}}{c_3} &\reducestoc \letv{x_1}{c_1}{\letv{x_2}{c_2}{c_3}}\\
-\letv{x_1}{\perform{v_1}{op}{v_2}{x_2}{c_1}}{c_2} &\reducestoc \perform{v_1}{op}{v_2}{x_2}{\letv{x_1}{c_1}{c_2}} \\
-\app{(\abs{x}{\tau}{c})}{v} &\reducestoc \sbst{c}{x}{v} \\
-\reify{\Sigma}{x}{\return{v}} &\reducestoc \return{\ret{\Sigma}{v}} \\
-\reify{\Sigma}{x_1}{\letv{x_2}{c_1}{c_2}} &\reducestoc \letret{\Sigma}{x_2}{\reify{\Sigma}{x_1}{c_1}}{\reify{\Sigma}{x_1}{c_2}} \\
-\reify{\Sigma}{x_1}{\perform{x_1}{op}{v}{x_2}{c}} &\reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{x_2}{\tau}{\reify{\Sigma}{x_1}{c}}}} \\
-\reify{\Sigma}{x_1}{\perform{x_2}{op}{v}{x_3}{c}} &\reducestoc \perform{x_2}{op}{v}{x_3}{\reify{\Sigma}{x_1}{c}} \qquad (x_1 \neq x_2) \\
 \perform{(\outl{v_1})}{op}{v_2}{x}{c} &\reducestoc \perform{v_1}{\mathrm{left}(op)}{v_2}{x}{c} \\
-\perform{(\outr{v_1})}{op}{v_2}{x}{c} &\reducestoc \perform{v_1}{\mathrm{right}(op)}{v_2}{x}{c}
+\perform{(\outr{v_1})}{op}{v_2}{x}{c} &\reducestoc \perform{v_1}{\mathrm{right}(op)}{v_2}{x}{c} \\
+\reify{\Sigma}{\loc}{\return{(\gbox{v})}} &\reducestoc \return{\ret{\Sigma}{v}} \\
+\reify{\Sigma}{\loc_1}{\perform{\loc_1}{op}{v}} &\reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{x}{\glob \tau}{\return{x}}}} \\
+\reify{\Sigma}{\loc_1}{\perform{\loc_2}{op}{v}} &\reducestoc \perform{\loc_2}{op}{v} \qquad (\loc_1 \neq \loc_2) \\
+\reify{\Sigma}{\loc_1}{\letv{x}{\perform{\loc_1}{op}{v}{c}}} &\reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{x}{\glob \tau}{\reify{\Sigma}{\loc_1}{c}}}} \\
+\reify{\Sigma}{\loc_1}{\letv{x}{\perform{\loc_2}{op}{v}}{c}} &\reducestoc \letv{x}{\perform{\loc_2}{op}{v}}{\reify{\Sigma}{\loc_1}{c}} \qquad (\loc_1 \neq \loc_2)
 \end{align*}
 \caption{Reduction relations}
 \label{fig:reduction}
@@ -1239,22 +1256,22 @@ Fig.\ref{fig:normal}.
 \begin{figure}
 \begin{align*}
   \mathrm{neutral\ values}, \eta :=\;& x \mid \fst \eta \mid \snd \eta \mid \\
-                                   &\case{\eta}{x}{\omega}{x}{\omega} \mid \\
-                                   &\casebox{\eta}{x}{\omega}{x}{\omega} \mid \\
+                                   &\casem{\eta}{x}{\omega}{x}{\omega} \mid \\
                                    &\gunbox{x}{\eta}{\omega} \mid \grun{\mu} \mid \\
-                                   &\indelim{\Sigma}{\eta}
+                                   &\indelimm{\Sigma}{\eta}
                                      {\indretcase{x}{\omega} \seq
                                      \indcase{op}{x}{x}{\omega} \seq \ldots \seq
                                      \indcase{op}{x}{x}{\omega}} \\
-  \mathrm{neutral\ computations}, \mu :=\;& \app{\eta}{\omega}
-                                            \mid \reify{\Sigma}{x}{\mu} \\
   \mathrm{normal\ values}, \omega :=\;& \eta \mid (\omega, \omega)
                            \mid () \mid \inl{\omega} \mid \inr{\omega} \mid \abs{x}{\tau}{\gamma} \mid \\
                            &\indintro{\Sigma}{op}{\omega}{\omega} \mid \ret{\Sigma}{\omega} \mid \\
-                           &\gbox{\omega} \mid \outl{\omega} \mid \outr{\omega} \\
+                           &\gbox{\omega} \mid \loc \mid \outl{\omega} \mid \outr{\omega} \\
+  \mathrm{neutral\ atomic\ computations}, \nu :=\;& \app{\eta}{\omega}
+                                            \mid \reify{\Sigma}{x}{\mu} \mid \perform{\eta}{op}{\omega} \\
+  \mathrm{normal\ atomic\ computations}, \delta :=\;& \nu \mid \perform{\loc}{op}{\omega} \\
+  \mathrm{neutral\ computations}, \mu :=\;& \nu \mid \letv{x}{\nu}{\gamma} \\
   \mathrm{normal\ computations}, \gamma :=\;& \mu \mid \return{\omega}
-                                              \mid \letv{x}{\mu}{\gamma}
-                                               \mid \perform{\eta}{op}{\omega}{x}{\gamma}
+                                              \mid \letv{x}{\delta}{\gamma}
 \end{align*}
 \caption{Normal forms}
 \label{fig:normal}
@@ -1267,7 +1284,7 @@ the reduction relations.
 \label{lemma:subject-reduction}
   \begin{equation*}
     \Gamma \turnv v_1 \types \tau
-    \wedge v_1 \reducestov v_2 \implies \Gamma \turnv v_2 \types \tau
+    \quad \wedge \quad v_1 \reducestov v_2 \quad \implies \quad \Gamma \turnv v_2 \types \tau
   \end{equation*}
 \end{lemma}
 
@@ -1285,36 +1302,8 @@ the presence of infinitary inductive types, which requires us to
 
 Using the global modality and $\grun{c}$ construct we can embed the
 Simply Typed Lambda Calculus (STLC) into this language as values. This
-demonstrates that the language is a proper extension of STLC. We define
-an embedding $\embed{\_}$ on types, contexts and terms of STLC in
-Fig.\ref{fig:stlc}. Note that $\reducestov$ matches the behaviour of
-$\beta$ reduction of STLC too, with each STLC reduction step
-corresponding to up to 3 steps of $\reducestov$.
-\begin{figure}
-\begin{equation*}
-\begin{aligned}[c]
-  &\embed{1} = 1 \\
-  &\embed{A \times B} = \embed{A} \times \embed{B} \\
-  &\embed{A \rightarrow B} = (\glob \embed{A}) \rightarrow \embed{B} \\ \\
-  &\embed{\cempty} = \cempty \\
-  &\embed{\lbind{\Gamma}{x}{A}} = \gbind{\embed{\Gamma}}{x}{\embed{A}}
-\end{aligned}
-\qquad
-\begin{aligned}[c]
-  &\embed{x} = x \\
-  &\embed{(e, f)} = (\embed{e}, \embed{f}) \\
-  &\embed{\fst{e}} = \fst{\embed{e}} \\
-  &\embed{\snd{e}} = \snd{\embed{e}} \\
-  &\embed{\abs{x}{A}{e}} =
-    \abs{x^{\prime}}{\glob \embed{A}}{\return{(\gunbox{x}{x^{\prime}}{\embed{e}})}} \\
-  &\embed{\app{f}{e}} = \grun{\app{\embed{f}}{(\gbox{\embed{e}})}}
-\end{aligned}
-\end{equation*}
-\caption{Embedding of Simply-Typed Lambda Calculus into values}
-\label{fig:stlc}
-\end{figure}
-
-\todo{Prove that this embedding respects reduction of STLC}
+demonstrates that the language is a proper extension of STLC. We show this
+embedding and prove it correct in \ref{apdx:embedding}.
 
 \section{The ambient monad model}
 \label{sec:semantics}
@@ -1613,7 +1602,7 @@ respectively of $\mon$.
 Categories of presheaves also have exponentials, which combine with the
 free algebras monad to give us our semantics for function types.
 \begin{equation*}
-  \sem{\tau_1 \rightarrow \tau_2} = \arrow{\sem{\tau_1}}{\mon(\sem{\tau_2})}
+  \sem{\tau_1 \arr \tau_2} = \arrow{\sem{\tau_1}}{\mon(\sem{\tau_2})}
 \end{equation*}
 
 \subsection{The global modality}
@@ -1643,6 +1632,7 @@ $\glob$ bindings.
 \begin{align*}
 &\sem{\glob \tau} = \glob \sem{\tau} \\
 &\sem{\gbind{\Gamma}{x}{\tau}} = \sem{\Gamma} \times \glob \sem{\tau} \\
+&\sem{\tau_1 \arr \tau_2} = \arrow{\glob \sem{\tau_1}}{\mon(\sem{\tau_2})}
 &\sem{\gbind{\Gamma}{x}{\tau} \turnv x \types \tau} = \epsilon \circ \snd \\
 &\sem{\Gamma \turnv \gbox{v} \types \glob \tau} =
   \glob \sem{\cdiv{\Gamma} \turnv v \types \tau}
@@ -2004,6 +1994,105 @@ and the global modality used to control dependence on it.
 
 \appendix
 \section{Operational semantics}
+\subsection{General lemmas}
+
+We start by proving some general lemmas that we'll need in the various
+proofs. Note that we will refer to a property that applies to both value
+and computation terms, and which must be shown by mutual induction, as a
+single lemma.
+
+\subsubsection{Context division lemmas}
+
+We will need some simple lemmas describing the behaviour of the context
+division operator $\cdiv{\Gamma}$. All of which follow directly by
+induction on $\Gamma_2$.
+\begin{lemma}
+\label{lemma:local-cdiv}
+  \begin{align*}
+    &\cdiv{(\ccons{\lbind{\Gamma_1}{x}{v}}{\Gamma_2})} = \cdiv{(\ccons{\Gamma_1}{\Gamma_2})} \\
+    &\cdiv{(\ccons{\lbind{\Gamma_1}{\loc}{\Sigma}}{\Gamma_2})} = \cdiv{(\ccons{\Gamma_1}{\Gamma_2})} \\
+  \end{align*}
+\end{lemma}
+\begin{lemma}
+\label{lemma:global-cdiv}
+  \begin{equation*}
+    \cdiv{(\ccons{\gbind{\Gamma_1}{x}{v}}{\Gamma_2})} = \ccons{\gbind{\cdiv{\Gamma_1}}{x}{v}}{\cdiv{\Gamma_2}}
+  \end{equation*}
+\end{lemma}
+
+\subsubsection{Weakening lemmas}
+
+We need lemmas stating that we can weaken typing judgements with new
+variable bindings of both $x$ and $\loc$ variables.
+\begin{lemma}
+\label{lemma:local-weakening}
+  \begin{align*}
+    &\ccons{\Gamma_1}{\Gamma_2} \turnv v \types \tau_1
+    \quad \implies \quad \ccons{\lbind{\Gamma_1}{x}{\tau_2}}{\Gamma_2} \turnv v \types \tau_1 \\
+    &\ccons{\Gamma_1}{\Gamma_2} \turnc c \types \tau_1
+    \quad \implies \quad \ccons{\lbind{\Gamma_1}{x}{\tau_2}}{\Gamma_2} \turnc c \types \tau_1 \\
+  \end{align*}
+\end{lemma}
+\begin{lemma}
+\label{lemma:yoneda-weakening}
+  \begin{align*}
+    &\ccons{\Gamma_1}{\Gamma_2} \turnv v \types \tau
+    \quad \implies \quad \ccons{\lbind{\Gamma_1}{\loc}{\Sigma}}{\Gamma_2} \turnv v \types \tau \\
+    &\ccons{\Gamma_1}{\Gamma_2} \turnc c \types \tau
+    \quad \implies \quad \ccons{\lbind{\Gamma_1}{\loc}{\Sigma}}{\Gamma_2} \turnc c \types \tau \\
+  \end{align*}
+\end{lemma}
+The proof of these follows by mutual induction on the value and
+computation typing rules. The only aspect that isn't straightforward is
+that rules with premises featuring $\cdiv{\Gamma}$ rely on
+\ref{lemma:local-cdiv} to reuse those premises with the weakened
+context.
+
+We similarly need a lemma stating that we can weakening typing
+judgements with new global variable bindings.
+\begin{lemma}
+\label{lemma:global-weakening}
+  \begin{align*}
+    &\ccons{\Gamma_1}{\Gamma_2} \turnv v \types \tau_1
+    \quad \implies \quad \ccons{\gbind{\Gamma_1}{x}{\tau_2}}{\Gamma_2} \turnv v \types \tau_1 \\
+    &\ccons{\Gamma_1}{\Gamma_2} \turnc c \types \tau_1
+    \quad \implies \quad \ccons{\gbind{\Gamma_1}{x}{\tau_2}}{\Gamma_2} \turnc c \types \tau_1 \\
+  \end{align*}
+\end{lemma}
+This again follows by mutual induction on the value and computation
+typing rules. Rules with premises featuring $\cdiv{\Gamma}$ rely on
+\ref{lemma:global-cdiv} in order to make use of the inductive hypothesis
+on those premises.
+
+\subsubsection{Substitution lemmas}
+
+We will need two lemmas demonstrating that substitution preserves
+typing, one for local bindings and one for global bindings.
+\begin{lemma}
+\label{lemma:local-substitution}
+  \begin{align*}
+    &\Gamma \turnv v_1 \types \tau_1
+    \quad \wedge \quad \lbind{\Gamma}{x}{\tau_1} \turnv v_2 \types \tau_2
+    \quad \implies \quad \Gamma \turnv \sbst{v_2}{x}{v_1} \types \tau_2 \\
+    &\Gamma \turnv v \types \tau_1
+    \quad \wedge \quad \lbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2
+    \quad \implies \quad \Gamma \turnv \sbst{c}{x}{v} \types \tau_2
+  \end{align*}
+\end{lemma}
+
+
+\begin{lemma}
+\label{lemma:global-substitution}
+  \begin{align*}
+    &\cdiv{\Gamma} \turnv v_1 \types \tau_1
+    \quad \wedge \quad \gbind{\Gamma}{x}{\tau_1} \turnv v_2 \types \tau_2
+    \quad \implies \quad \Gamma \turnv \sbst{v_2}{x}{v_1} \types \tau_2 \\
+    &\cdiv{\Gamma} \turnv v \types \tau_1
+    \quad \wedge \quad \gbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2
+    \quad \implies \quad \Gamma \turnv \sbst{c}{x}{v} \types \tau_2
+  \end{align*}
+\end{lemma}
+
 \subsection{Subject reduction}
 \label{apdx:subject-reduction}
 
@@ -2018,14 +2107,14 @@ the rules in Fig.~\ref{fig:reduction}.
 
 The reflexivity case is immediate and the transitive case follows
 directly by induction. As all the typing rules are entirely
-compositional, the congruence cases also all follow direectly by
+compositional, the congruence cases also all follow directly by
 induction. This leaves only the rules from Fig.~\ref{fig:reduction}.
 
 Note that the typing rules are syntax directed with the exception of the
-two var rules, which are distinguished by how the variable is bound in
-the context. Since none of the left-hand sides of our reduction rules is
-a variable, there is always only a single typing rule that we need to
-consider.
+local and global var rules, which are distinguished by how the variable
+is bound in the context. Since none of the left-hand sides of our
+reduction rules is a variable, there is always only a single typing rule
+that we need to consider.
 
 The cases for the products rules:
 \begin{align*}
@@ -2110,6 +2199,37 @@ The case for the return rule:
 
 \subsection{Strong normalization}
 \label{apdx:strong-normalization}
+\section{Embedding the Simply-Typed Lambda Calculus}
+\label{apdx:embedding}
+We define an embedding $\embed{\_}$ on types, contexts and terms of STLC
+in Fig.\ref{fig:stlc}. Note that $\reducestov$ matches the behaviour of
+$\beta$ reduction of STLC too, with each STLC reduction step
+corresponding to up to 3 steps of $\reducestov$.
+\begin{figure}
+\begin{equation*}
+\begin{aligned}[c]
+  &\embed{1} = 1 \\
+  &\embed{A \times B} = \embed{A} \times \embed{B} \\
+  &\embed{A \rightarrow B} = \glob \embed{A} \arr \embed{B} \\ \\
+  &\embed{\cempty} = \cempty \\
+  &\embed{\lbind{\Gamma}{x}{A}} = \gbind{\embed{\Gamma}}{x}{\embed{A}}
+\end{aligned}
+\qquad
+\begin{aligned}[c]
+  &\embed{x} = x \\
+  &\embed{(e, f)} = (\embed{e}, \embed{f}) \\
+  &\embed{\fst{e}} = \fst{\embed{e}} \\
+  &\embed{\snd{e}} = \snd{\embed{e}} \\
+  &\embed{\abs{x}{A}{e}} =
+    \abs{(\gbox{x})}{\glob \embed{A}}{\return{\embed{e}}} \\
+  &\embed{\app{f}{e}} = \grun{\app{\embed{f}}{\embed{e}}}
+\end{aligned}
+\end{equation*}
+\caption{Embedding of Simply-Typed Lambda Calculus into values}
+\label{fig:stlc}
+\end{figure}
+
+\todo{Prove that this embedding respects reduction of STLC}
 \section{Denotational semantics}
 \label{apdx:denotational}
 \subsection{Soundness}

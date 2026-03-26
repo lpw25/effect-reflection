@@ -21,10 +21,6 @@
 
 - Add crisp version of rec.
 
-- Add a modality nonterminal to the syntax ranging over box and an
-  identity modality. Use this for bindings in the context. Then also
-  use it for case and rec to avoid needing to duplicate so many things.
-
 # Section 4
 
 - Add additional citations to section 4. There are currently no
