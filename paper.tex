@@ -1245,9 +1245,9 @@ Fig.\ref{fig:normal}.
 \perform{(\outl{v_1})}{op}{v_2}{x}{c} &\reducestoc \perform{v_1}{\mathrm{left}(op)}{v_2}{x}{c} \\
 \perform{(\outr{v_1})}{op}{v_2}{x}{c} &\reducestoc \perform{v_1}{\mathrm{right}(op)}{v_2}{x}{c} \\
 \reify{\Sigma}{\loc}{\return{(\gbox{v})}} &\reducestoc \return{\ret{\Sigma}{v}} \\
-\reify{\Sigma}{\loc_1}{\perform{\loc_1}{op}{v}} &\reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{x}{\glob \tau}{\return{x}}}} \\
+\reify{\Sigma}{\loc_1}{\perform{\loc_1}{op}{v}} &\reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{x}{\glob \tau_a}{\return{x}}}} \\
 \reify{\Sigma}{\loc_1}{\perform{\loc_2}{op}{v}} &\reducestoc \perform{\loc_2}{op}{v} \qquad (\loc_1 \neq \loc_2) \\
-\reify{\Sigma}{\loc_1}{\letv{x}{\perform{\loc_1}{op}{v}{c}}} &\reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{x}{\glob \tau}{\reify{\Sigma}{\loc_1}{c}}}} \\
+\reify{\Sigma}{\loc_1}{\letv{x}{\perform{\loc_1}{op}{v}{c}}} &\reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{x}{\glob \tau_a}{\reify{\Sigma}{\loc_1}{c}}}} \\
 \reify{\Sigma}{\loc_1}{\letv{x}{\perform{\loc_2}{op}{v}}{c}} &\reducestoc \letv{x}{\perform{\loc_2}{op}{v}}{\reify{\Sigma}{\loc_1}{c}} \qquad (\loc_1 \neq \loc_2)
 \end{align*}
 \caption{Reduction relations}
@@ -2005,11 +2005,16 @@ single lemma.
 
 We will need some simple lemmas describing the behaviour of the context
 division operator $\cdiv{\Gamma}$. All of which follow directly by
-induction on $\Gamma_2$.
+induction on the context.
 \begin{lemma}
 \label{lemma:local-cdiv}
   \begin{align*}
     &\cdiv{(\ccons{\lbind{\Gamma_1}{x}{v}}{\Gamma_2})} = \cdiv{(\ccons{\Gamma_1}{\Gamma_2})} \\
+  \end{align*}
+\end{lemma}
+\begin{lemma}
+\label{lemma:yoneda-cdiv}
+  \begin{align*}
     &\cdiv{(\ccons{\lbind{\Gamma_1}{\loc}{\Sigma}}{\Gamma_2})} = \cdiv{(\ccons{\Gamma_1}{\Gamma_2})} \\
   \end{align*}
 \end{lemma}
@@ -2019,6 +2024,13 @@ induction on $\Gamma_2$.
     \cdiv{(\ccons{\gbind{\Gamma_1}{x}{v}}{\Gamma_2})} = \ccons{\gbind{\cdiv{\Gamma_1}}{x}{v}}{\cdiv{\Gamma_2}}
   \end{equation*}
 \end{lemma}
+\begin{lemma}
+\label{lemma:cdiv-idempotent}
+  \begin{equation*}
+    \cdiv{\cdiv{\Gamma}} = \cdiv{\Gamma}
+  \end{equation*}
+\end{lemma}
+
 
 \subsubsection{Weakening lemmas}
 
@@ -2042,11 +2054,11 @@ variable bindings of both $x$ and $\loc$ variables.
     \quad \implies \quad \ccons{\lbind{\Gamma_1}{\loc}{\Sigma}}{\Gamma_2} \turnc c \types \tau \\
   \end{align*}
 \end{lemma}
-The proof of these follows by mutual induction on the value and
+The proofs of these follow by mutual induction on the value and
 computation typing rules. The only aspect that isn't straightforward is
 that rules with premises featuring $\cdiv{\Gamma}$ rely on
-\ref{lemma:local-cdiv} to reuse those premises with the weakened
-context.
+\ref{lemma:local-cdiv} and \ref{lemma:yoneda-cdiv} to reuse those
+premises with the weakened context.
 
 We similarly need a lemma stating that we can weakening typing
 judgements with new global variable bindings.
@@ -2066,32 +2078,61 @@ on those premises.
 
 \subsubsection{Substitution lemmas}
 
-We will need two lemmas demonstrating that substitution preserves
-typing, one for local bindings and one for global bindings.
+We need a simple lemma stating that substituting unbound variables does
+nothing, which follows directly from mutual induction on typing rules:
+\begin{lemma}
+\label{lemma:unbound-substitution}
+  \begin{align*}
+    &\Gamma \turnv v_1 \types \tau
+    \quad \wedge \quad x \notin \Gamma
+    \quad \implies \quad \sbst{v_1}{x}{v_2} = v_1 \\
+    &\Gamma \turnc c \types \tau
+    \quad \wedge \quad x \notin \Gamma
+    \quad \implies \quad \sbst{c}{x}{v} = c
+  \end{align*}
+\end{lemma}
+
+We need a lemma demonstrating that substitution for local bindings
+preserves typing.
 \begin{lemma}
 \label{lemma:local-substitution}
   \begin{align*}
-    &\Gamma \turnv v_1 \types \tau_1
-    \quad \wedge \quad \lbind{\Gamma}{x}{\tau_1} \turnv v_2 \types \tau_2
-    \quad \implies \quad \Gamma \turnv \sbst{v_2}{x}{v_1} \types \tau_2 \\
-    &\Gamma \turnv v \types \tau_1
-    \quad \wedge \quad \lbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2
+    &\lbind{\Gamma}{x}{\tau_1} \turnv v_1 \types \tau_2
+    \quad \wedge \quad \Gamma \turnv v_2 \types \tau_1
+    \quad \implies \quad \Gamma \turnv \sbst{v_1}{x}{v_2} \types \tau_2 \\
+    &\lbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2
+    \quad \wedge \quad \Gamma \turnv v \types \tau_1
     \quad \implies \quad \Gamma \turnv \sbst{c}{x}{v} \types \tau_2
   \end{align*}
 \end{lemma}
+This follows by mutual induction on the typing rules for $v_1$ and
+$c$. Cases with premises that extend the context rely on weakening
+(\ref{lemma:local-weakening} and \ref{lemma:global-weakening}) to apply
+the inductive hypothesis on those premises. Cases with premises that use
+$\cdiv{}$ rely on \ref{lemma:unbound-substitution} to reuse the original
+premise.
 
-
+Similarly, we need a lemma demonstrating that substitution for global bindings
+preserves typing.
 \begin{lemma}
 \label{lemma:global-substitution}
   \begin{align*}
-    &\cdiv{\Gamma} \turnv v_1 \types \tau_1
-    \quad \wedge \quad \gbind{\Gamma}{x}{\tau_1} \turnv v_2 \types \tau_2
-    \quad \implies \quad \Gamma \turnv \sbst{v_2}{x}{v_1} \types \tau_2 \\
-    &\cdiv{\Gamma} \turnv v \types \tau_1
-    \quad \wedge \quad \gbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2
+    &\gbind{\Gamma}{x}{\tau_1} \turnv v_1 \types \tau_2
+    \quad \wedge \quad \cdiv{\Gamma} \turnv v_2 \types \tau_1
+    \quad \implies \quad \Gamma \turnv \sbst{v_1}{x}{v_2} \types \tau_2 \\
+    &\gbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2
+    \quad \wedge \quad \cdiv{\Gamma} \turnv v \types \tau_1
     \quad \implies \quad \Gamma \turnv \sbst{c}{x}{v} \types \tau_2
   \end{align*}
 \end{lemma}
+This follows by mutual induction on the typing rules for $v_1$ and
+$c$. Cases with premises that extend the context with global bindings
+rely on weakening (\ref{lemma:global-weakening}) to apply the inductive
+hypothesis on those premises. Cases with premises that extend the
+context with local bindings can already apply the inductive hypothesis
+without weakening. Cases with premises that use $\cdiv{}$ rely on the
+idempotence of $\cdiv{}$ (\ref{lemma:cdiv-idempotent}) to apply the
+inductive hypothesis.
 
 \subsection{Subject reduction}
 \label{apdx:subject-reduction}
@@ -2099,7 +2140,8 @@ typing, one for local bindings and one for global bindings.
 We prove subject reduction (Lemma~\ref{lemma:subject-reduction}):
 \begin{equation*}
   \Gamma \turnv v_1 \types \tau
-  \wedge v_1 \reducestov v_2 \implies \Gamma \turnv v_2 \types \tau
+  \quad \wedge \quad v_1 \reducestov v_2
+  \quad \implies \quad \Gamma \turnv v_2 \types \tau
 \end{equation*}
 by mutual induction over the two reduction relations. The reduction
 relations are the least reflexive, transitive congruences closed under
