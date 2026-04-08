@@ -1238,16 +1238,16 @@ Fig.\ref{fig:normal}.
 \grun{\return{v}} &\reducestov v \\
 \indelimm{\Sigma}{(\ret{\Sigma}{v_s})}{\indretcase{x}{v_r} \seq \ldots} &\reducestov \sbst{v_r}{x}{v_s} \\
 \indelimm{\Sigma}{(\indintro{\Sigma}{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} &\reducestov \\
-  \sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{\abs{x_a}{\tau_a}{\letv{x_w}{\app{v_2}{x_a}&}{\return{(\indelimm{\Sigma}{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}} \\
+  \sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{\abs{x_a}{\glob \tau_a}{\letv{x_w}{\app{v_2}{x_a}&}{\return{(\indelimm{\Sigma}{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}} \\
 \app{(\abs{x}{\tau}{c})}{v} &\reducestoc \sbst{c}{x}{v} \\
 \letv{x}{\return{v}}{c} &\reducestoc \sbst{c}{x}{v} \\
 \letv{x_2}{\letv{x_1}{c_1}{c_2}}{c_3} &\reducestoc \letv{x_1}{c_1}{\letv{x_2}{c_2}{c_3}}\\
-\perform{(\outl{v_1})}{op}{v_2}{x}{c} &\reducestoc \perform{v_1}{\mathrm{left}(op)}{v_2}{x}{c} \\
-\perform{(\outr{v_1})}{op}{v_2}{x}{c} &\reducestoc \perform{v_1}{\mathrm{right}(op)}{v_2}{x}{c} \\
+\perform{(\outl{v_1})}{op}{v_2} &\reducestoc \perform{v_1}{\mathrm{left}(op)}{v_2} \\
+\perform{(\outr{v_1})}{op}{v_2} &\reducestoc \perform{v_1}{\mathrm{right}(op)}{v_2} \\
 \reify{\Sigma}{\loc}{\return{(\gbox{v})}} &\reducestoc \return{\ret{\Sigma}{v}} \\
-\reify{\Sigma}{\loc_1}{\perform{\loc_1}{op}{v}} &\reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{x}{\glob \tau_a}{\return{x}}}} \\
-\reify{\Sigma}{\loc_1}{\perform{\loc_2}{op}{v}} &\reducestoc \perform{\loc_2}{op}{v} \qquad (\loc_1 \neq \loc_2) \\
-\reify{\Sigma}{\loc_1}{\letv{x}{\perform{\loc_1}{op}{v}{c}}} &\reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{x}{\glob \tau_a}{\reify{\Sigma}{\loc_1}{c}}}} \\
+\reify{\Sigma}{\loc_1}{\perform{\loc_1}{op}{v}} &\reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{(\gbox{x})}{\glob \tau_a}{\return{\ret{\Sigma}{x}}}}} \\
+\reify{\Sigma}{\loc_1}{\letv{x}{\perform{\loc_1}{op}{v}}{c}} &\reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{x}{\glob \tau_a}{\reify{\Sigma}{\loc_1}{c}}}} \\
+\reify{\Sigma}{\loc_1}{\perform{\loc_2}{op}{v}} &\reducestoc \letv{(\gbox{x})}{\perform{\loc_2}{op}{v}}{\return{\ret{\Sigma}{x}}} \qquad (\loc_1 \neq \loc_2) \\
 \reify{\Sigma}{\loc_1}{\letv{x}{\perform{\loc_2}{op}{v}}{c}} &\reducestoc \letv{x}{\perform{\loc_2}{op}{v}}{\reify{\Sigma}{\loc_1}{c}} \qquad (\loc_1 \neq \loc_2)
 \end{align*}
 \caption{Reduction relations}
@@ -1282,10 +1282,14 @@ Appendix~\ref{apdx:subject-reduction} by straightforward induction on
 the reduction relations.
 \begin{lemma}
 \label{lemma:subject-reduction}
-  \begin{equation*}
-    \Gamma \turnv v_1 \types \tau
-    \quad \wedge \quad v_1 \reducestov v_2 \quad \implies \quad \Gamma \turnv v_2 \types \tau
-  \end{equation*}
+  \begin{align*}
+    &\Gamma \turnv v_1 \types \tau
+      \quad \wedge \quad v_1 \reducestov v_2
+      \quad \implies \quad \Gamma \turnv v_2 \types \tau \\
+    &\Gamma \turnc c_1 \types \tau
+      \quad \wedge \quad c_1 \reducestoc c_2
+      \quad \implies \quad \Gamma \turnc c_2 \types \tau
+  \end{align*}
 \end{lemma}
 
 These reduction relations are strongly normalizing. We prove this via
@@ -2008,15 +2012,15 @@ division operator $\cdiv{\Gamma}$. All of which follow directly by
 induction on the context.
 \begin{lemma}
 \label{lemma:local-cdiv}
-  \begin{align*}
-    &\cdiv{(\ccons{\lbind{\Gamma_1}{x}{v}}{\Gamma_2})} = \cdiv{(\ccons{\Gamma_1}{\Gamma_2})} \\
-  \end{align*}
+  \begin{equation*}
+    \cdiv{(\ccons{\lbind{\Gamma_1}{x}{v}}{\Gamma_2})} = \cdiv{(\ccons{\Gamma_1}{\Gamma_2})}
+  \end{equation*}
 \end{lemma}
 \begin{lemma}
 \label{lemma:yoneda-cdiv}
-  \begin{align*}
-    &\cdiv{(\ccons{\lbind{\Gamma_1}{\loc}{\Sigma}}{\Gamma_2})} = \cdiv{(\ccons{\Gamma_1}{\Gamma_2})} \\
-  \end{align*}
+  \begin{equation*}
+    \cdiv{(\ccons{\lbind{\Gamma_1}{\loc}{\Sigma}}{\Gamma_2})} = \cdiv{(\ccons{\Gamma_1}{\Gamma_2})}
+  \end{equation*}
 \end{lemma}
 \begin{lemma}
 \label{lemma:global-cdiv}
@@ -2042,7 +2046,7 @@ variable bindings of both $x$ and $\loc$ variables.
     &\ccons{\Gamma_1}{\Gamma_2} \turnv v \types \tau_1
     \quad \implies \quad \ccons{\lbind{\Gamma_1}{x}{\tau_2}}{\Gamma_2} \turnv v \types \tau_1 \\
     &\ccons{\Gamma_1}{\Gamma_2} \turnc c \types \tau_1
-    \quad \implies \quad \ccons{\lbind{\Gamma_1}{x}{\tau_2}}{\Gamma_2} \turnc c \types \tau_1 \\
+    \quad \implies \quad \ccons{\lbind{\Gamma_1}{x}{\tau_2}}{\Gamma_2} \turnc c \types \tau_1
   \end{align*}
 \end{lemma}
 \begin{lemma}
@@ -2051,7 +2055,7 @@ variable bindings of both $x$ and $\loc$ variables.
     &\ccons{\Gamma_1}{\Gamma_2} \turnv v \types \tau
     \quad \implies \quad \ccons{\lbind{\Gamma_1}{\loc}{\Sigma}}{\Gamma_2} \turnv v \types \tau \\
     &\ccons{\Gamma_1}{\Gamma_2} \turnc c \types \tau
-    \quad \implies \quad \ccons{\lbind{\Gamma_1}{\loc}{\Sigma}}{\Gamma_2} \turnc c \types \tau \\
+    \quad \implies \quad \ccons{\lbind{\Gamma_1}{\loc}{\Sigma}}{\Gamma_2} \turnc c \types \tau
   \end{align*}
 \end{lemma}
 The proofs of these follow by mutual induction on the value and
@@ -2068,13 +2072,27 @@ judgements with new global variable bindings.
     &\ccons{\Gamma_1}{\Gamma_2} \turnv v \types \tau_1
     \quad \implies \quad \ccons{\gbind{\Gamma_1}{x}{\tau_2}}{\Gamma_2} \turnv v \types \tau_1 \\
     &\ccons{\Gamma_1}{\Gamma_2} \turnc c \types \tau_1
-    \quad \implies \quad \ccons{\gbind{\Gamma_1}{x}{\tau_2}}{\Gamma_2} \turnc c \types \tau_1 \\
+    \quad \implies \quad \ccons{\gbind{\Gamma_1}{x}{\tau_2}}{\Gamma_2} \turnc c \types \tau_1
   \end{align*}
 \end{lemma}
 This again follows by mutual induction on the value and computation
 typing rules. Rules with premises featuring $\cdiv{\Gamma}$ rely on
 \ref{lemma:global-cdiv} in order to make use of the inductive hypothesis
 on those premises.
+
+We also need a lemma stating that we can weaken from $\cdiv{\Gamma}$ to
+$\Gamma$.
+\begin{lemma}
+\label{lemma:cdiv-weakening}
+  \begin{align*}
+    &\ccons{\cdiv{\Gamma_1}}{\Gamma_2} \turnv v \types \tau
+    \quad \implies \quad \ccons{\Gamma_1}{\Gamma_2} \turnv v \types \tau \\
+    &\ccons{\cdiv{\Gamma_1}}{\Gamma_2} \turnc c \types \tau
+    \quad \implies \quad \ccons{\Gamma_1}{\Gamma_2} \turnc c \types \tau \\
+  \end{align*}
+\end{lemma}
+This follows by induction on $\Gamma_1$ via the local weakening lemmas
+(\ref{lemma:local-weakening} and \ref{lemma:yoneda-weakening}).
 
 \subsubsection{Substitution lemmas}
 
@@ -2122,7 +2140,7 @@ preserves typing.
     \quad \implies \quad \Gamma \turnv \sbst{v_1}{x}{v_2} \types \tau_2 \\
     &\gbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2
     \quad \wedge \quad \cdiv{\Gamma} \turnv v \types \tau_1
-    \quad \implies \quad \Gamma \turnv \sbst{c}{x}{v} \types \tau_2
+    \quad \implies \quad \Gamma \turnc \sbst{c}{x}{v} \types \tau_2
   \end{align*}
 \end{lemma}
 This follows by mutual induction on the typing rules for $v_1$ and
@@ -2132,17 +2150,22 @@ hypothesis on those premises. Cases with premises that extend the
 context with local bindings can already apply the inductive hypothesis
 without weakening. Cases with premises that use $\cdiv{}$ rely on the
 idempotence of $\cdiv{}$ (\ref{lemma:cdiv-idempotent}) to apply the
-inductive hypothesis.
+inductive hypothesis. The variable case that actually substitutes $v_2$
+uses Lemma \ref{lemma:cdiv-weakening} to weaken $v_2$ to the right
+context.
 
 \subsection{Subject reduction}
 \label{apdx:subject-reduction}
 
 We prove subject reduction (Lemma~\ref{lemma:subject-reduction}):
-\begin{equation*}
-  \Gamma \turnv v_1 \types \tau
+\begin{align*}
+  &\Gamma \turnv v_1 \types \tau
   \quad \wedge \quad v_1 \reducestov v_2
-  \quad \implies \quad \Gamma \turnv v_2 \types \tau
-\end{equation*}
+  \quad \implies \quad \Gamma \turnv v_2 \types \tau \\
+  &\Gamma \turnc c_1 \types \tau
+  \quad \wedge \quad c_1 \reducestoc c_2
+  \quad \implies \quad \Gamma \turnc c_2 \types \tau
+\end{align*}
 by mutual induction over the two reduction relations. The reduction
 relations are the least reflexive, transitive congruences closed under
 the rules in Fig.~\ref{fig:reduction}.
@@ -2152,92 +2175,102 @@ directly by induction. As all the typing rules are entirely
 compositional, the congruence cases also all follow directly by
 induction. This leaves only the rules from Fig.~\ref{fig:reduction}.
 
-Note that the typing rules are syntax directed with the exception of the
-local and global var rules, which are distinguished by how the variable
-is bound in the context. Since none of the left-hand sides of our
-reduction rules is a variable, there is always only a single typing rule
-that we need to consider.
+Note that the typing rules are syntax directed so there is always only a
+single typing rule that we need to consider.
 
-The cases for the products rules:
+\subsubsection{Products}
+
+For the product beta rules:
 \begin{align*}
 \fst{(v_1, v_2)} &\reducestov v_1 \\
-\snd{(v_1, v_2)} &\reducestov v_2 \\
+\snd{(v_1, v_2)} &\reducestov v_2
 \end{align*}
-follow immediately by inversion on the typing rule.
+the cases follow directly by inversion on the typing rule.
 
+\subsubsection{Sums}
+
+For the sum rules:
+\begin{align*}
+\casem{(\inl{v_1})}{x_1}{v_2}{x_2}{v_3} &\reducestov \sbst{v_2}{x_1}{v_1} \\
+\casem{(\inr{v_1})}{x_1}{v_2}{x_2}{v_3} &\reducestov \sbst{v_3}{x_2}{v_1}
+\end{align*}
+the cases follow by inversion on the typing rules followed by case
+splitting on the modality $m$ and applying the either the global
+(\ref{lemma:global-substitution}) or local
+(\ref{lemma:local-substitution}) substition lemma.
+
+\subsubsection{Global modality}
+
+For the global modality rule:
 \begin{equation*}
 \gunbox{x}{\gbox{v_1}}{v_2} \reducestov \sbst{v_2}{x}{v_1}
 \end{equation*}
-\todo{Requires substitution rule of a term under $\cdiv{\Gamma}$ for a
-  boxed binding}.
+the case follows by inversion on the typing rules followed by the global
+substitution lemma (\ref{lemma:global-substitution}).
 
-The case for the $\grun$ rule
+For the run rule:
 \begin{equation*}
 \grun{\return{v}} \reducestov v
 \end{equation*}
-\todo{Requires weakening from $\cdiv{\Gamma}$ to $\Gamma$}.
+the case follows by inversion on the typing rules along with weakening
+via Lemma \ref{lemma:cdiv-weakening}.
 
-The case for the let-return rule:
+\subsubsection{Inductive types}
+
+For the $\indelimname$/$\retname$ rule:
 \begin{equation*}
-\letv{x}{\return{v}}{c} \reducestoc \sbst{c}{x}{v}
+\indelimm{\Sigma}{(\ret{\Sigma}{v_s})}{\indretcase{x}{v_r} \seq \ldots} \reducestov \sbst{v_r}{x}{v_s}
 \end{equation*}
-\todo{Requires ordinary substitution lemma}.
+the case follows by inversion on the typing rules followed by the global
+substitution lemma (\ref{lemma:global-substitution}).
 
-The case for the let-perform rule:
-\begin{equation*}
-\letv{x_1}{\perform{v_1}{op}{v_2}{x_2}{c_1}}{c_2} \reducestoc \perform{v_1}{op}{v_2}{x_2}{\letv{x_1}{c_1}{c_2}}
-\end{equation*}
-follows immediately by inversion on the typing rule.
+For the $\indelimname$/$op$ rule:
+\begin{align*}
+\indelimm{\Sigma}{(\indintro{\Sigma}{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} &\reducestov \\
+  \sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{\abs{x_a}{\tau_a}{\letv{x_w}{\app{v_2}{x_a}&}{\return{(\indelimm{\Sigma}{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}}
+\end{align*}
+the case follows by inversion on the typing rules followed by the global
+substitution lemma (\ref{lemma:global-substitution}) for $x_1$ and the
+local substition lemma (\ref{lemma:local-substitution}) for $x_2$.
 
-The case for the standard beta rule:
+\subsubsection{Functions}
+
+The case for the function beta rule:
 \begin{equation*}
 \app{(\abs{x}{\tau}{c})}{v} \reducestoc \sbst{c}{x}{v}
 \end{equation*}
-\todo{Requires ordinary substitution lemma}.
+follows by inversion on the typing rules followed by the local
+substitution lemma (\ref{lemma:local-substitution}).
 
-The cases for the case rules:
+\subsubsection{Bind}
+
+The case for the bind/return rule:
+\begin{equation*}
+\letv{x}{\return{v}}{c} \reducestoc \sbst{c}{x}{v}
+\end{equation*}
+follows by inversion on the typing rules followed by the local
+substitution lemma (\ref{lemma:local-substitution}).
+
+The case for the bind commuting rule: 
+\begin{equation*}
+\letv{x_2}{\letv{x_1}{c_1}{c_2}}{c_3} \reducestoc \letv{x_1}{c_1}{\letv{x_2}{c_2}{c_3}}
+\end{equation*}
+follows by inversion on the typing rules followed by weakening $c_3$ by
+the local binding of $x_1$.
+
+\subsubsection{Effect reflection}
+
+The cases for all the rules relating to effects and effect reflection:
 \begin{align*}
-\case{(\inl{v_1})}{x_1}{v_2}{x_2}{v_3} &\reducestoc \sbst{v_2}{x_1}{v_1}
-\case{(\inr{v_1})}{x_1}{v_2}{x_2}{v_3} &\reducestoc \sbst{v_3}{x_2}{v_1}
+\perform{(\outl{v_1})}{op}{v_2} &\reducestoc \perform{v_1}{\mathrm{left}(op)}{v_2} \\
+\perform{(\outr{v_1})}{op}{v_2} &\reducestoc \perform{v_1}{\mathrm{right}(op)}{v_2} \\
+\reify{\Sigma}{\loc}{\return{(\gbox{v})}} &\reducestoc \return{\ret{\Sigma}{v}} \\
+\reify{\Sigma}{\loc_1}{\perform{\loc_1}{op}{v}} &\reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{(\gbox{x})}{\glob \tau_a}{\return{\ret{\Sigma}{x}}}}} \\
+\reify{\Sigma}{\loc_1}{\letv{x}{\perform{\loc_1}{op}{v}}{c}} &\reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{x}{\glob \tau_a}{\reify{\Sigma}{\loc_1}{c}}}} \\
+\reify{\Sigma}{\loc_1}{\perform{\loc_2}{op}{v}} &\reducestoc \letv{(\gbox{x})}{\perform{\loc_2}{op}{v}}{\return{\ret{\Sigma}{x}}} \qquad (\loc_1 \neq \loc_2) \\
+\reify{\Sigma}{\loc_1}{\letv{x}{\perform{\loc_2}{op}{v}}{c}} &\reducestoc \letv{x}{\perform{\loc_2}{op}{v}}{\reify{\Sigma}{\loc_1}{c}} \qquad (\loc_1 \neq \loc_2)
 \end{align*}
-\todo{Requires ordinary substitution lemma}.
-
-The case for the $\retname$ rule:
-\begin{equation*}
-\indelim{\Sigma}{(\ret{\Sigma}{v_1})}{\indretcase{x}{v_2} \seq \ldots} \reducestoc \sbst{v_2}{x}{v_1}
-\end{equation*}
-\todo{Requires ordinary substitution lemma}.
-
-The case for the $\indintro{\Sigma}{op}{\_}{\_}$ rule:
-\begin{align*}
-&\indelim{\Sigma}{(\indintro{\Sigma}{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} \\
-&\qquad \reducestoc \sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{\abs{x_a}{\tau_a}{\letv{x_w}{\app{v_2}{x_a}}{\indelim{\Sigma}{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2}}}}
-\end{align*}
-\todo{Requires ordinary substitution lemma}.
-
-The case for the return rule:
-\begin{equation*}
-\reify{\Sigma}{x}{\return{v}} \reducestoc \return{\ret{\Sigma}{v}}
-\end{equation*}
-\todo{Requires strengthening by local bindings of handlers for global values,
-  which doesn't actually hold because you can have global terms that ignore their
-  inputs}.
-
-\begin{equation*}
-\reify{\Sigma}{x_1}{\perform{x_1}{op}{v}{x_2}{c}} \reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{x_2}{\reify{\Sigma}{x_1}{c}}}}
-\end{equation*}
-
-\begin{equation*}
-\reify{\Sigma}{x_1}{\perform{x_2}{op}{v}{x_3}{c}} \reducestoc \perform{x_2}{op}{v}{x_3}{\reify{\Sigma}{x_1}{c}} \qquad (x_1 \neq x_2)
-\end{equation*}
-
-\begin{equation*}
-\perform{(\outl{v_1})}{op}{v_2}{x}{c} \reducestoc \perform{v_1}{\mathrm{left}(op)}{v_2}{x}{c}
-\end{equation*}
-
-\begin{equation*}
-\perform{(\outr{v_1})}{op}{v_2}{x}{c} \reducestoc \perform{v_1}{\mathrm{right}(op)}{v_2}{x}{c}
-\end{equation*}
+follow directly by inversion on the typing rules.
 
 \subsection{Strong normalization}
 \label{apdx:strong-normalization}
