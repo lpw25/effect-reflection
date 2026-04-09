@@ -9,6 +9,7 @@
 \usepackage{sourcecodepro}
 \usepackage{amsthm}
 
+
 \DeclareFontFamily{U}{min}{}
 \DeclareFontShape{U}{min}{m}{n}{<-> udmj30}{}
 \newcommand{\yo}{\!\text{\usefont{U}{min}{m}{n}\symbol{'207}}\!}
@@ -119,15 +120,20 @@
 \newcommand{\letv}[3]{\mathop{\mathrm{let}} #1 = #2 \mathop{\mathrm{in}} #3}
 \newcommand{\gbox}[1]{\mathop{\mathrm{box}} #1}
 \newcommand{\gunbox}[3]{\mathop{\mathrm{let}} (\gbox{#1}) = #2 \mathop{\mathrm{in}} #3}
-\newcommand{\grun}[1]{\mathop{\mathrm{run}}(#1)}
+\newcommand{\grunname}{\mathrm{run}}
+\newcommand{\grun}[1]{\mathop{\grunname}(#1)}
 \newcommand{\sub}[2]{[#1\backslash#2]}
 \newcommand{\sbst}[3]{#1\sub{#2}{#3}}
 \newcommand{\turnv}{\mathrel{\vdash_V}}
 \newcommand{\turnc}{\mathrel{\vdash_C}}
+\newcommand{\turnstlc}{\mathrel{\vdash_{STLC}}}
 \newcommand{\evmap}{\mathop{ev}}
 \newcommand{\currymap}{\mathop{\lambda}}
 \newcommand{\reducestov}{\rightsquigarrow_V}
 \newcommand{\reducestoc}{\rightsquigarrow_C}
+\newcommand{\reducestostlc}{\rightsquigarrow_{STLC}}
+\newcommand{\reducesnotv}{\not\rightsquigarrow_{V}}
+\newcommand{\reducesnotstlc}{\not\rightsquigarrow_{STLC}}
 \newcommand{\mif}{\mathop{\mathrm{if}}}
 \newcommand{\mthen}{\mathop{\mathrm{then}}}
 \newcommand{\melse}{\mathop{\mathrm{else}}}
@@ -2274,12 +2280,11 @@ follow directly by inversion on the typing rules.
 
 \subsection{Strong normalization}
 \label{apdx:strong-normalization}
+
 \section{Embedding the Simply-Typed Lambda Calculus}
 \label{apdx:embedding}
-We define an embedding $\embed{\_}$ on types, contexts and terms of STLC
-in Fig.\ref{fig:stlc}. Note that $\reducestov$ matches the behaviour of
-$\beta$ reduction of STLC too, with each STLC reduction step
-corresponding to up to 3 steps of $\reducestov$.
+We define an embedding $\embed{\_}$ on types, contexts and terms of the
+Simply-Typed Lambda Calculus (STLC) in Fig.\ref{fig:stlc}.
 \begin{figure}
 \begin{equation*}
 \begin{aligned}[c]
@@ -2304,7 +2309,66 @@ corresponding to up to 3 steps of $\reducestov$.
 \label{fig:stlc}
 \end{figure}
 
-\todo{Prove that this embedding respects reduction of STLC}
+Note that the embedding produces contexts with only global bindings so
+that:
+\begin{lemma}
+\label{lemma:stlc-global-context}
+  \begin{equation*}
+    \cdiv{\embed{\Gamma}} = \embed{\Gamma}
+  \end{equation*}
+\end{lemma}
+
+This embedding maps well-typed STLC terms to well-typed values:
+\begin{lemma}
+\label{lemma:stlc-well-typed}
+  \begin{equation*}
+    \Gamma \turnstlc e \types t
+    \quad \implies \quad \embed{\Gamma} \turnv \embed{e} \types \embed{t}
+  \end{equation*}
+\end{lemma}
+which is proved by induction on the STLC typing derivation. The case for
+the app rule relies on \ref{lemma:stlc-global-context} in order to apply
+$\grunname$ to the embedded expression.
+
+Reduction of STLC terms is modelled by the reduction of the embedded
+terms:
+\begin{lemma}
+\label{lemma:stlc-reduces}
+  \begin{equation*}
+    e_1 \reducestostlc e_2
+    \quad \implies \quad \embed{e_1} \reducestov \embed{e_2}
+  \end{equation*}
+\end{lemma}
+We prove this via induction on the STLC reduction relation. All cases
+are trivial except for the function beta-reduction case:
+\begin{equation*}
+  \embed{\app{(\abs{x}{A}{e_1})}{e_2}} \reducestov \embed{\sbst{e_1}{x}{e_2}}
+\end{equation*}
+which reduces to:
+\begin{equation*}
+\grun{\app{(\abs{(\gbox{x})}{\glob \embed{A}}{\return{\embed{e_1}}})}{\embed{e_2}}}  \reducestov \embed{\sbst{e_1}{x}{e_2}}
+\end{equation*}
+applying the function beta rule, the $\grunname$ reduction rule and reflexivity this becomes:
+\begin{equation*}
+\embed{\sbst{e_1}{x}{e_2}} = \sbst{\embed{e_1}}{x}{\embed{e_2}}
+\end{equation*}
+which follows by induction on $e_1$.
+
+Normal forms of STLC are embedded to normal forms:
+\begin{lemma}
+\label{lemma:stlc-reduces}
+  \begin{equation*}
+    e \reducesnotstlc
+    \quad \implies \quad \embed{e} \reducesnotv
+  \end{equation*}
+\end{lemma}
+This follows from observing that the neutral forms and normal forms of
+STLC embed to neutral and normal forms respectively.
+
+Since our langauge is strongly normalizing
+(\ref{lemma:strong-normalization}) this is sufficient to show that the
+embedding correctly models STLC.
+
 \section{Denotational semantics}
 \label{apdx:denotational}
 \subsection{Soundness}
