@@ -64,39 +64,44 @@
 \newcommand{\arrow}[2]{{#2}^{#1}}
 \newcommand{\sem}[1]{\llbracket #1 \rrbracket}
 \newcommand{\reflectname}{\mathord{\Uparrow}}
-\newcommand{\reflectraw}[1]{\mathop{\reflectname_{#1}}}
-\newcommand{\reflect}[3]{\reflectraw{#1}(#2, #3)}
+\newcommand{\reflectraw}[1]{\mathop{\reflectname(#1)}}
+\newcommand{\reflect}[2]{\reflectraw{#1}(#2)}
 \newcommand{\reflectc}[2]{\mathop{\reflectname_{#1 #2}}}
 \newcommand{\performraw}[2]{\mathop{\reflectname(#1(#2))}}
 \newcommand{\perform}[3]{\performraw{#1}{#2}(#3)}
 \newcommand{\reifyname}{\Downarrow}
-\newcommand{\reifyraw}[1]{\mathop{\reifyname_{#1}}}
-\newcommand{\reify}[3]{\reifyraw{#1}(#2.\,#3)}
+\newcommand{\reify}[2]{\mathop{\reifyname}(#1.\,#2)}
 \newcommand{\reifyc}[2]{\mathop{\reifyname_{#1 #2}}}
+\newcommand{\vars}{\mathcal{X}}
 \newcommand{\loc}{\ell}
-\newcommand{\outlname}{\mathrm{out}_L}
+\newcommand{\locs}{\mathcal{L}}
+\newcommand{\outlname}{\mathtt{out}_L}
 \newcommand{\outl}[1]{\mathop{\outlname} #1}
-\newcommand{\outrname}{\mathrm{out}_R}
+\newcommand{\outrname}{\mathtt{out}_R}
 \newcommand{\outr}[1]{\mathop{\outrname} #1}
 \newcommand{\mon}{\mathcal{T}}
 \newcommand{\ind}[1]{W_{#1}}
-\newcommand{\indintro}[4]{{#2}_{#1}(#3,\, #4)}
-\newcommand{\retname}{\mathrm{ret}}
-\newcommand{\ret}[2]{\mathop{\retname_{#1}}(#2)}
-\newcommand{\indelimname}{\mathrm{rec}}
-\newcommand{\indelim}[3]{\mathop{\indelimname_{#1}} #2 \,\{#3\}}
+\newcommand{\indintro}[3]{{#1}(#2,\, #3)}
+\newcommand{\retname}{\mathtt{ret}}
+\newcommand{\ret}[1]{\mathop{\retname}(#1)}
+\newcommand{\indelimname}{\mathtt{rec}}
+\newcommand{\indelim}[2]{\mathop{\indelimname} #1 \,\{#2\}}
 \newcommand{\indelimboxname}{\indelimname^{\Box}}
 \newcommand{\indelimbox}[3]{\mathop{\indelimboxname_{#1}} #2 \,\{#3\}}
 \newcommand{\indelimmname}{\indelimname^{m}}
-\newcommand{\indelimm}[3]{\mathop{\indelimmname_{#1}} #2 \,\{#3\}}
+\newcommand{\indelimm}[2]{\mathop{\indelimmname} #1 \,\{#2\}}
 \newcommand{\indretcase}[2]{\retname(#1) \Rightarrow #2}
 \newcommand{\indcase}[4]{#1(#2, #3) \Rightarrow #4}
 \newcommand{\seq}{\,;\,}
-\newcommand{\fst}{\mathop{\pi_1}}
-\newcommand{\snd}{\mathop{\pi_2}}
-\newcommand{\inl}[1]{\mathop{\mathrm{in}_L} #1}
-\newcommand{\inr}[1]{\mathop{\mathrm{in}_R} #1}
-\newcommand{\casename}{\mathrm{case}}
+\newcommand{\fstname}{\mathop{\pi_1}}
+\newcommand{\fst}[1]{\fstname #1}
+\newcommand{\sndname}{\mathop{\pi_2}}
+\newcommand{\snd}[1]{\sndname #1}
+\newcommand{\inlname}{\mathop{\mathtt{in}_L}}
+\newcommand{\inl}[1]{\inlname #1}
+\newcommand{\inrname}{\mathop{\mathtt{in}_R}}
+\newcommand{\inr}[1]{\inrname #1}
+\newcommand{\casename}{\mathtt{case}}
 \newcommand{\case}[5]{\mathop{\casename} #1 \,\{\,\inl{#2} \Rightarrow #3 \seq \inr{#4} \Rightarrow #5 \,\}}
 \newcommand{\casemname}{\casename^{m}}
 \newcommand{\casem}[5]{\mathop{\casemname} #1 \,\{\,\inl{#2} \Rightarrow #3 \seq \inr{#4} \Rightarrow #5 \,\}}
@@ -105,7 +110,7 @@
 \newcommand{\types}{\mathrel{:}}
 \newcommand{\gtypes}{\mathrel{:_{\Box}}}
 \newcommand{\mtypes}{\mathrel{:_{m}}}
-\newcommand{\abs}[3]{\mathop{\lambda}(#1 \types #2).\,#3}
+\newcommand{\abs}[2]{\lambda#1.\,#2}
 \newcommand{\app}[2]{#1\,#2}
 \newcommand{\cempty}{\varepsilon}
 \newcommand{\ccons}[2]{#1;\,#2}
@@ -116,11 +121,14 @@
 \newcommand{\cmdiv}[1]{#1/m}
 \newcommand{\cldiv}[1]{#1/\nothing}
 \newcommand{\bdiv}[1]{\cdiv{\mathop{!_{#1}}}}
-\newcommand{\return}[1]{\mathop{\mathrm{return}} #1}
-\newcommand{\letv}[3]{\mathop{\mathrm{let}} #1 = #2 \mathop{\mathrm{in}} #3}
-\newcommand{\gbox}[1]{\mathop{\mathrm{box}} #1}
-\newcommand{\gunbox}[3]{\mathop{\mathrm{let}} (\gbox{#1}) = #2 \mathop{\mathrm{in}} #3}
-\newcommand{\grunname}{\mathrm{run}}
+\newcommand{\returnname}{\mathop{\mathtt{return}}}
+\newcommand{\return}[1]{\returnname\, #1}
+\newcommand{\letvname}{\mathop{\mathtt{let}}}
+\newcommand{\letv}[3]{\letvname #1 = #2 \mathop{\mathtt{in}} #3}
+\newcommand{\gboxname}{\mathop{\mathtt{box}}}
+\newcommand{\gbox}[1]{\gboxname #1}
+\newcommand{\gunbox}[3]{\mathop{\mathtt{let}} (\gbox{#1}) = #2 \mathop{\mathtt{in}} #3}
+\newcommand{\grunname}{\mathtt{run}}
 \newcommand{\grun}[1]{\mathop{\grunname}(#1)}
 \newcommand{\sub}[2]{[#1\backslash#2]}
 \newcommand{\sbst}[3]{#1\sub{#2}{#3}}
@@ -129,11 +137,35 @@
 \newcommand{\turnstlc}{\mathrel{\vdash_{STLC}}}
 \newcommand{\evmap}{\mathop{ev}}
 \newcommand{\currymap}{\mathop{\lambda}}
-\newcommand{\reducestov}{\rightsquigarrow_V}
-\newcommand{\reducestoc}{\rightsquigarrow_C}
-\newcommand{\reducestostlc}{\rightsquigarrow_{STLC}}
-\newcommand{\reducesnotv}{\not\rightsquigarrow_{V}}
-\newcommand{\reducesnotstlc}{\not\rightsquigarrow_{STLC}}
+\newcommand{\stepstoname}{\rightsquigarrow}
+\newcommand{\stepstov}{\stepstoname_V}
+\newcommand{\stepstoc}{\stepstoname_C}
+\newcommand{\stepstostlc}{\stepstoname_{STLC}}
+\newcommand{\stepsnotv}{\not\stepstoname_{V}}
+\newcommand{\stepsnotc}{\not\stepstoname_{C}}
+\newcommand{\stepsnotstlc}{\not\stepstoname_{STLC}}
+\newcommand{\reducestoname}{\stepstoname^{*}}
+\newcommand{\reducestov}{\reducestoname_{V}}
+\newcommand{\reducestoc}{\reducestoname_{C}}
+\newcommand{\reducesnottoc}{\not\reducestoname_{C}}
+\newcommand{\reducestostlc}{\reducestoname_{STLC}}
+\newcommand{\drightsquigarrow}{\begin{array}{@{}c@{}}\rightsquigarrow \\[-8pt] \rightsquigarrow\end{array}}
+\newcommand{\parastepstoname}{\drightsquigarrow}
+\newcommand{\parastepstov}{\mathrel{\parastepstoname_{V}}}
+\newcommand{\parastepstoc}{\mathrel{\parastepstoname_{C}}}
+\newcommand{\parareducestoname}{\parastepstoname^{*}}
+\newcommand{\parareducestov}{\mathrel{\parareducestoname_{V}}}
+\newcommand{\parareducestoc}{\mathrel{\parareducestoname_{C}}}
+\newcommand{\snv}{SN_V}
+\newcommand{\snc}{SN_C}
+\newcommand{\clocs}[1]{\mathrm{locs}(#1)}
+\newcommand{\redname}{RED}
+\newcommand{\redvname}{\redname_{V}}
+\newcommand{\redv}[2]{\redvname{({#1},{#2})}}
+\newcommand{\redva}[3]{\redvname{({#1},{#2},{#3})}}
+\newcommand{\redcname}{\redname_{C}}
+\newcommand{\redc}[2]{\redcname{({#1},{#2})}}
+\newcommand{\redca}[3]{\redcname{({#1},{#2},{#3})}}
 \newcommand{\mif}{\mathop{\mathrm{if}}}
 \newcommand{\mthen}{\mathop{\mathrm{then}}}
 \newcommand{\melse}{\mathop{\mathrm{else}}}
@@ -233,7 +265,8 @@ The ``effects as capabilities'' approach of the Effekt
 language~\cite{brachthauser2020effects} points the way by elegantly
 tracking effects without requiring explicit effect-tracking machinery in
 the type system. However, it is restricted to second-class
-functions\footnote{That restriction is lifted in more recent work on Effekt~\cite{brachthauser2022effects}, but only by falling back to explicit
+functions\footnote{That restriction is lifted in more recent work on
+Effekt~\cite{brachthauser2022effects}, but only by falling back to explicit
 effect-tracking machinery.}. We aim to extend this approach to first
 class functions.
 
@@ -864,11 +897,12 @@ and typing judgements for values and computations. The syntax and typing
 rules for the base language are shown in Fig.\ref{fig:typing-standard}.
 \begin{figure}
 \begin{align*}
+  \mathrm{variables},&x \in& \vars \\
   \mathrm{types}, \tau ::=\;& \tau \times \tau \mid 1 \mid \tau + \tau
                               \mid \tau \arr \tau \mid \ldots \\
   \mathrm{contexts}, \Gamma ::=\;& \cempty \mid \lbind{\Gamma}{x}{\tau} \mid \ldots \\
-  \mathrm{values}, v :=\;& x \mid \abs{x}{\tau}{c}
-                           \mid (v, v) \mid \fst v \mid \snd v \mid () \\
+  \mathrm{values}, v :=\;& x \mid \abs{x}{c}
+                           \mid (v, v) \mid \fst{v} \mid \snd{v} \mid () \\
                            \mid& \inl{v} \mid \inr{v} \mid \case{v}{x}{v}{x}{v}
                            \mid \ldots \\
   \mathrm{computations}, c :=\;& \return{v} \mid \letv{x}{c}{c}
@@ -879,7 +913,7 @@ rules for the base language are shown in Fig.\ref{fig:typing-standard}.
 {\ccons{\lbind{\Gamma_1}{x}{\tau}}{\Gamma_2} \turnv x \types \tau}
 \and
 \inferrule{\lbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2}
-{\Gamma \turnv \abs{x}{\tau_1}{c} \types \tau_1 \arr \tau_2}
+{\Gamma \turnv \abs{x}{c} \types \tau_1 \arr \tau_2}
 \and
 \inferrule{\Gamma \turnv v_1 \types \tau_1 \\ \Gamma \turnv v_1 \types \tau_1}
 {\Gamma \turnv (v_1, v_2) \types \tau_1 \times \tau_2}
@@ -931,7 +965,7 @@ Note that $\casename$ -- the eliminator for sum types -- is a value
 rather than a computation. We can define a computation version as:
 \begin{align*}
     &\case{v}{x_1}{c_1}{x_2}{c_2} := \\
-    &\qquad (\case{v}{x_1}{\abs{()}{1}{c_1}}{x_2}{\abs{()}{1}{c_2}}) \; ()
+    &\qquad (\case{v}{x_1}{\abs{()}{c_1}}{x_2}{\abs{()}{c_2}}) \; ()
 \end{align*}
 
 \subsection{Locality}
@@ -1063,14 +1097,14 @@ $\Sigma_1$ and $op_{2,1} \seq \ldots \seq op_{2,m}$ are the operations
 of $\Sigma_2$.
 
 For each operation $op \types \tau_p \rightarrowtail \tau_a$,
-$\ind{\Sigma}(\tau)$ has a constructor $\indintro{\Sigma}{op}{v_p}{v_k}$
+$\ind{\Sigma}(\tau)$ has a constructor $\indintro{op}{v_p}{v_k}$
 where $v_p \gtypes \tau_p$ and
 $v_k \types \glob \tau_a \arr \ind{\Sigma}(\tau)$. $\ind{\Sigma}(\tau)$
-also has a constructor $\ret{\Sigma}{v}$ where $v \gtypes \tau$.
+also has a constructor $\ret{v}$ where $v \gtypes \tau$.
 
 The eliminator for $\ind{\Sigma}$ is written
 \begin{align*}
-\indelim{\Sigma}{v_s}
+\indelim{v_s}
   {&\indretcase{x}{v_r} \seq \\
    &\indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} \seq \\
    &\ldots \seq \\
@@ -1093,9 +1127,9 @@ components.
   \mathrm{signatures}, \Sigma ::=\;& \{ op \types \tau \rightarrowtail \tau \seq \ldots
                                        \seq op \types \tau \rightarrowtail \tau \}
                                      \mid \Sigma + \Sigma \\
-  \mathrm{values}, v :=\;& \ldots \mid \indintro{\Sigma}{op}{v}{v}
-                           \mid \ret{\Sigma}{v} \mid \\
-                         & \indelimm{\Sigma}{v}
+  \mathrm{values}, v :=\;& \ldots \mid \indintro{op}{v}{v}
+                           \mid \ret{v} \mid \\
+                         & \indelimm{v}
                            {\indretcase{x}{v} \seq
                            \indcase{op}{x}{x}{v} \seq \ldots
                            \seq \indcase{op}{x}{x}{v}} \ldots
@@ -1104,10 +1138,10 @@ components.
 \inferrule{op \types \tau_1 \rightarrowtail \tau_2 \in \Sigma \\
            \cdiv{\Gamma} \turnv v_1 \types \tau_1 \\
            \Gamma \turnv v_2 \types \glob \tau_2 \arr \ind{\Sigma}(\tau)}
-{\Gamma \turnv \indintro{\Sigma}{op}{v_1}{v_2} \types \ind{\Sigma}(\tau)}
+{\Gamma \turnv \indintro{op}{v_1}{v_2} \types \ind{\Sigma}(\tau)}
 \and
 \inferrule{\cdiv{\Gamma} \turnv v \types \tau}
-{\Gamma \turnv \ret{\Sigma}{v} \types \ind{\Sigma}(\tau)}
+{\Gamma \turnv \ret{v} \types \ind{\Sigma}(\tau)}
 \and
 \inferrule{\cmdiv{\Gamma} \turnv v_s \types \ind{\Sigma}(\tau_1) \\
            \Sigma = \{ op_1 \types \tau_{p_1} \rightarrowtail \tau_{a_1};
@@ -1116,7 +1150,7 @@ components.
            \mbind{\gbind{\Gamma}{x_{p_1}}{\tau_{p_1}}}{x_{k_1}}{\glob \tau_{a_1} \arr \tau_2} \turnv v_1 \types \tau_2 \\
            \ldots \\
            \mbind{\gbind{\Gamma}{x_{p_n}}{\tau_{p_n}}}{x_{k_n}}{\glob \tau_{a_n} \arr \tau_2} \turnv v_n \types \tau_2}
-{\Gamma \turnv \indelimm{\Sigma}{v_s}{\indretcase{x_r}{v_r} \seq
+{\Gamma \turnv \indelimm{v_s}{\indretcase{x_r}{v_r} \seq
                                    \indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} \seq \ldots \seq
                                    \indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}} \types \tau_2}
 \end{mathpar}
@@ -1129,10 +1163,10 @@ components.
   The following value of type $\ind{\Sigma_{bs}}$ represents a
   reified computation that negates the value of the state:
   \begin{align*}
-    &\indintro{\Sigma_{bs}}{get}{()}{\\
-      &\quad\abs{(\gbox{x_a})}{\glob (1 + 1)}{\\
-          &\qquad \indintro{\Sigma_{bs}}{set}{\grun{\app{\mathit{negate}}{x_a}}}
-            {\abs{(\gbox{x_r})}{\glob 1}{\ret{\Sigma_{bs}}{x_r}}}}}
+    &\indintro{get}{()}{\\
+      &\quad\abs{(\gbox{x_a})}{\\
+          &\qquad \indintro{set}{\grun{\app{\mathit{negate}}{x_a}}}
+            {\abs{(\gbox{x_r})}{\ret{x_r}}}}}
   \end{align*}
   where $\mathit{negate}$ is the function that negates a boolean.
 \end{example}
@@ -1144,22 +1178,22 @@ represent mappings from the operations of $\Sigma$ into the current
 ambient monad. Effect reflection appears in the language as two
 constructs: reflection and reification. Reflection $\performraw{v}{op}$
 uses a value $v \types \yoneda{\Sigma}$ to map the operation $op$ from
-$\Sigma$ into the ambient monad.  Reification $\reifyraw{\Sigma}$
-extends the ambient monad with the operations from $\Sigma$, providing a
-value of type $\yoneda{\Sigma}$ for constructing those operations via
+$\Sigma$ into the ambient monad.  Reification $\reifyname$ extends the
+ambient monad with the operations from some $\Sigma$, providing a value
+of type $\yoneda{\Sigma}$ for constructing those operations via
 reflection.  These constructs implement the core isomorphism of effect
 reflection: reification can convert functions
-$\yoneda{\Sigma} \arr \glob \tau$ into terms
-$\ind{\Sigma}(\tau)$, while reflection provides the inverse
-direction. Their syntax and typing rules are shown in
-Fig.\ref{fig:typing-reflection}.
+$\yoneda{\Sigma} \arr \glob \tau$ into terms $\ind{\Sigma}(\tau)$, while
+reflection provides the inverse direction. Their syntax and typing rules
+are shown in Fig.\ref{fig:typing-reflection}.
 
 \begin{figure}
 \begin{align*}
+  \mathrm{locations},&\loc \in& \locs \\
   \mathrm{types}, \tau ::=\;& \ldots \mid \yoneda{\Sigma} \mid \ldots \\
   \mathrm{contexts}, \Gamma ::=\;& \ldots \mid \lbind{\Gamma}{\loc}{\Sigma} \\
   \mathrm{values}, v :=\;& \ldots \mid \loc \mid \outl{v} \mid \outr{v} \\
-  \mathrm{computations}, c :=\;& \ldots \perform{v}{op}{v} \mid \reify{\Sigma}{\loc}{c}
+  \mathrm{computations}, c :=\;& \ldots \perform{v}{op}{v} \mid \reify{\loc}{c}
 \end{align*}
 \begin{mathpar}
 \inferrule{\\}
@@ -1177,7 +1211,7 @@ Fig.\ref{fig:typing-reflection}.
 {\Gamma \turnc \; \perform{v_1}{op}{v_2} \types \glob \tau_2}
 \and
 \inferrule{\lbind{\Gamma}{\loc}{\Sigma} \turnc c \types \glob \tau}
-{\Gamma \turnc \; \reify{\Sigma}{\loc}{c} \types \ind{\Sigma}(\tau)}
+{\Gamma \turnc \; \reify{\loc}{c} \types \ind{\Sigma}(\tau)}
 \end{mathpar}
 \caption{Effect reflection syntax and typing rules}
 \label{fig:typing-reflection}
@@ -1191,10 +1225,10 @@ $\cdiv{}$ operation
 
 Note that we treat reflection of individual operations
 $\performraw{v}{op}$ as primitive. We can define reflection of
-terms $\reflectraw{\Sigma}$ in terms of $\performraw{v}{op}$:
+terms $\reflectraw{v}$ in terms of $\performraw{v}{op}$:
 \begin{align*}
-    \reflect{\Sigma}{v}{c} := \quad &\letv{x_w}{c}{\\
-        &\indelim{\Sigma}{x_w}{ \\
+    \reflect{v}{c} := \quad &\letv{x_w}{c}{\\
+        &\indelim{x_w}{ \\
         &\qquad \indretcase{x_r}{\return{(\gbox{x_r}})} \seq \\
         &\qquad \indcase{op_1}{x_{p_1}}{x_{k_1}}
           {\letv{x_{a_1}}{\perform{v}{op_1}{x_{p_1}}}{\app{x_{k_1}}{x_{a_1}}}} \seq \\
@@ -1206,7 +1240,7 @@ which has this admissible typing rule:
 \begin{mathpar}
 \inferrule{\Gamma \turnv v \types \yoneda{\Sigma} \\
            \Gamma \turnv c \types \ind{\Sigma}(\tau)}
-{\Gamma \turnc \; \reflect{\Sigma}{v}{c} \types \glob \tau}
+{\Gamma \turnc \; \reflect{v}{c} \types \glob \tau}
 \end{mathpar}
 
 We also provide projections $\outl$ and $\outr$ that decompose a mapping
@@ -1217,7 +1251,7 @@ respectively.
   The value from Example~\ref{example:negate} can also be constructed
   via reflection:
   \begin{align*}
-    &\reify{\Sigma_{bs}}{\loc}{\\
+    &\reify{\loc}{\\
       &\qquad \letv{(\gbox{x})}{\perform{\loc}{get}{}}{\\
       &\qquad \perform{\loc}{set}{\grun{\app{\mathit{negate}}{x}}}}}
   \end{align*}
@@ -1229,55 +1263,56 @@ respectively.
 \label{sec:operational}
 
 We define the operational semantics as a pair of mutually defined
-reduction relations $\reducestov$ and $\reducestoc$ for values and
-computations respectively shown in Fig.\ref{fig:reduction}. The
-definitions of normal forms for values and computations are given in
+reduction relations $\stepstov$ and $\stepstoc$ for values and
+computations respectively shown in Fig.\ref{fig:reduction}, omitting the
+obvious congruence rules. We write $\reducestov$ and $\reducestoc$ for
+the reflexive transitive closures of these relations. The definitions of
+normal forms for values and computations are given in
 Fig.\ref{fig:normal}.
 
 \begin{figure}
 \begin{align*}
-\fst{(v_1, v_2)} &\reducestov v_1 \\
-\snd{(v_1, v_2)} &\reducestov v_2 \\
-\casem{(\inl{v_1})}{x_1}{v_2}{x_2}{v_3} &\reducestov \sbst{v_2}{x_1}{v_1} \\
-\casem{(\inr{v_1})}{x_1}{v_2}{x_2}{v_3} &\reducestov \sbst{v_3}{x_2}{v_1} \\
-\gunbox{x}{\gbox{v_1}}{v_2} &\reducestov \sbst{v_2}{x}{v_1} \\
-\grun{\return{v}} &\reducestov v \\
-\indelimm{\Sigma}{(\ret{\Sigma}{v_s})}{\indretcase{x}{v_r} \seq \ldots} &\reducestov \sbst{v_r}{x}{v_s} \\
-\indelimm{\Sigma}{(\indintro{\Sigma}{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} &\reducestov \\
-  \sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{\abs{x_a}{\glob \tau_a}{\letv{x_w}{\app{v_2}{x_a}&}{\return{(\indelimm{\Sigma}{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}} \\
-\app{(\abs{x}{\tau}{c})}{v} &\reducestoc \sbst{c}{x}{v} \\
-\letv{x}{\return{v}}{c} &\reducestoc \sbst{c}{x}{v} \\
-\letv{x_2}{\letv{x_1}{c_1}{c_2}}{c_3} &\reducestoc \letv{x_1}{c_1}{\letv{x_2}{c_2}{c_3}}\\
-\perform{(\outl{v_1})}{op}{v_2} &\reducestoc \perform{v_1}{\mathrm{left}(op)}{v_2} \\
-\perform{(\outr{v_1})}{op}{v_2} &\reducestoc \perform{v_1}{\mathrm{right}(op)}{v_2} \\
-\reify{\Sigma}{\loc}{\return{(\gbox{v})}} &\reducestoc \return{\ret{\Sigma}{v}} \\
-\reify{\Sigma}{\loc_1}{\perform{\loc_1}{op}{v}} &\reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{(\gbox{x})}{\glob \tau_a}{\return{\ret{\Sigma}{x}}}}} \\
-\reify{\Sigma}{\loc_1}{\letv{x}{\perform{\loc_1}{op}{v}}{c}} &\reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{x}{\glob \tau_a}{\reify{\Sigma}{\loc_1}{c}}}} \\
-\reify{\Sigma}{\loc_1}{\perform{\loc_2}{op}{v}} &\reducestoc \letv{(\gbox{x})}{\perform{\loc_2}{op}{v}}{\return{\ret{\Sigma}{x}}} \qquad (\loc_1 \neq \loc_2) \\
-\reify{\Sigma}{\loc_1}{\letv{x}{\perform{\loc_2}{op}{v}}{c}} &\reducestoc \letv{x}{\perform{\loc_2}{op}{v}}{\reify{\Sigma}{\loc_1}{c}} \qquad (\loc_1 \neq \loc_2)
+\fst{(v_1, v_2)} &\stepstov v_1 \\
+\snd{(v_1, v_2)} &\stepstov v_2 \\
+\casem{(\inl{v_1})}{x_1}{v_2}{x_2}{v_3} &\stepstov \sbst{v_2}{x_1}{v_1} \\
+\casem{(\inr{v_1})}{x_1}{v_2}{x_2}{v_3} &\stepstov \sbst{v_3}{x_2}{v_1} \\
+\gunbox{x}{\gbox{v_1}}{v_2} &\stepstov \sbst{v_2}{x}{v_1} \\
+\grun{\return{v}} &\stepstov v \\
+\indelimm{(\ret{v_s})}{\indretcase{x}{v_r} \seq \ldots} &\stepstov \sbst{v_r}{x}{v_s} \\
+\indelimm{(\indintro{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} &\stepstov \\
+  \sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{\abs{x_a}{\letv{x_w}{\app{v_2}{x_a}&}{\return{(\indelimm{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}} \\
+\app{(\abs{x}{c})}{v} &\stepstoc \sbst{c}{x}{v} \\
+\letv{x}{\return{v}}{c} &\stepstoc \sbst{c}{x}{v} \\
+\letv{x_2}{\letv{x_1}{\perform{\loc}{op}{v}}{c_1}}{c_2} &\stepstoc \letv{x_1}{\perform{\loc}{op}{v}}{\letv{x_2}{c_1}{c_2}} \\
+\perform{(\outl{v_1})}{op}{v_2} &\stepstoc \perform{v_1}{\mathrm{left}(op)}{v_2} \\
+\perform{(\outr{v_1})}{op}{v_2} &\stepstoc \perform{v_1}{\mathrm{right}(op)}{v_2} \\
+\reify{\loc}{\return{(\gbox{v})}} &\stepstoc \return{\ret{v}} \\
+\reify{\loc_1}{\perform{\loc_1}{op}{v}} &\stepstoc \return{\indintro{op}{v}{\abs{(\gbox{x})}{\return{\ret{x}}}}} \\
+\reify{\loc_1}{\letv{x}{\perform{\loc_1}{op}{v}}{c}} &\stepstoc \return{\indintro{op}{v}{\abs{x}{\reify{\loc_1}{c}}}} \\
+\reify{\loc_1}{\perform{\loc_2}{op}{v}} &\stepstoc \letv{(\gbox{x})}{\perform{\loc_2}{op}{v}}{\return{\ret{x}}} \qquad (\loc_1 \neq \loc_2) \\
+\reify{\loc_1}{\letv{x}{\perform{\loc_2}{op}{v}}{c}} &\stepstoc \letv{x}{\perform{\loc_2}{op}{v}}{\reify{\loc_1}{c}} \qquad (\loc_1 \neq \loc_2)
 \end{align*}
 \caption{Reduction relations}
 \label{fig:reduction}
 \end{figure}
 \begin{figure}
 \begin{align*}
-  \mathrm{neutral\ values}, \eta :=\;& x \mid \fst \eta \mid \snd \eta \mid \\
+  \mathrm{neutral\ normal\ values}, \eta :=\;& x \mid \fst{\eta} \mid \snd{\eta} \mid \\
                                    &\casem{\eta}{x}{\omega}{x}{\omega} \mid \\
                                    &\gunbox{x}{\eta}{\omega} \mid \grun{\mu} \mid \\
-                                   &\indelimm{\Sigma}{\eta}
+                                   &\indelimm{\eta}
                                      {\indretcase{x}{\omega} \seq
                                      \indcase{op}{x}{x}{\omega} \seq \ldots \seq
                                      \indcase{op}{x}{x}{\omega}} \\
   \mathrm{normal\ values}, \omega :=\;& \eta \mid (\omega, \omega)
-                           \mid () \mid \inl{\omega} \mid \inr{\omega} \mid \abs{x}{\tau}{\gamma} \mid \\
-                           &\indintro{\Sigma}{op}{\omega}{\omega} \mid \ret{\Sigma}{\omega} \mid \\
+                           \mid () \mid \inl{\omega} \mid \inr{\omega} \mid \abs{x}{\mu} \mid \\
+                           &\indintro{op}{\omega}{\omega} \mid \ret{\omega} \mid \\
                            &\gbox{\omega} \mid \loc \mid \outl{\omega} \mid \outr{\omega} \\
-  \mathrm{neutral\ atomic\ computations}, \nu :=\;& \app{\eta}{\omega}
-                                            \mid \reify{\Sigma}{x}{\mu} \mid \perform{\eta}{op}{\omega} \\
-  \mathrm{normal\ atomic\ computations}, \delta :=\;& \nu \mid \perform{\loc}{op}{\omega} \\
-  \mathrm{neutral\ computations}, \mu :=\;& \nu \mid \letv{x}{\nu}{\gamma} \\
-  \mathrm{normal\ computations}, \gamma :=\;& \mu \mid \return{\omega}
-                                              \mid \letv{x}{\delta}{\gamma}
+  \mathrm{neutral\ normal\ computations}, \nu :=\;& \app{\eta}{\omega}
+                                            \mid \reify{\loc}{\nu} \mid \perform{\eta}{op}{\omega}
+                                            \mid \letv{x}{\nu}{\mu} \\
+  \mathrm{normal\ computations}, \mu :=\;& \nu \mid \return{\omega} \mid \perform{\loc}{op}{\omega}
+                                              \mid \letv{x}{\perform{\loc}{op}{\omega}}{\mu}
 \end{align*}
 \caption{Normal forms}
 \label{fig:normal}
@@ -1290,23 +1325,45 @@ the reduction relations.
 \label{lemma:subject-reduction}
   \begin{align*}
     &\Gamma \turnv v_1 \types \tau
-      \quad \wedge \quad v_1 \reducestov v_2
+      \quad \wedge \quad v_1 \stepstov v_2
       \quad \implies \quad \Gamma \turnv v_2 \types \tau \\
     &\Gamma \turnc c_1 \types \tau
-      \quad \wedge \quad c_1 \reducestoc c_2
+      \quad \wedge \quad c_1 \stepstoc c_2
       \quad \implies \quad \Gamma \turnc c_2 \types \tau
   \end{align*}
 \end{lemma}
 
-These reduction relations are strongly normalizing. We prove this via
-Tait computability\cite{??} in
-Appendix~\ref{apdx:strong-normalization}. This is made more involved by
-the presence of infinitary inductive types, which requires us to
-\todo{something something Knaster-Tarski}.
+These reduction relations are confluent:
+\begin{lemma}
+\label{lemma:church-rosser}
+  \begin{align*}
+    &v_1 \reducestov v_2
+      \quad \wedge \quad v_1 \reducestov v_3
+      \quad \implies \quad \exists\, v_4. \quad v_2 \reducestov v_4
+      \quad \wedge \quad v_3 \reducestov v_4 \\
+    &c_1 \reducestoc c_2
+      \quad \wedge \quad c_1 \reducestoc c_3
+      \quad \implies \quad \exists\, c_4. \quad c_2 \reducestoc c_4
+      \quad \wedge \quad c_3 \reducestoc v_4 \\
+  \end{align*}
+\end{lemma}
+which we prove using the standard approach via an equivalent notion of
+parallel reduction Appendix~\ref{apdx:church-rosser}.
+
+They are also strongly normalizing. We call the sets of values and
+computations for which there exist no infinite chains
+of reductions $\snv$ and $\snc$ respectively.
 \begin{lemma}
 \label{lemma:strong-normalization}
-\todo{Find simplest formal description of strong normalization}
+\begin{align*}
+    &\Gamma \turnv v \types \tau
+      \quad \implies \quad v \in \snv \\
+    &\Gamma \turnc c \types \tau
+      \quad \implies \quad c \in \snc \\
+\end{align*}
 \end{lemma}
+We prove this using logical relations\cite{??} in
+Appendix~\ref{apdx:strong-normalization}.
 
 \subsection{Embedding the Simply-Typed Lambda Calculus}
 
@@ -1821,8 +1878,8 @@ which we call $\reifyc{\Sigma}{}$.
 
 $\reifyc{\Sigma}{}$ gives us our semantics for reification.
 \begin{align*}
-&\sem{\Gamma \turnc \reify{\Sigma}{x}{c} \types \ind{\Sigma}(\glob \tau)} =
-  \reifyc{\Sigma}{\tau} \circ \currymap(\sem{\lbind{\Gamma}{x}{\yoneda{\Sigma}} \turnc c \types \glob \tau}) \\
+&\sem{\Gamma \turnc \reify{\loc}{c} \types \ind{\Sigma}(\glob \tau)} =
+  \reifyc{\Sigma}{\tau} \circ \currymap(\sem{\lbind{\Gamma}{\loc}{\yoneda{\Sigma}} \turnc c \types \glob \tau}) \\
 \end{align*}
 
 \subsection{Properties of the denotational semantics}
@@ -1832,7 +1889,7 @@ The denotational semantics is sound:
 \label{lemma:soundness}
   \begin{equation*}
     \Gamma \turnv v_1 \types \tau
-    \wedge v_1 \reducestov v_2
+    \wedge v_1 \stepstov v_2
     \implies \sem{\Gamma \turnv v_1 \types \tau}
            = \sem{\Gamma \turnv v_2 \types \tau}
   \end{equation*}
@@ -2004,14 +2061,14 @@ and the global modality used to control dependence on it.
 
 \appendix
 \section{Operational semantics}
-\subsection{General lemmas}
 
-We start by proving some general lemmas that we'll need in the various
-proofs. Note that we will refer to a property that applies to both value
-and computation terms, and which must be shown by mutual induction, as a
-single lemma.
+In this section we prove subject reduction, confluence and strong
+normalizatoin for our operational semantics. We start by proving some
+general lemmas that we'll need in the various proofs. Note that we will
+refer to a property that applies to both value and computation terms,
+and which must be shown by mutual induction, as a single lemma.
 
-\subsubsection{Context division lemmas}
+\subsection{Context division lemmas}
 
 We will need some simple lemmas describing the behaviour of the context
 division operator $\cdiv{\Gamma}$. All of which follow directly by
@@ -2041,8 +2098,7 @@ induction on the context.
   \end{equation*}
 \end{lemma}
 
-
-\subsubsection{Weakening lemmas}
+\subsection{Weakening lemmas}
 
 We need lemmas stating that we can weaken typing judgements with new
 variable bindings of both $x$ and $\loc$ variables.
@@ -2100,7 +2156,7 @@ $\Gamma$.
 This follows by induction on $\Gamma_1$ via the local weakening lemmas
 (\ref{lemma:local-weakening} and \ref{lemma:yoneda-weakening}).
 
-\subsubsection{Substitution lemmas}
+\subsection{Substitution lemmas}
 
 We need a simple lemma stating that substituting unbound variables does
 nothing, which follows directly from mutual induction on typing rules:
@@ -2160,126 +2216,539 @@ inductive hypothesis. The variable case that actually substitutes $v_2$
 uses Lemma \ref{lemma:cdiv-weakening} to weaken $v_2$ to the right
 context.
 
+When reasoning about reductions we will need a lemma stating that
+substitutions commute:
+\begin{lemma}
+\label{lemma:substitutions-commute}
+  \begin{align*}
+    &\sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{v_2} = \sbst{\sbst{v_3}{x_2}{v_2}}{x_1}{\sbst{v_1}{x_2}{v_2}} \\
+    &\sbst{\sbst{c}{x_1}{v_1}}{x_2}{v_2} = \sbst{\sbst{c}{x_2}{v_2}}{x_1}{\sbst{v_1}{x_2}{v_2}}
+  \end{align*}
+\end{lemma}
+which follows directly by mutual induction on $v_3$ and $c$.
+
 \subsection{Subject reduction}
 \label{apdx:subject-reduction}
 
 We prove subject reduction (Lemma~\ref{lemma:subject-reduction}):
 \begin{align*}
   &\Gamma \turnv v_1 \types \tau
-  \quad \wedge \quad v_1 \reducestov v_2
+  \quad \wedge \quad v_1 \stepstov v_2
   \quad \implies \quad \Gamma \turnv v_2 \types \tau \\
   &\Gamma \turnc c_1 \types \tau
-  \quad \wedge \quad c_1 \reducestoc c_2
+  \quad \wedge \quad c_1 \stepstoc c_2
   \quad \implies \quad \Gamma \turnc c_2 \types \tau
 \end{align*}
 by mutual induction over the two reduction relations. The reduction
-relations are the least reflexive, transitive congruences closed under
-the rules in Fig.~\ref{fig:reduction}.
+relations are the least relations closed under the rules in
+Fig.~\ref{fig:reduction} combined with the obvious congruence rules.
 
-The reflexivity case is immediate and the transitive case follows
-directly by induction. As all the typing rules are entirely
-compositional, the congruence cases also all follow directly by
-induction. This leaves only the rules from Fig.~\ref{fig:reduction}.
+\begin{proof}
+As all the typing rules are entirely compositional, the cases for the
+congruence rules all follow directly by induction. This leaves only the
+rules from Fig.~\ref{fig:reduction}.
 
 Note that the typing rules are syntax directed so there is always only a
 single typing rule that we need to consider.
 
-\subsubsection{Products}
-
-For the product beta rules:
+\begin{description}
+\item[Products] For the product beta rules:
 \begin{align*}
-\fst{(v_1, v_2)} &\reducestov v_1 \\
-\snd{(v_1, v_2)} &\reducestov v_2
+\fst{(v_1, v_2)} &\stepstov v_1 \\
+\snd{(v_1, v_2)} &\stepstov v_2
 \end{align*}
 the cases follow directly by inversion on the typing rule.
 
-\subsubsection{Sums}
-
-For the sum rules:
+\item[Sums] For the sum rules:
 \begin{align*}
-\casem{(\inl{v_1})}{x_1}{v_2}{x_2}{v_3} &\reducestov \sbst{v_2}{x_1}{v_1} \\
-\casem{(\inr{v_1})}{x_1}{v_2}{x_2}{v_3} &\reducestov \sbst{v_3}{x_2}{v_1}
+\casem{(\inl{v_1})}{x_1}{v_2}{x_2}{v_3} &\stepstov \sbst{v_2}{x_1}{v_1} \\
+\casem{(\inr{v_1})}{x_1}{v_2}{x_2}{v_3} &\stepstov \sbst{v_3}{x_2}{v_1}
 \end{align*}
 the cases follow by inversion on the typing rules followed by case
 splitting on the modality $m$ and applying the either the global
 (\ref{lemma:global-substitution}) or local
 (\ref{lemma:local-substitution}) substition lemma.
 
-\subsubsection{Global modality}
-
-For the global modality rule:
+\item[Global modality] For the global modality rule:
 \begin{equation*}
-\gunbox{x}{\gbox{v_1}}{v_2} \reducestov \sbst{v_2}{x}{v_1}
+\gunbox{x}{\gbox{v_1}}{v_2} \stepstov \sbst{v_2}{x}{v_1}
 \end{equation*}
 the case follows by inversion on the typing rules followed by the global
 substitution lemma (\ref{lemma:global-substitution}).
 
 For the run rule:
 \begin{equation*}
-\grun{\return{v}} \reducestov v
+\grun{\return{v}} \stepstov v
 \end{equation*}
 the case follows by inversion on the typing rules along with weakening
 via Lemma \ref{lemma:cdiv-weakening}.
 
-\subsubsection{Inductive types}
-
+\item[Inductive types]
 For the $\indelimname$/$\retname$ rule:
 \begin{equation*}
-\indelimm{\Sigma}{(\ret{\Sigma}{v_s})}{\indretcase{x}{v_r} \seq \ldots} \reducestov \sbst{v_r}{x}{v_s}
+\indelimm{(\ret{v_s})}{\indretcase{x}{v_r} \seq \ldots} \stepstov \sbst{v_r}{x}{v_s}
 \end{equation*}
 the case follows by inversion on the typing rules followed by the global
 substitution lemma (\ref{lemma:global-substitution}).
 
 For the $\indelimname$/$op$ rule:
 \begin{align*}
-\indelimm{\Sigma}{(\indintro{\Sigma}{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} &\reducestov \\
-  \sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{\abs{x_a}{\tau_a}{\letv{x_w}{\app{v_2}{x_a}&}{\return{(\indelimm{\Sigma}{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}}
+\indelimm{(\indintro{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} &\stepstov \\
+  \sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{\abs{x_a}{\letv{x_w}{\app{v_2}{x_a}&}{\return{(\indelimm{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}}
 \end{align*}
 the case follows by inversion on the typing rules followed by the global
 substitution lemma (\ref{lemma:global-substitution}) for $x_1$ and the
 local substition lemma (\ref{lemma:local-substitution}) for $x_2$.
 
-\subsubsection{Functions}
-
+\item[Functions]
 The case for the function beta rule:
 \begin{equation*}
-\app{(\abs{x}{\tau}{c})}{v} \reducestoc \sbst{c}{x}{v}
+\app{(\abs{x}{c})}{v} \stepstoc \sbst{c}{x}{v}
 \end{equation*}
 follows by inversion on the typing rules followed by the local
 substitution lemma (\ref{lemma:local-substitution}).
 
-\subsubsection{Bind}
-
+\item[Bind]
 The case for the bind/return rule:
 \begin{equation*}
-\letv{x}{\return{v}}{c} \reducestoc \sbst{c}{x}{v}
+\letv{x}{\return{v}}{c} \stepstoc \sbst{c}{x}{v}
 \end{equation*}
 follows by inversion on the typing rules followed by the local
 substitution lemma (\ref{lemma:local-substitution}).
 
 The case for the bind commuting rule: 
 \begin{equation*}
-\letv{x_2}{\letv{x_1}{c_1}{c_2}}{c_3} \reducestoc \letv{x_1}{c_1}{\letv{x_2}{c_2}{c_3}}
+\letv{x_2}{\letv{x_1}{\perform{\loc}{op}{v}}{c_1}}{c_2} \stepstoc \letv{x_1}{\perform{\loc}{op}{v}}{\letv{x_2}{c_1}{c_2}}
 \end{equation*}
 follows by inversion on the typing rules followed by weakening $c_3$ by
 the local binding of $x_1$.
 
-\subsubsection{Effect reflection}
+\item[Reflection]
 
-The cases for all the rules relating to effects and effect reflection:
+The cases for the $\outlname$ and $\outrname$ rules
 \begin{align*}
-\perform{(\outl{v_1})}{op}{v_2} &\reducestoc \perform{v_1}{\mathrm{left}(op)}{v_2} \\
-\perform{(\outr{v_1})}{op}{v_2} &\reducestoc \perform{v_1}{\mathrm{right}(op)}{v_2} \\
-\reify{\Sigma}{\loc}{\return{(\gbox{v})}} &\reducestoc \return{\ret{\Sigma}{v}} \\
-\reify{\Sigma}{\loc_1}{\perform{\loc_1}{op}{v}} &\reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{(\gbox{x})}{\glob \tau_a}{\return{\ret{\Sigma}{x}}}}} \\
-\reify{\Sigma}{\loc_1}{\letv{x}{\perform{\loc_1}{op}{v}}{c}} &\reducestoc \return{\indintro{\Sigma}{op}{v}{\abs{x}{\glob \tau_a}{\reify{\Sigma}{\loc_1}{c}}}} \\
-\reify{\Sigma}{\loc_1}{\perform{\loc_2}{op}{v}} &\reducestoc \letv{(\gbox{x})}{\perform{\loc_2}{op}{v}}{\return{\ret{\Sigma}{x}}} \qquad (\loc_1 \neq \loc_2) \\
-\reify{\Sigma}{\loc_1}{\letv{x}{\perform{\loc_2}{op}{v}}{c}} &\reducestoc \letv{x}{\perform{\loc_2}{op}{v}}{\reify{\Sigma}{\loc_1}{c}} \qquad (\loc_1 \neq \loc_2)
+\perform{(\outl{v_1})}{op}{v_2} &\stepstoc \perform{v_1}{\mathrm{left}(op)}{v_2} \\
+\perform{(\outr{v_1})}{op}{v_2} &\stepstoc \perform{v_1}{\mathrm{right}(op)}{v_2}
 \end{align*}
 follow directly by inversion on the typing rules.
 
+\item[Reification]
+
+The cases for the $\reifyname$ rules:
+\begin{align*}
+\reify{\loc}{\return{(\gbox{v})}} &\stepstoc \return{\ret{v}} \\
+\reify{\loc_1}{\perform{\loc_1}{op}{v}} &\stepstoc \return{\indintro{op}{v}{\abs{(\gbox{x})}{\return{\ret{x}}}}} \\
+\reify{\loc_1}{\letv{x}{\perform{\loc_1}{op}{v}}{c}} &\stepstoc \return{\indintro{op}{v}{\abs{x}{\reify{\loc_1}{c}}}} \\
+\reify{\loc_1}{\perform{\loc_2}{op}{v}} &\stepstoc \letv{(\gbox{x})}{\perform{\loc_2}{op}{v}}{\return{\ret{x}}} \qquad (\loc_1 \neq \loc_2) \\
+\reify{\loc_1}{\letv{x}{\perform{\loc_2}{op}{v}}{c}} &\stepstoc \letv{x}{\perform{\loc_2}{op}{v}}{\reify{\loc_1}{c}} \qquad (\loc_1 \neq \loc_2)
+\end{align*}
+follow by inversion on the typing rules followed by \ref{lemma:yoneda-cdiv}.
+\end{description}
+\end{proof}
+
+\subsection{Confluence}
+\label{apdx:church-rosser}
+
+We prove that the reduction relations are confluent:
+\begin{align*}
+  &v_1 \reducestov v_2
+    \quad \wedge \quad v_1 \reducestov v_3
+    \quad \implies \quad \exists\, v_4. \quad v_2 \reducestov v_4
+    \quad \wedge \quad v_3 \reducestov v_4 \\
+  &c_1 \reducestoc c_2
+    \quad \wedge \quad c_1 \reducestoc c_3
+    \quad \implies \quad \exists\, c_4. \quad c_2 \reducestoc c_4
+    \quad \wedge \quad c_3 \reducestoc v_4 \\
+\end{align*}
+
+As is standard, we start by constructing notions of parallel reduction
+$\parastepstov$ and $\parastepstoc$. The inference rules describing
+parallel reduction are given in Fig.~\ref{fig:parallel-value-reduction}
+and Fig.~\ref{fig:parallel-computation-reduction}. We omit the
+confluence rules. We write $\parareducestov$ and $\parareducestoc$ for
+the transitive closures of $\parastepstov$ and $\parastepstoc$
+respectively.
+\begin{figure}
+\begin{mathpar}
+\inferrule{v_1 \parastepstov v_1^{\prime}}
+{\fst{(v_1, v_2)} \parastepstov v_1^{\prime}}
+\and
+\inferrule{v_2 \parastepstov v_2^{\prime}}
+{\snd{(v_1, v_2)} \parastepstov v_2^{\prime}}
+\and
+\inferrule{v_1 \parastepstov v_1^{\prime} \\ v_2 \parastepstov v_2^{\prime}}
+{\casem{(\inl{v_1})}{x_1}{v_2}{x_2}{v_3} \parastepstov \sbst{v_2^{\prime}}{x_1}{v_1^{\prime}}}
+\and
+\inferrule{v_1 \parastepstov v_1^{\prime} \\ v_3 \parastepstov v_3^{\prime}}
+{\casem{(\inr{v_1})}{x_1}{v_2}{x_2}{v_3} \stepstov \sbst{v_3^{\prime}}{x_2}{v_1^{\prime}}}
+\and
+\inferrule{v_1 \parastepstov v_1^{\prime} \\ v_2 \parastepstov v_2^{\prime}}
+{\gunbox{x}{\gbox{v_1}}{v_2} \stepstov \sbst{v_2^{\prime}}{x}{v_1^{\prime}}}
+\and
+\inferrule{v \parastepstov v^{\prime}}
+{\grun{\return{v}} \stepstov v^{\prime}}
+\and
+\inferrule{v_1 \parastepstov v_1^{\prime} \\ v_2 \parastepstov v_2^{\prime}}
+{\indelimm{(\ret{v_1})}{\indretcase{x}{v_2} \seq \ldots} \stepstov \sbst{v_2^{\prime}}{x}{v_1^{\prime}}}
+\and
+\inferrule{v_p \parastepstov v_p^{\prime} \\ v_k \parastepstov v_k^{\prime} \\ v_r \parastepstov v_r^{\prime} \\ \overline{v_j \parastepstov v_j^{\prime}}}
+{\indelimm{\indintro{op_i}{v_p}{v_k}}{\indretcase{x_r}{v_r} \seq
+                                   \overline{\indcase{op_j}{x_{p_j}}{x_{k_j}}{v_j}}} \\\\ \parastepstov \\\\
+  \sbst{\sbst{v_i^{\prime}}{x_{p_i}}{v_p^{\prime}}}{x_{k_i}}{\abs{x_a}{\letv{x_w}{\app{v_k^{\prime}}{x_a}}{
+     \return{(\indelimm{x_w}{\indretcase{x_r}{v_r^{\prime}} \seq
+                \overline{\indcase{op_j}{x_{p_j}}{x_{k_j}}{v_j^{\prime}}}})}}}}}
+\end{mathpar}
+\caption{Parallel reduction relations (values)}
+\label{fig:parallel-value-reduction}
+\end{figure}
+
+\begin{figure}
+\begin{mathpar}
+\inferrule{c \parastepstoc c^{\prime} \\ v \parastepstov v^{\prime}}
+{\app{(\abs{x}{c})}{v} \parastepstoc \sbst{c^{\prime}}{x}{v^{\prime}}}
+\and
+\inferrule{v \parastepstov v^{\prime} \\ c \parastepstoc c^{\prime}}
+{\letv{x}{\return{v}}{c} \parastepstoc \sbst{c}{x}{v}}
+\and
+\inferrule{v \parastepstoc v^{\prime} \\ c_1 \parastepstoc c_1^{\prime} \\ c_2 \parastepstoc c_2^{\prime}}
+{\letv{x_2}{\letv{x_1}{\perform{\loc}{op}{v}}{c_1}}{c_2} \parastepstoc \letv{x_1}{\perform{\loc}{op}{v^{\prime}}}{\letv{x_2}{c_1^{\prime}}{c_2^{\prime}}}}
+\and
+\inferrule{v_1 \parastepstov v_1^{\prime} \\ v_2 \parastepstov v_2^{\prime}}
+{\perform{(\outl{v_1})}{op}{v_2} \parastepstoc \perform{v_1^{\prime}}{\mathrm{left}(op)}{v_2^{\prime}}}
+\and
+\inferrule{v_1 \parastepstov v_1^{\prime} \\ v_2 \parastepstov v_2^{\prime}}
+{\perform{(\outr{v_1})}{op}{v_2} \parastepstoc \perform{v_1^{\prime}}{\mathrm{right}(op)}{v_2^{\prime}}}
+\and
+\inferrule{v \parastepstov v^{\prime}}
+{\reify{\loc}{\return{(\gbox{v})}} \parastepstoc \return{\ret{v^{\prime}}}}
+\and
+\inferrule{v \parastepstov v^{\prime}}
+{\reify{\loc_1}{\perform{\loc_1}{op}{v}} \parastepstoc \return{\indintro{op}{v^{\prime}}{\abs{(\gbox{x})}{\return{\ret{x}}}}}}
+\and
+\inferrule{v \parastepstov v^{\prime} \\ c \parastepstoc c^{\prime}}
+{\reify{\loc_1}{\letv{x}{\perform{\loc_1}{op}{v}}{c}} \parastepstoc \return{\indintro{op}{v^{\prime}}{\abs{x}{\reify{\loc_1}{c^{\prime}}}}}}
+\and
+\inferrule{v \parastepstov v^{\prime}}
+{\reify{\loc_1}{\perform{\loc_2}{op}{v}} \parastepstoc \letv{(\gbox{x})}{\perform{\loc_2}{op}{v^{\prime}}}{\return{\ret{x}}} \qquad (\loc_1 \neq \loc_2)}
+\and
+\inferrule{v \parastepstov v^{\prime} \\ c \parastepstoc c^{\prime}}
+{\reify{\loc_1}{\letv{x}{\perform{\loc_2}{op}{v}}{c}} \parastepstoc \letv{x}{\perform{\loc_2}{op}{v^{\prime}}}{\reify{\loc_1}{c^{\prime}}} \qquad (\loc_1 \neq \loc_2)}
+\end{mathpar}
+\caption{Parallel reduction relations (computations)}
+\label{fig:parallel-computation-reduction}
+\end{figure}
+
+Parallel reductions are reflexive:
+\begin{lemma}
+\label{lemma:parallel-reduction-reflexive}
+  \begin{equation*}
+    v \parastepstov v \qquad
+    c \parastepstoc c
+  \end{equation*}
+\end{lemma}
+which follows by induction on $v$ and $c$ via the confluence rules.
+
+A single step of ordinary reduction is a valid parallel reduction:
+\begin{lemma}
+\label{lemma:parallel-reduction-of-reduction}
+  \begin{align*}
+    &v_1 \stepstov v_2
+    \quad \implies \quad v_1 \parastepstov v_2 \\
+    &c_1 \stepstoc c_2
+    \quad \implies \quad c_1 \parastepstoc c_2
+  \end{align*}
+\end{lemma}
+This follows by induction on the ordinary reductions. Each rule of the
+ordinary reduction has a corresponding rule in the parallel reduction
+that can be used, applying reflexivity of the parallel reduction
+\ref{lemma:parallel-reduction-reflexive} on subterms as needed.
+
+A single step of parallel reduction corresponds to a sequence of steps
+in the ordinary reduction.
+\begin{lemma}
+\label{lemma:reductions-of-parallel-reduction}
+  \begin{align*}
+    &v_1 \parastepstov v_2
+    \quad \implies \quad v_1 \reducestov v_2 \\
+    &c_1 \parastepstoc c_2
+    \quad \implies \quad c_1 \reducestoc c_2
+  \end{align*}
+\end{lemma}
+This follows by induction on the parallel reductions. Each rule of the
+parallel reduction relation has a corresponding rule of the ordinary
+reduction relation. We use transitivity of $\reducestoname$ to first
+apply confluence rules to reduce subterms before applying the actual
+corresponding rule.
+
+\subsubsection{Substitution}
+
+The above lemmas mean that showing confluence of $\parareducestoname$ is
+sufficient to show confluence of $\reducestoname$. To do that we first
+need a lemma showing that substitution commutes with parallel reduction:
+\begin{lemma}
+\label{lemma:subst-of-parallel-reduction}
+  \begin{align*}
+  &v_1 \parastepstov v_3
+    \quad \wedge \quad v_2 \parastepstov v_4
+    \quad \implies \quad \sbst{v_1}{x}{v_2} \parastepstov \sbst{v_3}{x}{v_4} \\
+  &c_1 \parastepstov c_2
+    \quad \wedge \quad v_1 \parastepstov v_2
+    \quad \implies \quad \sbst{c_1}{x}{v_1} \parastepstov \sbst{c_2}{x}{v_2} \\
+  \end{align*}
+\end{lemma}
+\begin{proof}
+We prove this by mutual induction on the parallel reduction relations on
+$v_1$ and $c_1$.
+\begin{description}
+\item[Variables]
+  If the variable is $x$ then this case follows directly from $v_2 \parastepstov v_4$,
+  otherwise it follows directly from $v_1 \parastepstov v_3$.
+\item[Other confluence rules] For confluence rules other than the
+  variable rule we apply the same confluence rule and use the inductive
+  hypothesis for any subcomponents.
+\item[Reduction rules] For reduction rules we apply the same reduction
+  rule, commute any substitutions produced by the reduction with the
+  substitution of $x$ using \ref{lemma:substitutions-commute}, and then
+  use the inductive hypothesis for any subcomponents.
+\end{description}
+\end{proof}
+
+\subsubsection{The diamond property}
+
+We can now show confluence of $\parareducestoname$ by proving the
+stronger property that $\parastepstoname$ satisfies the diamond
+property:
+\begin{lemma}
+\label{lemma:parallel-reduction-diamond}
+\begin{align*}
+  &v_a \parastepstov v_b
+    \quad \wedge \quad v_a \parastepstov v_c
+    \quad \implies \quad \exists\, v_d. \quad v_b \parastepstov v_d
+    \quad \wedge \quad v_c \parastepstov v_d \\
+  &c_a \parastepstoc c_b
+    \quad \wedge \quad c_a \parastepstoc c_c
+    \quad \implies \quad \exists\, c_d. \quad c_b \parastepstoc c_d
+    \quad \wedge \quad c_c \parastepstoc c_d \\
+\end{align*}
+\end{lemma}
+\begin{proof}
+  We prove this by mutual induction on the parallel reductions to $v_b$
+  and $c_b$, followed by inversion of the parallel reductions to $v_c$
+  and $c_c$. As all congruence rules operate on different constructs,
+  and no two reduction rule can apply to the same term, there are only
+  two cases we must consider:
+\begin{description}
+\item[The same rule] If both reductions are the same rule then the
+  induction hypotheses gives us a value and associated parallel
+  reductions for each subcomponent. We use these values to build
+  $v_d$/$c_d$ and apply the rule to build the required parallel
+  reductions.
+\item[A reduction rule and a confluence rule] Cases where
+  one reduction is a reduction rule and the other is a confluence rule
+  then all follow the same reasoning. We illustrate this reasoning by
+  describing the case for the $\letvname/\returnname$ reduction rule.
+
+  We have $v_a = \letv{x_l}{\return{v_{ar}}}{c_{as}}$,
+  $v_b = \sbst{c_{bs}}{x_l}{v_{br}}$ and
+  $v_c = \letv{x_l}{v_{cl}}{c_{cs}}$, and the rules in
+  question are:
+  \begin{mathpar}
+    \inferrule{v_{ar} \parastepstov v_{br} \\ c_{as} \parastepstoc c_{bs}}
+    {\letv{x_l}{\return{v_{ar}}}{c_{as}} \parastepstoc \sbst{c_{bs}}{x_l}{v_{br}}}
+    \and
+    \inferrule{\return{v_{ar}} \parastepstov v_{cl} \\ c_{as} \parastepstoc c_{cs}}
+    {\letv{x_l}{\return{v_{ar}}}{c_{as}} \parastepstoc \letv{x}{v_{cl}}{c_{cs}}}
+  \end{mathpar}
+  All our reduction rules have a single subcomponent that is not a
+  metavariable -- in this case it is $\return{v}$ -- and there are no
+  reduction rules which could apply to that subcomponent. That means
+  we know by inversion that $\return{v_{ar}} \parastepstov v_{cl}$ must be the confluence rule on $\returnname$,
+  which gives us $v_{cl} = \return{v_{cr}}$, and the combined confluence rules amount to:
+  \begin{mathpar}
+    \inferrule{v_{ar} \parastepstov v_{cr} \\ c_{as} \parastepstoc c_{cs}}
+    {\letv{x_l}{\return{v_{ar}}}{c_{as}} \parastepstoc \letv{x}{\return{v_{cr}}}{c_{cs}}}
+  \end{mathpar}
+  For some of the cases, e.g. the $\reifyname$/$\returnname$ rule, the
+  subcomponent itself has a nested subcomponent that is not a
+  metavariable and this inversion step must be repeated a second time.
+
+  By the inductive hypothesis, we know that:
+  \begin{align*}
+  \exists\, v_{dr}. \,v_{br} \parastepstov v_{dr} \, \wedge \, v_{cr} \parastepstov v_{dr} \\
+  \exists\, c_{ds}. \,c_{bs} \parastepstov c_{ds} \, \wedge \, v_{cs} \parastepstov v_{ds}
+  \end{align*}
+  We take $v_d$ to be $\sbst{c_{ds}}{x_l}{v_{dr}}$. We have
+  $\sbst{c_{bs}}{x_l}{v_{br}} \parastepstov \sbst{c_{ds}}{x_l}{v_{dr}}$
+  using \ref{lemma:subst-of-parallel-reduction}, and we have
+  $\letv{x}{\return{v_{cr}}}{c_{cs}} \parastepstov \sbst{c_{ds}}{x_l}{v_{dr}}$
+  by applying the reduction rule. In some cases there is no
+  substitution and so the lemma is not needed, and in some other cases
+  the result of the reduction is not a metavariable and so we must
+  first apply the relevant confluence rule.
+\end{description}
+\end{proof}
+
 \subsection{Strong normalization}
 \label{apdx:strong-normalization}
+
+\begin{align*}
+    &\Gamma \turnv v \types \tau
+      \quad \implies \quad v \in \snv \\
+    &\Gamma \turnc c \types \tau
+      \quad \implies \quad c \in \snc \\
+\end{align*}
+
+We prove strong normalization in the standard way for a simply typed
+calculus via logical relations. In addition to being indexed by types
+these relations will be parameterized by an \emph{effect context}: a
+context restricted to bindings of the form $\loc \types \Sigma$.
+
+\begin{equation*}
+  \mathrm{effect\ contexts}, \Delta ::=\; \cempty \mid \lbind{\Gamma}{\loc}{\Sigma}
+\end{equation*}
+
+We write $\clocs{\Gamma}$ for the effect context obtained by removing
+all the ordinary variable bindings from $\Gamma$ and keeping only the
+location bindings.
+
+We define a pair of mutually defined logical relations
+$\redva{\Delta}{\tau}{\alpha}$ and $\redca{\Delta}{\tau}{\alpha}$
+indexed by an effect context, a type and an ordinal. The ordinal
+controls the rank of the well-founded trees corresponding to inductive
+types and computations. The definitions are given in
+Fig.~\ref{fig:reducibility-predicates}.
+
+We write $\redv{\Delta}{\tau}$ for
+$\mathrm{lim}_{\alpha} \redva{\Delta}{\tau}{\alpha}$ and
+$\redc{\Delta}{\tau}$ for
+$\mathrm{lim}_{\alpha} \redca{\Delta}{\tau}{\alpha}$. These limits are
+well-defined because the predicates are monotonic in $\alpha$.
+
+\begin{figure}
+\begin{align*}
+    \redva{\Delta}{1}{\alpha} \quad &= \quad
+      \snv \\
+    \redva{\Delta}{\tau_1 \times \tau_2}{\alpha} \quad &= \quad
+       \{ \, v \; | \; \fst{v} \in \redv{\Delta}{\tau_1} \; \wedge \; \snd{v} \in \redv{\Delta}{\tau_2} \, \} \\
+    \redva{\Delta}{\tau_1 + \tau_2}{\alpha} \quad &= \quad
+       \{ \, v_1 \in \snv \; | \; \forall v_2. \; v_1 \reducestov \inl{v_2} \; \implies \; v_2 \in \redv{\Delta}{\tau_1} \\
+         &\qquad \qquad \qquad \wedge \; \forall v_2. \; v_1 \reducestov \inr{v_2} \; \implies \; v_2 \in \redv{\Delta}{\tau_2} \, \} \\
+    \redva{\Delta}{\tau_1 \arr \tau_2}{\alpha} \quad &= \quad
+      \{ \, v_1 \; | \; \forall v_2 \in \redv{\Delta}{\tau_1}. \; \app{v_1}{v_2} \in \redc{\Delta}{\tau_2} \, \} \\
+    \redva{\Delta}{\glob \tau}{\alpha} \quad &= \quad
+      \{ \, v_1 \in \snv \; | \; \forall v_2. \; v_1 \reducestov \gbox{v_2} \; \implies \; v_2 \in \redv{\cempty}{\tau} \, \} \\
+    \redva{\Delta}{\yoneda{\Sigma}}{\alpha} \quad &= \quad
+      \snv \\
+    \redva{\Delta}{\ind{\Sigma}(\tau_1)}{\alpha} \quad &= \\
+      \{ \, v_1 \in \snv \; &| \;
+        (\forall v_2. \; v_1 \reducestov \ret{v_2}
+          \; \implies \; v_2 \in \redv{\cempty}{\tau_1}) \\
+        &\wedge \; (\forall op
+          \types \tau_2 \rightarrowtail \tau_3 \in \Sigma, v_3, v_4. \quad
+          v_1 \reducestov \indintro{op}{v_3}{v_4} \\
+          &\quad \implies v_3 \in \redv{\cempty}{\tau_2} \\
+          &\qquad \quad \wedge \; (\forall v_5 \in \snv. \;
+                   (\forall v_6. \; v_5 \reducestov \gbox{v_6} \; \implies \; v_6 \in \redv{\cempty}{\tau_3}) \\
+                   &\qquad \qquad \implies \; \exists \beta < \alpha.
+                     \quad \app{v_4}{v_5} \in \redca{\Delta}{\ind{\Sigma}(\tau_1)}{\beta})) \, \} \\
+    \redca{\Delta}{\tau}{\alpha} \quad &= \\
+      \{ \, c_1 \in \snc \; &| \;
+        (\forall v_1. \; c_1 \reducestoc \return{v_1}
+          \; \implies \; v_1 \in \redva{\Delta}{\tau}{\alpha}) \\
+        &\wedge \; (\forall \loc, op, v_2. \quad
+            c_1 \reducestoc \perform{\loc}{op}{v_2} \\
+            &\quad \implies \;
+            \exists \Sigma, \tau_2, \tau_3. \; \loc \types \Sigma \in \Delta
+                            \; \wedge \; op \types \tau_2 \rightarrowtail \tau_3 \in \Sigma
+                            \; \wedge \; v_2 \in \redv{\cempty}{\tau_2}) \\
+        &\wedge \; (\forall \loc, op, v_3, c_2. \quad
+           c_1 \reducestoc \letv{x}{\perform{\loc}{op}{v_3}}{c_2} \\
+            &\quad \implies \;
+            \exists \Sigma, \tau_4, \tau_5. \; \loc \types \Sigma \in \Delta
+                            \; \wedge \; op \types \tau_4 \rightarrowtail \tau_5 \in \Sigma
+                            \; \wedge \; v_3 \in \redv{\cempty}{\tau_4} \\
+                            &\qquad \quad \wedge \; (\forall v_4 \in \snv. \;
+                              (\forall v_5. \; v_4 \reducestov \gbox{v_5} \; \implies \; v_5 \in \redv{\cempty}{\tau_4}) \\
+                              &\qquad \qquad \implies \; \exists \beta < \alpha.
+                                 \quad \sbst{c_2}{x}{v_4} \in \redca{\Delta}{\tau}{\beta})) \, \}
+\end{align*}
+\caption{Reducibility predicates}
+\label{fig:reducibility-predicates}
+\end{figure}
+
+\subsection{Properties of reducibility}
+
+We prove the three properties of reducibility refered to as CR1, CR2 and
+CR3 in Girad et al.\cite{??}.
+
+Reducible values and computations are strongly normalizing:
+\begin{lemma}
+\label{lemma:red-implies-sn}
+\begin{align*}
+  &\redva{\Delta}{\tau}{\alpha} \subseteq \snv \\
+  &\redca{\Delta}{\tau}{\alpha} \subseteq \snc
+\end{align*}
+\end{lemma}
+\begin{proof}
+We prove this by induction on $\tau$. Most of the cases follow directly
+by the definitions of $\redvname$ and $\redcname$. The exceptions are
+pair and function types.
+\begin{description}
+\item[$\tau_1 \times \tau_2$:] We have $\fst{v} \in \snv$ and
+  $\snd{v} \in \snv$ and must show that $v \in \snv$. This holds because
+  if there was an infinite chain of reductions for $v$ then there would
+  be an infinite chain of reductions for $\fst{v}$ by congurence.
+\item[$\tau_1 \arr \tau_2$:] We have
+  $\forall v_2 \in \redv{\Delta}{\tau_1}. \; \app{v_1}{v_2} \in \snc$
+  and must show that $v_1 \in \snv$. This holds because if there was an
+  infinite chain of reductions for $v_1$ then there would be an infinite
+  chain of reductions for $\app{v_1}{v_2}$ by congruence.
+\end{description}
+\end{proof}
+
+Reduciblity predicates are compatible with reductions:
+\begin{lemma}
+\label{lemma:red-reduces}
+\begin{align*}
+  &v_1 \in \redva{\Delta}{\tau}{\alpha} \wedge v_1 \reducestov v_2 \implies v_2 \in \redva{\Delta}{\tau}{\alpha} \\
+  &c_1 \in \redva{\Delta}{\tau}{\alpha} \wedge c_1 \reducestoc c_2 \implies c_2 \in \redva{\Delta}{\tau}{\alpha}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  We prove this by induction on $\tau$. The reasoning for computations
+  is the same for all types so we treat it as a separate case.
+\begin{description}
+\item[$1$:] If $v_1 \in \snv$ then $v_2 \in \snv$ because an infinite
+  chain in $v_2$ would produce an infinite chain in $v_1$.
+\item[$\tau_1 \times \tau_2$:] By congruence we have
+  $\fst{v_1} \reducestov \fst{v_2}$ and
+  $\snd{v_1} \reducestov \snd{v_2}$, so
+  $\fst{v_2} \in \redva{\Delta}{\tau_1}{\alpha}$ and
+  $\snd{v_2} \in \redva{\Delta}{\tau_2}{\alpha}$ follow by the induction
+  hypothesis.
+\item[$\tau_1 + \tau_2$:] Given $v_2 \reducestov \inl{v_3}$ we have
+  $v_1 \reducestov \inl{v_3}$ and thus $v_3 \in
+  \redv{\Delta}{\tau_1}$. Similarly, given $v_2 \reducestov \inr{v_4}$
+  we have $v_4 \in \redv{\Delta}{\tau_2}$.
+\item[$\tau_1 \arr \tau_2$:] Given $v_3 \in \redv{\Delta}{\tau_1}$, we
+  have that $\app{v_1}{v_3}$ reduces to $\app{v_2}{v_3}$ by congruence,
+  so $\app{v_2}{v_3} \in \redc{\Delta}{\tau_2}$ by the induction
+  hypothesis.
+\item[$\glob \tau$:] Given $v_2 \reducestov \gbox{v_3}$ we have
+  $v_1 \reducestov \gbox{v_3}$ and thus $v_3 \in \redv{\cempty}{\tau}$.
+\item[$\yoneda{\tau}$:] If $v_1 \in \snv$ then $v_2 \in \snv$ because an infinite
+  chain in $v_2$ would produce an infinite chain in $v_1$.
+\item[$\ind{\Sigma}(\tau)$:] Given $v_2 \reducestov \ret{v_3}$
+  or $v_2 \reducestov \indintro{op}{v_4}{v_5}$ then $v_1$ also reduces to those
+  values and thus they have the required properties.
+\item[$\redcname$:] Given $c_2 \reducestoc \return{v_3}$
+  $c_2 \reducestoc \perform{\loc}{op}{v_4}$ or
+  $c_2 \reducestoc \letv{x}{\perform{\loc}{op}{v_5}}{c_3}$ then $c_1$
+  also reduces to those computations and thus they have the required
+  properties.
+\end{description}
+\end{proof}
+
 
 \section{Embedding the Simply-Typed Lambda Calculus}
 \label{apdx:embedding}
@@ -2300,8 +2769,8 @@ Simply-Typed Lambda Calculus (STLC) in Fig.\ref{fig:stlc}.
   &\embed{(e, f)} = (\embed{e}, \embed{f}) \\
   &\embed{\fst{e}} = \fst{\embed{e}} \\
   &\embed{\snd{e}} = \snd{\embed{e}} \\
-  &\embed{\abs{x}{A}{e}} =
-    \abs{(\gbox{x})}{\glob \embed{A}}{\return{\embed{e}}} \\
+  &\embed{\abs{x}{e}} =
+    \abs{(\gbox{x})}{\return{\embed{e}}} \\
   &\embed{\app{f}{e}} = \grun{\app{\embed{f}}{\embed{e}}}
 \end{aligned}
 \end{equation*}
@@ -2335,18 +2804,18 @@ terms:
 \begin{lemma}
 \label{lemma:stlc-reduces}
   \begin{equation*}
-    e_1 \reducestostlc e_2
+    e_1 \stepstostlc e_2
     \quad \implies \quad \embed{e_1} \reducestov \embed{e_2}
   \end{equation*}
 \end{lemma}
 We prove this via induction on the STLC reduction relation. All cases
 are trivial except for the function beta-reduction case:
 \begin{equation*}
-  \embed{\app{(\abs{x}{A}{e_1})}{e_2}} \reducestov \embed{\sbst{e_1}{x}{e_2}}
+  \embed{\app{(\abs{x}{e_1})}{e_2}} \reducestov \embed{\sbst{e_1}{x}{e_2}}
 \end{equation*}
 which reduces to:
 \begin{equation*}
-\grun{\app{(\abs{(\gbox{x})}{\glob \embed{A}}{\return{\embed{e_1}}})}{\embed{e_2}}}  \reducestov \embed{\sbst{e_1}{x}{e_2}}
+\grun{\app{(\abs{(\gbox{x})}{\return{\embed{e_1}}})}{\embed{e_2}}}  \reducestov \embed{\sbst{e_1}{x}{e_2}}
 \end{equation*}
 applying the function beta rule, the $\grunname$ reduction rule and reflexivity this becomes:
 \begin{equation*}
@@ -2358,8 +2827,8 @@ Normal forms of STLC are embedded to normal forms:
 \begin{lemma}
 \label{lemma:stlc-reduces}
   \begin{equation*}
-    e \reducesnotstlc
-    \quad \implies \quad \embed{e} \reducesnotv
+    e \stepsnotstlc
+    \quad \implies \quad \embed{e} \stepsnotv
   \end{equation*}
 \end{lemma}
 This follows from observing that the neutral forms and normal forms of
