@@ -159,6 +159,7 @@
 \newcommand{\snv}{SN_V}
 \newcommand{\snc}{SN_C}
 \newcommand{\clocs}[1]{\mathrm{locs}(#1)}
+\newcommand{\bound}[1]{\nu(#1)}
 \newcommand{\redname}{RED}
 \newcommand{\redvname}{\redname_{V}}
 \newcommand{\redv}[2]{\redvname{({#1},{#2})}}
@@ -166,6 +167,9 @@
 \newcommand{\redcname}{\redname_{C}}
 \newcommand{\redc}[2]{\redcname{({#1},{#2})}}
 \newcommand{\redca}[3]{\redcname{({#1},{#2},{#3})}}
+\newcommand{\redsname}{\redname_{S}}
+\newcommand{\reds}[1]{\redsname{({#1})}}
+\newcommand{\redsc}[2]{\redsname{({#1},{#2})}}
 \newcommand{\mif}{\mathop{\mathrm{if}}}
 \newcommand{\mthen}{\mathop{\mathrm{then}}}
 \newcommand{\melse}{\mathop{\mathrm{else}}}
@@ -1105,7 +1109,7 @@ also has a constructor $\ret{v}$ where $v \gtypes \tau$.
 The eliminator for $\ind{\Sigma}$ is written
 \begin{align*}
 \indelim{v_s}
-  {&\indretcase{x}{v_r} \seq \\
+  {&\indretcase{x}{v_e} \seq \\
    &\indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} \seq \\
    &\ldots \seq \\
    &\indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}}
@@ -1146,11 +1150,11 @@ components.
 \inferrule{\cmdiv{\Gamma} \turnv v_s \types \ind{\Sigma}(\tau_1) \\
            \Sigma = \{ op_1 \types \tau_{p_1} \rightarrowtail \tau_{a_1};
              \ldots; op_n\types \tau_{p_n} \rightarrowtail \tau_{a_n} \} \\
-           \gbind{\Gamma}{x_r}{\tau_1} \turnv v_r \types \tau_2 \\
+           \gbind{\Gamma}{x_r}{\tau_1} \turnv v_e \types \tau_2 \\
            \mbind{\gbind{\Gamma}{x_{p_1}}{\tau_{p_1}}}{x_{k_1}}{\glob \tau_{a_1} \arr \tau_2} \turnv v_1 \types \tau_2 \\
            \ldots \\
            \mbind{\gbind{\Gamma}{x_{p_n}}{\tau_{p_n}}}{x_{k_n}}{\glob \tau_{a_n} \arr \tau_2} \turnv v_n \types \tau_2}
-{\Gamma \turnv \indelimm{v_s}{\indretcase{x_r}{v_r} \seq
+{\Gamma \turnv \indelimm{v_s}{\indretcase{x_r}{v_e} \seq
                                    \indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} \seq \ldots \seq
                                    \indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}} \types \tau_2}
 \end{mathpar}
@@ -1278,7 +1282,7 @@ Fig.\ref{fig:normal}.
 \casem{(\inr{v_1})}{x_1}{v_2}{x_2}{v_3} &\stepstov \sbst{v_3}{x_2}{v_1} \\
 \gunbox{x}{\gbox{v_1}}{v_2} &\stepstov \sbst{v_2}{x}{v_1} \\
 \grun{\return{v}} &\stepstov v \\
-\indelimm{(\ret{v_s})}{\indretcase{x}{v_r} \seq \ldots} &\stepstov \sbst{v_r}{x}{v_s} \\
+\indelimm{(\ret{v_r})}{\indretcase{x}{v_e} \seq \ldots} &\stepstov \sbst{v_e}{x}{v_r} \\
 \indelimm{(\indintro{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} &\stepstov \\
   \sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{\abs{x_a}{\letv{x_w}{\app{v_2}{x_a}&}{\return{(\indelimm{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}} \\
 \app{(\abs{x}{c})}{v} &\stepstoc \sbst{c}{x}{v} \\
@@ -1317,6 +1321,13 @@ Fig.\ref{fig:normal}.
 \caption{Normal forms}
 \label{fig:normal}
 \end{figure}
+
+Note that the reduction rules are for strong reduction, i.e. there is a
+congruence rule for abstraction:
+\begin{mathpar}
+\inferrule{c_1 \stepstoc c_2}
+{\abs{x}{c_1} \stepstov \abs{x}{c_2}}
+\end{mathpar}
 
 We prove subject reduction for this semantics in
 Appendix~\ref{apdx:subject-reduction} by straightforward induction on
@@ -2286,7 +2297,7 @@ via Lemma \ref{lemma:cdiv-weakening}.
 \item[Inductive types]
 For the $\indelimname$/$\retname$ rule:
 \begin{equation*}
-\indelimm{(\ret{v_s})}{\indretcase{x}{v_r} \seq \ldots} \stepstov \sbst{v_r}{x}{v_s}
+\indelimm{(\ret{v_s})}{\indretcase{x}{v_e} \seq \ldots} \stepstov \sbst{v_e}{x}{v_s}
 \end{equation*}
 the case follows by inversion on the typing rules followed by the global
 substitution lemma (\ref{lemma:global-substitution}).
@@ -2391,11 +2402,11 @@ respectively.
 \inferrule{v_1 \parastepstov v_1^{\prime} \\ v_2 \parastepstov v_2^{\prime}}
 {\indelimm{(\ret{v_1})}{\indretcase{x}{v_2} \seq \ldots} \stepstov \sbst{v_2^{\prime}}{x}{v_1^{\prime}}}
 \and
-\inferrule{v_p \parastepstov v_p^{\prime} \\ v_k \parastepstov v_k^{\prime} \\ v_r \parastepstov v_r^{\prime} \\ \overline{v_j \parastepstov v_j^{\prime}}}
-{\indelimm{\indintro{op_i}{v_p}{v_k}}{\indretcase{x_r}{v_r} \seq
+\inferrule{v_p \parastepstov v_p^{\prime} \\ v_k \parastepstov v_k^{\prime} \\ v_e \parastepstov v_e^{\prime} \\ \overline{v_j \parastepstov v_j^{\prime}}}
+{\indelimm{\indintro{op_i}{v_p}{v_k}}{\indretcase{x_r}{v_e} \seq
                                    \overline{\indcase{op_j}{x_{p_j}}{x_{k_j}}{v_j}}} \\\\ \parastepstov \\\\
   \sbst{\sbst{v_i^{\prime}}{x_{p_i}}{v_p^{\prime}}}{x_{k_i}}{\abs{x_a}{\letv{x_w}{\app{v_k^{\prime}}{x_a}}{
-     \return{(\indelimm{x_w}{\indretcase{x_r}{v_r^{\prime}} \seq
+     \return{(\indelimm{x_w}{\indretcase{x_r}{v_e^{\prime}} \seq
                 \overline{\indcase{op_j}{x_{p_j}}{x_{k_j}}{v_j^{\prime}}}})}}}}}
 \end{mathpar}
 \caption{Parallel reduction relations (values)}
@@ -2611,6 +2622,23 @@ We write $\clocs{\Gamma}$ for the effect context obtained by removing
 all the ordinary variable bindings from $\Gamma$ and keeping only the
 location bindings.
 
+As in Girard~\cite{??}, we will use the fact that strongly normalizable
+terms must have a bound on the length of their possible reduction
+sequences.
+\begin{lemma}
+\label{lemma:sn-bound}
+For any strongly normalisable value $v$ (or computation $c$) there is a
+number $\bound{v}$ (or $\bound{c}$) which bounds the length of every
+normalization sequence beginning with $v$ (or $c$).
+\end{lemma}
+\begin{proof}
+We can represent the possible normalization sequences as a tree, where the nodes
+are reducts. Since there are a finite number of subterms of any value this tree
+must be finitely branching. As the term is strongly normalizing it cannot contain
+any infinite branches. Thus, by K\H{o}nig's lemma, the whole tree is finite and
+there must be a $\bound{v}$ that bounds its height.
+\end{proof}
+
 We define a pair of mutually defined logical relations
 $\redva{\Delta}{\tau}{\alpha}$ and $\redca{\Delta}{\tau}{\alpha}$
 indexed by an effect context, a type and an ordinal. The ordinal
@@ -2679,14 +2707,14 @@ well-defined because the predicates are monotonic in $\alpha$.
 \subsection{Properties of reducibility}
 
 We prove the three properties of reducibility refered to as CR1, CR2 and
-CR3 in Girad et al.\cite{??}.
+CR3 in Girard~\cite{??}.
 
-Reducible values and computations are strongly normalizing:
+Reducible values and computations are strongly normalizing (CR1):
 \begin{lemma}
 \label{lemma:red-implies-sn}
 \begin{align*}
-  &\redva{\Delta}{\tau}{\alpha} \subseteq \snv \\
-  &\redca{\Delta}{\tau}{\alpha} \subseteq \snc
+  &\redv{\Delta}{\tau} \subseteq \snv \\
+  &\redc{\Delta}{\tau} \subseteq \snc
 \end{align*}
 \end{lemma}
 \begin{proof}
@@ -2706,12 +2734,14 @@ pair and function types.
 \end{description}
 \end{proof}
 
-Reduciblity predicates are compatible with reductions:
+Reduciblity predicates are compatible with reductions (CR2):
 \begin{lemma}
 \label{lemma:red-reduces}
 \begin{align*}
-  &v_1 \in \redva{\Delta}{\tau}{\alpha} \wedge v_1 \reducestov v_2 \implies v_2 \in \redva{\Delta}{\tau}{\alpha} \\
-  &c_1 \in \redva{\Delta}{\tau}{\alpha} \wedge c_1 \reducestoc c_2 \implies c_2 \in \redva{\Delta}{\tau}{\alpha}
+  &v_1 \in \redva{\Delta}{\tau}{\alpha} \; \wedge \; v_1 \reducestov v_2 \;
+    \implies \; v_2 \in \redva{\Delta}{\tau}{\alpha} \\
+  &c_1 \in \redva{\Delta}{\tau}{\alpha} \; \wedge \; c_1 \reducestoc c_2 \;
+    \implies \; c_2 \in \redva{\Delta}{\tau}{\alpha}
 \end{align*}
 \end{lemma}
 \begin{proof}
@@ -2723,8 +2753,8 @@ Reduciblity predicates are compatible with reductions:
 \item[$\tau_1 \times \tau_2$:] By congruence we have
   $\fst{v_1} \reducestov \fst{v_2}$ and
   $\snd{v_1} \reducestov \snd{v_2}$, so
-  $\fst{v_2} \in \redva{\Delta}{\tau_1}{\alpha}$ and
-  $\snd{v_2} \in \redva{\Delta}{\tau_2}{\alpha}$ follow by the induction
+  $\fst{v_2} \in \redv{\Delta}{\tau_1}$ and
+  $\snd{v_2} \in \redv{\Delta}{\tau_2}$ follow by the induction
   hypothesis.
 \item[$\tau_1 + \tau_2$:] Given $v_2 \reducestov \inl{v_3}$ we have
   $v_1 \reducestov \inl{v_3}$ and thus $v_3 \in
@@ -2741,7 +2771,7 @@ Reduciblity predicates are compatible with reductions:
 \item[$\ind{\Sigma}(\tau)$:] Given $v_2 \reducestov \ret{v_3}$
   or $v_2 \reducestov \indintro{op}{v_4}{v_5}$ then $v_1$ also reduces to those
   values and thus they have the required properties.
-\item[$\redcname$:] Given $c_2 \reducestoc \return{v_3}$
+\item[$\redcname$:] Given $c_2 \reducestoc \return{v_3}$,
   $c_2 \reducestoc \perform{\loc}{op}{v_4}$ or
   $c_2 \reducestoc \letv{x}{\perform{\loc}{op}{v_5}}{c_3}$ then $c_1$
   also reduces to those computations and thus they have the required
@@ -2749,6 +2779,581 @@ Reduciblity predicates are compatible with reductions:
 \end{description}
 \end{proof}
 
+A term is neutral if it is not an introduction form. We consider
+$\return{v}$, $\perform{\loc}{op}{v}$ and
+$\letv{x}{\perform{\loc}{op}{v}}{c}$ to be the introduction forms for
+computations. If a term is neutral, and whenever we reduce t we obtain a
+term that is reducible, then the original term is reduceable (CR3).
+\begin{lemma}
+\label{lemma:red-neutral}
+For all neutral values $v_n$ and neutral computations $c_n$:
+\begin{align*}
+  &(\forall v_r. \; v_n \stepstov v_r \implies v_r \in \redva{\Delta}{\tau}{\alpha}) \implies v_n \in \redva{\Delta}{\tau}{\alpha} \\
+  &(\forall c_r. \; c_n \stepstoc c_r \implies c_r \in \redca{\Delta}{\tau}{\alpha}) \implies c_n \in \redva{\Delta}{\tau}{\alpha}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  We prove this by induction on $\tau$. The reasoning for computations
+  is the same for all types so we treat it as a separate case.
+\begin{description}
+\item[$1$:] Any chain from $v_n$ must pass through one of the $v_r$ and
+  so must be finite.
+\item[$\tau_1 \times \tau_2$:] As $v_n$ is neutral, the only reduction
+  rule that applies to $\fst{v_n}$ is congruence, so any reduction must
+  be of the form $\fst{v_n} \stepstov \fst{v_r}$. We have
+  $v_r \in \redva{\Delta}{\tau_1 \times \tau_2}{\alpha}$ and thus
+  $\fst{v_r} \in \redv{\Delta}{\tau_1}$, so by the induction hypothesis
+  we have $\fst{v_n} \in \redv{\Delta}{\tau_1}$. Similarly, we have
+  $\snd{v_n} \in \redv{\Delta}{\tau_2}$.
+\item[$\tau_1 + \tau_2$:] Any reduction $v_n \reducestov \inl{v_i}$ must
+  go through one of the $v_r$ because $v_n$ cannot equal $\inl{v_i}$ as
+  it is neutral. From $v_r \reducestov \inl{v_i}$ we have
+  $v_i \in \redv{\Delta}{\tau_1}$. Similarly we have that if
+  $v_n \reducestov \inl{v_i}$ then $v_i \in \redv{\Delta}{\tau_2}$.
+\item[$\tau_1 \arr \tau_2$:] For any
+  $v_a \in \redv{\Delta}{\tau_1}$, we have by
+  CR1(\ref{lemma:red-implies-sn}) that $v_a \in \snv$.
+  We prove that $\app{v_n}{v_a} \in \redv{\Delta}{\tau_2}$ by
+  induction on $\bound{v_a}$.
+  By the outer induction hypothesis it is sufficient to show that any reduct
+  of $\app{v_n}{v_a}$ is itself in $\redv{\Delta}{\tau_2}$.
+  As $v_n$ is neutral the only reduction rules that apply to $\app{v_n}{v_a}$ are the
+  congruences, so any reduction must be one of:
+  \begin{itemize}
+    \item $\app{v_n}{v_a} \stepstov \app{v_r}{v_a}$
+    \item $\app{v_n}{v_a} \stepstov \app{v_n}{v_b}$ where $v_a \stepstov v_b$
+  \end{itemize}
+  In the first case, we have
+  $v_r \in \redva{\Delta}{\tau_1 \arr \tau_2}{\alpha}$ and thus
+  $\app{v_r}{v_a} \in \redv{\Delta}{\tau_2}$. In the second case, we
+  have $v_b \in \redv{\Delta}{\tau_1}$ by CR2(\ref{lemma:red-reduces}),
+  and $\bound{v_b} < \bound{v_a}$, so we have
+  $\app{v_n}{v_b} \in \redv{\Delta}{\tau_2}$ by the inner induction
+  hypothesis.
+\item[$\glob \tau$:] Any reduction $v_n \reducestov \gbox{v_b}$ must
+  go through one of the $v_r$ because $v_n$ cannot equal $\gbox{v_b}$ as
+  it is neutral. From $v_r \reducestov \gbox{v_b}$ we have
+  $v_b \in \redv{\Delta}{\tau}$.
+\item[$\yoneda{\tau}$:] Any chain from $v_n$ must pass through one of
+  the $v_r$ and so must be finite.
+\item[$\ind{\Sigma}(\tau)$:] Any reduction $v_n \reducestov \ret{v_t}$
+  or $v_n \reducestov \indintro{op}{v_p}{v_a}$ must go through one of
+  the $v_r$ because $v_n$ cannot equal $\ret{v_t}$ or
+  $\indintro{op}{v_p}{v_a}$ as it is neutral. Since they reduce from
+  $v_r$ and $v_r \in \redva{\Delta}{\ind{\Sigma}(\tau)}{\alpha}$ they
+  must have the required properties.
+\item[$\redcname$:] Any reduction $c_n \reducestoc \return{v_t}$,
+  $c_n \reducestoc \perform{\loc}{op}{v_p}$ or
+  $c_n \reducestoc \letv{x}{\perform{\loc}{op}{v_p}}{c_k}$ must go
+  through one of the $c_r$ because $c_n$ cannot equal $\return{v_t}$,
+  $\perform{\loc}{op}{v_p}$ or $\letv{x}{\perform{\loc}{op}{v_p}}{c_k}$
+  as it is neutral. Since they reduce from $c_r$ and
+  $c_r \in \redca{\Delta}{\tau}{\alpha}$ they must have the required
+  properties.
+\end{description}
+\end{proof}
+
+As a corollary, we get that any neutral normal form is reducible. In
+particular, the variable term $x$ is reducible.
+
+\subsection{Effect weakening}
+
+Reducibility can have its effect context weakened:
+\begin{lemma}
+\label{lemma:red-weaken}
+\begin{align*}
+  \redva{\Delta}{\tau}{\alpha} \subseteq \redva{\lbind{\Delta}{\loc}{\Sigma}}{\tau}{\alpha}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  We prove this by induction on $\tau$ and $alpha$. All the value cases
+  follow immediately by the induction hypotheses as they do not mention
+  $\Delta$ otherwise. The computation case follows by the induction
+  hypothesis and the fact that context membership is preserved by
+  weakening.
+\end{proof}
+
+\subsection{Compositionality of reducibility}
+
+Next we show that the various term formers produce reducible terms from reducible subterms.
+
+\subsubsection{Products}
+
+Projection terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-proj}
+\begin{align*}
+  &v \in \redv{\Delta}{\tau_1 \times \tau_2} \; \implies \; \fst{v} \in \redv{\Delta}{\tau_1} \\
+  &v \in \redv{\Delta}{\tau_1 \times \tau_2} \; \implies \; \snd{v} \in \redv{\Delta}{\tau_2}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  Follows directly from the definition of $\redv{\Delta}{\tau_1 \times \tau_2}$
+\end{proof}
+
+Pair terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-pair}
+\begin{align*}
+  v_1 \in \redv{\Delta}{\tau_1} \; \wedge \; v_2 \in \redv{\Delta}{\tau_2}
+  \; \implies \; (v_1, v_2) \in \redv{\Delta}{\tau_1 \times \tau_2}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  By induction on $\bound{v_1} + \bound{v_2}$.  $\fst{(v_1, v_2)}$ is
+  neutral so we can use CR3(\ref{lemma:red-neutral}). There are three
+  possibilities for a reduct of $\fst{(v_1, v_2)}$.
+  \begin{itemize}
+  \item It can reduce by the $\fstname$ reduction rule to $v_1$.
+  \item It can reduce by congruence to $\fst{(v_3, v_2)}$ where $v_1 \stepstov v_3$.
+  \item It can reduce by congruence to $\fst{(v_1, v_4)}$ where $v_2 \stepstov v_4$.
+  \end{itemize}
+  The first case is reducible by hypothesis. The second and third cases
+  hold by the inductive hypothesis using
+  CR2(\ref{lemma:red-reduces}). The same reasoning applies to
+  $\snd{(v_1, v_2}$.
+\end{proof}
+
+\subsubsection{Functions}
+
+Application terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-app}
+\begin{align*}
+  v_1 \in \redv{\Delta}{\tau_1 \arr \tau_2} \; \wedge \; v_2 \in \redv{\Delta}{\tau_1}
+  \; \implies \; \app{v_1}{v_2} \in \redc{\Delta}{\tau_2}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  Follows directly from the definition of $\redv{\Delta}{\tau_1 \arr \tau_2}$
+\end{proof}
+
+Abstraction terms are reducible when built from a reducible subterm.
+\begin{lemma}
+\label{lemma:red-abs}
+\begin{align*}
+  (\forall v_a \in \redv{\Delta}{\tau_1}. \; \sbst{c_b}{x}{v_a} \in \redc{\Delta}{\tau_2})
+  \; \implies \; \abs{x}{c_b} \in \redv{\Delta}{\tau_1 \arr \tau_2}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  We need to show that
+  $\app{\abs{x}{c_b}}{v_a} \in \redc{\Delta}{\tau_2}$ for any
+  $v_a \in \redv{\Delta}{\tau_1}$. We proceed by induction on
+  $\bound{c_b} + \bound{v_a}$. As $\app{\abs{x}{c_b}}{v_a}$ is neutral,
+  we can use CR3(\ref{lemma:red-neutral}). There are three possibilities for a
+  reduct of $\app{\abs{x}{c_b}}{v_a}$.
+  \begin{itemize}
+  \item It can reduce by beta reduction to $\sbst{c_b}{x}{v_a}$.
+  \item It can reduce by congruence to $\app{\abs{x}{c_d}}{v_a}$ where $c_b \stepstoc c_d$.
+  \item It can reduce by congruence to $\app{\abs{x}{c_b}}{v_e}$ where $v_a \stepstov v_e$.
+  \end{itemize}
+  The first case is reducible by hypothesis. The second and third cases
+  are reducible by the inductive hypothesis using
+  CR2(\ref{lemma:red-reduces}).
+\end{proof}
+
+\subsubsection{Sums}
+
+Injection terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-inj}
+\begin{align*}
+  &v_i \in \redv{\Delta}{\tau_1} \; \implies \; \inl{v_i} \in \redv{\Delta}{\tau_1 + \tau_2} \\
+  &v_i \in \redv{\Delta}{\tau_2} \; \implies \; \inr{v_i} \in \redv{\Delta}{\tau_1 + \tau_2}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  By induction on $\bound{v_i}$. For left injection, we must show two
+  things:
+  \begin{itemize}
+  \item We must show that $\inl{v_i} \in \snv$. The only reduction rule that can apply
+    to $\inl{v_i}$ is the congruence rule. Thus any reduct would be of
+    the form $\inl{v_j}$ with $v_i \stepstov v_j$ and so, by the
+    inductive hypothesis via CR2(\ref{lemma:red-reduces}), would be
+    strongly normalizing. Since every reduct is strongly normalizing then
+    so is $\inl{v_i}$.
+  \item We must show that $v_j \in \redv{\Delta}{\tau_1}$ for any $v_j$ such that $\inl{v_i} \reducestov \inl{v_j}$.
+    The reduction is either from reflexivity or by stepping to some intermediate term. If
+    it is by reflexivity then $v_j$ is reducible by hypothesis. Only the
+    congruence reduction rule applies to $\inl{v_i}$, so the intermediate
+    term must be of the form $\inl{v_k}$, which means we can use the
+    inductive hypothesis on $v_k$ CR2(\ref{lemma:red-reduces}) to show
+    that $v_j$ is reducible.
+  \end{itemize}
+
+  The case for right injection follows by the same reasoning.
+\end{proof}
+
+Case terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-case}
+\begin{align*}
+  &v_1 \in \redv{\Delta_1}{\tau_1 + \tau_2} \\
+  &\wedge \; (\forall v_4 \in \redv{\Delta_1}{\tau_1}. \; \sbst{v_2}{x_1}{v_4} \in \redv{\Delta_2}{\tau_3}) \\
+  &\wedge \; (\forall v_5 \in \redv{\Delta_1}{\tau_2}. \; \sbst{v_3}{x_2}{v_5} \in \redv{\Delta_2}{\tau_3}) \\
+  &\implies \; \case{v_1}{x_1}{v_2}{x_2}{v_3} \in \redv{\Delta_2}{\tau_3}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  By induction on $\bound{v_1} + \bound{v_2} + \bound{v_3}$.
+  $\case{v_1}{x_1}{v_2}{x_2}{v_3}$ is neutral so we can use CR3(\ref{lemma:red-neutral}). There are five
+  possibilities for a reduct of $\case{v_1}{x_1}{v_2}{x_2}{v_3}$.
+  \begin{itemize}
+  \item It can reduce to $\sbst{v_2}{x_1}{v_4}$ if $v_1$ is of the form $\inl{v_4}$.
+  \item It can reduce to $\sbst{v_3}{x_2}{v_5}$ if $v_1$ is of the form $\inr{v_5}$.
+  \item It can reduce by congruence to $\case{v_6}{x_1}{v_2}{x_2}{v_3}$ where $v_1 \stepstov v_6$.
+  \item It can reduce by congruence to $\case{v_1}{x_1}{v_7}{x_2}{v_3}$ where $v_2 \stepstov v_7$.
+  \item It can reduce by congruence to $\case{v_1}{x_1}{v_2}{x_2}{v_8}$ where $v_3 \stepstov v_8$.
+  \end{itemize}
+  In the first case we have $v_4 \in \redv{\Delta_1}{\tau_1}$ from $v_1 \in \redv{\Delta_1}{\tau_1 + \tau_2}$ 
+  and so the reduct is reducible by hypothesis. Similarly, in the second case we have $v_5 \in \redv{\Delta_1}{\tau_2}$
+  and so the reduct is reducible by hypothesis. The last three cases
+  are reducible by the inductive hypothesis using
+  CR2(\ref{lemma:red-reduces}).
+\end{proof}
+
+\subsubsection{Unit}
+
+Unit terms are reducible.
+\begin{lemma}
+\label{lemma:red-unit}
+\begin{align*}
+  () \in \redv{\Delta}{1}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  No reduction rules apply to $()$ so it is strongly normalizable.
+\end{proof}
+
+\subsubsection{Global modality}
+
+Boxing terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-box}
+\begin{align*}
+  &v_b \in \redv{\cempty}{\tau} \; \implies \; \gbox{v_b} \in \redv{\Delta}{\tau}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  By induction on $\bound{v_b}$. We must show two things:
+  \begin{itemize}
+  \item We must show that $\gbox{v_b} \in \snv$. The only reduction rule that can apply
+    to $\gbox{v_b}$ is the congruence rule. Thus any reduct would be of
+    the form $\gbox{v_c}$ with $v_b \stepstov v_c$ and so, by the
+    inductive hypothesis via CR2(\ref{lemma:red-reduces}), would be
+    strongly normalizing. Since every reduct is strongly normalizing then
+    so is $\gbox{v_b}$.
+  \item We must show that $v_c \in \redv{\cempty}{\tau}$ for any $v_c$
+    such that $\gbox{v_b} \reducestov \gbox{v_c}$. The reduction is
+    either from reflexivity or by stepping to some intermediate term. If
+    it is by reflexivity then $v_c$ is reducible by hypothesis. Only the
+    congruence reduction rule applies to $\gbox{v_b}$, so the
+    intermediate term must be of the form $\gbox{v_d}$, which means we
+    can use the inductive hypothesis on $v_d$ via
+    CR2(\ref{lemma:red-reduces}) to show that $v_c$ is reducible.
+  \end{itemize}
+\end{proof}
+
+Unboxing terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-unbox}
+\begin{align*}
+  &v_1 \in \redv{\Delta_1}{\glob \tau_1} \\
+  &\wedge \; (\forall v_3 \in \redv{\cempty}{\tau_1}.
+    \; \sbst{v_2}{x}{v_3} \in \redv{\Delta_2}{\tau_2}) \\
+  &\implies \; \gunbox{x}{v_1}{v_2} \in \redv{\Delta_2}{\tau_2}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  By induction on $\bound{v_1} +
+  \bound{v_2}$. $\gunbox{x}{v_1}{v_2}$ is neutral so we can use
+  CR3(\ref{lemma:red-neutral}). There are three possibilities for a
+  reduct of $\gunbox{x}{v_1}{v_2}$:
+  \begin{itemize}
+  \item It can reduce to $\sbst{v_2}{x}{v_3}$ if $v_1$ is of the form $\gbox{v_3}$.
+  \item It can reduce by congruence to $\gunbox{x}{v_4}{v_2}$ where $v_1 \stepstov v_4$.
+  \item It can reduce by congruence to $\gunbox{x}{v_1}{v_5}$ where $v_2 \stepstov v_5$.
+  \end{itemize}
+  In the first case we have $v_3 \in \redv{\cempty}{\tau_1}$ from
+  $v_1 \in \redv{\Delta_1}{\glob \tau_1}$ and so the reduct is reducible
+  by hypothesis. The second and third cases are reducible by the
+  inductive hypothesis using CR2(\ref{lemma:red-reduces}).
+\end{proof}
+
+\subsubsection{$\yonedaname$ types}
+
+Selection terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-out}
+\begin{align*}
+  &v_s \in \redv{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}
+    \; \implies \; \outl{v_s} \in \redv{\Delta}{\yoneda{Sigma_1}}
+  &v_s \in \redv{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}
+    \; \implies \; \outr{v_s} \in \redv{\Delta}{\yoneda{Sigma_2}}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  By induction on $\bound{v_s}$. The only reduction rule that can apply
+  to $\outl{v_s}$ is the congruence rule. Thus any reduct would be of
+  the form $\outl{v_r}$ with $v_s \stepstov v_r$ and so, by the
+  inductive hypothesis via CR2(\ref{lemma:red-reduces}), would be
+  strongly normalizing. Since every reduct is strongly normalizing then
+  so is $\outl{v_s}$.
+
+  The case for right selection follows by the same reasoning.
+\end{proof}
+
+\subsubsection{Computations}
+
+Return terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-return}
+\begin{align*}
+  &v_r \in \redv{\Delta}{\tau} \\
+  &\implies \; \return{v_r} \in \redc{\Delta}{\tau}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  By induction on $\bound{v_r}$. We must show three things:
+  \begin{itemize}
+  \item We must show that $\return{v_r} \in \snc$. The only reduction rule that can apply
+    to $\return{v_r}$ is the congruence rule. Thus any reduct would be of
+    the form $\return{v_t}$ with $v_r \stepstov v_t$ and so, by the
+    inductive hypothesis via CR2(\ref{lemma:red-reduces}), would be
+    strongly normalizing. Since every reduct is strongly normalizing then
+    so is $\return{v_r}$.
+  \item We must show that $v_t \in \redv{\Delta}{\tau}$ for any $v_t$
+    such that $\return{v_r} \reducestov \return{v_t}$. The reduction is
+    either from reflexivity or by stepping to some intermediate term. If
+    it is by reflexivity then $v_t$ is reducible by hypothesis. Only the
+    congruence reduction rule applies to $\return{v_r}$, so the
+    intermediate term must be of the form $\return{v_s}$, which means we
+    can use the inductive hypothesis on $v_s$ via
+    CR2(\ref{lemma:red-reduces}) to show that $v_t$ is reducible.
+  \item We must show that various propertes hold for any term of the
+    form $\perform{\loc}{\Sigma}{v_a}$ or
+    $\letv{x}{\perform{\loc}{op}{v_a}}{c_k}$ that $\return{v_r}$ reduces
+    to. The reduction would have to be by stepping to some intermediate
+    term as it can't be via reflexivity. Only the congruence reduction
+    rule applies to $\return{v_r}$, so the intermediate term must be of
+    the form $\return{v_t}$, which means we can use the inductive
+    hypothesis on $v_t$ via CR2(\ref{lemma:red-reduces}) to show that
+    the properties would hold.
+  \end{itemize}
+\end{proof}
+
+Non-neutral perform terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-perform-intro}
+\begin{align*}
+  &\loc_e \types \Sigma \in \Delta
+   \; \wedge \; op \types \tau_p \rightarrowtail \tau_a \in \Sigma
+   \; \wedge \; v_p \in \redv{\cempty}{\tau_p} \\
+  &\implies \; \perform{\loc_e}{op}{v_p} \in \redc{\Delta}{\glob \tau_a}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  By induction on $\bound{v_p}$. We must show three things:
+  \begin{itemize}
+  \item We must show that $\perform{\loc_e}{op}{v_p} \in \snc$. The only
+    reduction rule that can apply to $\perform{\loc_e}{op}{v_p}$ is the
+    congruence rule. Thus any reduct would be of the form
+    $\perform{\loc_e}{op}{v_q}$ with $v_p \stepstov v_q$ and so, by the
+    inductive hypothesis via CR2(\ref{lemma:red-reduces}), would be
+    strongly normalizing. Since every reduct is strongly normalizing
+    then so is $\perform{\loc_e}{op}{v_p}$.
+  \item We must show that $v_q \in \redv{\cempty}{\tau_p}$ for any $v_q$
+    such that
+    $\perform{\loc_e}{op}{v_p} \reducestov \perform{\loc_e}{op}{v_q}$. The
+    reduction is either from reflexivity or by stepping to some
+    intermediate term. If it is by reflexivity then $v_q$ is reducible
+    by hypothesis. Only the congruence reduction rule applies to
+    $\perform{\loc_e}{op}{v_p}$, so the intermediate term must be of the form
+    $\perform{\loc_e}{op}{v_r}$, which means we can use the inductive hypothesis on
+    $v_r$ via CR2(\ref{lemma:red-reduces}) to show that $v_q$ is
+    reducible.
+  \item We must show that various propertes hold for any term of the
+    form $\return{v_r}$, $\perform{\loc_f}{\Sigma}{v_q}$ (where
+    $\loc_f \neq \loc_e$) or $\letv{x}{\perform{\loc}{op}{v_p}}{c_k}$
+    that $\perform{\loc_e}{op}{v_p}$ reduces to. The reduction would
+    have to be by stepping to some intermediate term as it can't be via
+    reflexivity. Only the congruence reduction rule applies to
+    $\perform{\loc_e}{op}{v_p}$, so the intermediate term must be of the form
+    $\perform{\loc_e}{op}{v_q}$, which means we can use the inductive hypothesis on
+    $v_q$ via CR2(\ref{lemma:red-reduces}) to show that the properties
+    would hold.
+  \end{itemize}
+\end{proof}
+
+Non-neutral bind terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-bind-intro}
+\begin{align*}
+  &\loc_e \types \Sigma \in \Delta
+   \; \wedge \; op \types \tau_p \rightarrowtail \tau_a \in \Sigma
+   \; \wedge \; v_p \in \redv{\Delta}{\tau_p} \\
+  &\wedge \; (\forall v_a \in \redva{\Delta}{\glob \tau_a}. \; \sbst{c_k}{x}{v_a} \in \redc{\Delta}{\tau_k}) \\
+  &\implies \; \letv{x}{\perform{\loc_e}{op}{v_p}}{c_k} \in \redc{\Delta}{\tau_k}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  By induction on $\bound{v_p} + \bound{c_k}$. We must show three things:
+  \begin{itemize}
+  \item We must show that $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k} \in \snc$. The only
+    reduction rule that can apply to $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k}$ is the
+    congruence rule. Thus any reducts would be one of two forms:
+    \begin{itemize}
+    \item $\letv{x}{\perform{\loc_e}{op}{v_q}}{c_k}$ with $v_q \stepstov v_q$
+    \item $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_j}$ with $c_k \stepstoc c_j$
+    \end{itemize}
+    in both cases the reduct is strongly normalizing by the inductive
+    hypothesis via CR2(\ref{lemma:red-reduces}). Since every reduct is
+    strongly normalizing then so is
+    $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k}$.
+  \item We must show that $v_q \in \redv{\cempty}{\tau_p}$ and
+    $forall v_a \in \redva{\Delta}{\glob \tau_a}. \; \sbst{c_j}{x}{v_a}
+    \in \redc{\Delta}{\tau_k}$ for any $v_q$ and $c_j$ such that
+    $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k} \reducestov
+    \letv{x}{\perform{\loc_e}{op}{v_q}}{c_j}$. The reduction is either
+    from reflexivity or by stepping to some intermediate term. If it is
+    by reflexivity then $v_q$ and $c_j$ are reducible by
+    hypothesis. Only the congruence reduction rule applies to
+    $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k}$, so the intermediate term
+    must be of the form $\letv{x}{\perform{\loc_e}{op}{v_r}}{c_l}$,
+    which means we can use the inductive hypothesis on $v_r$ and $c_l$
+    via CR2(\ref{lemma:red-reduces}) to show that $v_q$ and $c_j$ are
+    reducible.
+  \item We must show that various propertes hold for any term of the
+    form $\return{v_r}$, $\perform{\loc_g}{\Sigma}{v_p}$ or
+    $\letv{x}{\perform{\loc_f}{op}{v_q}}{c_j}$ (where
+    $\loc_f \neq \loc_e$) that
+    $\letv{x}{\perform{\loc_f}{op}{v_p}}{c_k}$ reduces to. The reduction
+    would have to be by stepping to some intermediate term as it can't
+    be via reflexivity. Only the congruence reduction rule applies to
+    $\letv{x}{\perform{\loc_f}{op}{v_p}}{c_k}$, so the intermediate term
+    must be of the form $\letv{x}{\perform{\loc_f}{op}{v_r}}{c_l}$,
+    which means we can use the inductive hypothesis on $v_r$ and $c_l$
+    via CR2(\ref{lemma:red-reduces}) to show that the properties would
+    hold.
+  \end{itemize}
+\end{proof}
+
+Perform terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-perform}
+\begin{align*}
+  &\loc_e \types \Sigma \in \Delta
+   \; \wedge \; op \types \tau_p \rightarrowtail \tau_a \in \Sigma \\
+  &v_l \in \redv{\Delta}{\yoneda{\Sigma}}
+  \; \wedge \; v_a \in \redv{\Delta}{\tau_p} \\
+  &\implies \; \perform{v_l}{op}{v_a} \in \redc{\Delta}{\glob \tau_a}
+\end{align*}
+\end{lemma}
+\begin{proof}
+\todo{Write out proof}
+\end{proof}
+
+Bind terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-bind}
+\begin{align*}
+  &c_1 \in \redca{\Delta}{\tau_1}{\alpha} \\
+  &\wedge \; (\forall v \in \redva{\cempty}{\tau_1}{\alpha}. \; \sbst{c_2}{x}{v} \in \redc{\Delta}{\tau_2}) \\
+  &\implies \; \letv{x}{c_1}{c_2} \in \redc{\Delta}{\tau_2}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  By induction on $\alpha$ and $\bound{c_1} + \bound{c_2}$.
+  \todo{Write out proof}
+\end{proof}
+
+Run terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-run}
+\begin{align*}
+  &c_r \in \redc{\cempty}{\tau} \\
+  &\implies \; \grun{c_r} \in \redv{\Delta}{\tau}
+\end{align*}
+\end{lemma}
+\begin{proof}
+\todo{Write out proof}
+\end{proof}
+
+Reification terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-reify}
+\begin{align*}
+  &c \in \redca{\lbind{\Delta}{\loc}{\Sigma}}{\glob \tau}{\alpha} \\
+  &\implies \; \reify{\loc}{c} \in \redca{\Delta}{\ind{\Sigma}{\tau}}{\alpha}
+\end{align*}
+\end{lemma}
+\begin{proof}
+\todo{Write out proof}
+\end{proof}
+
+\subsubsection{Inductive types}
+
+Recursion terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-rec}
+\begin{align*}
+  &v_s \in \redva{\Delta_1}{\ind{\{ op_1 \types \tau_{p_1} \rightarrowtail \tau_{a_1};
+      \ldots; op_n\types \tau_{p_n} \rightarrowtail \tau_{a_n} \}}(\tau_1)}{\alpha} \\
+  &\wedge \; (\forall v_r \in \redva{\cempty}{\tau_1}{\alpha}. \\
+    &\qquad \sbst{v_e}{x_r}{v_r} \in \redva{\Delta_2}{\tau_2}{\alpha}) \\
+  &\wedge \; (\forall v_{p_1} \in \redva{\cempty}{\tau_{p_1}}{\alpha}, \;
+      v_{k_1} \in \redva{\Delta_1}{\glob \tau_{a_1} \arr \tau_2}{\alpha}. \\
+    &\qquad \sbst{\sbst{v_1}{x_{p_1}}{v_{p_1}}}{x_{k_1}}{v_{k_1}} \in \redva{\Delta_2}{\tau_2}{\alpha}) \\
+  &\ldots \\
+  &\wedge \; (\forall v_{p_n} \in \redva{\cempty}{\tau_{p_n}}{\alpha}, \;
+      v_{k_n} \in \redva{\Delta_1}{\glob \tau_{a_n} \arr \tau_2}{\alpha}. \\
+    &\qquad \sbst{\sbst{v_n}{x_{p_n}}{v_{p_n}}}{x_{k_n}}{v_{k_n}} \in \redva{\Delta_2}{\tau_2}{\alpha}) \\
+  &\implies \\
+  &\indelimm{v_s}{\indretcase{x_r}{v_e} \seq
+            \indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} \seq \ldots \seq
+            \indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}}
+    \in \redva{\Delta_2}{\tau_2}{\alpha}
+\end{align*}
+\end{lemma}
+\begin{proof}
+\todo{Write out proof}
+\end{proof}
+
+\subsection{Reducible substitutions}
+
+We define a notion of reducibility for substitutions as a reducibility
+predicate $\redsc{\Delta}{\Gamma}$ indexed by an effect context $\Delta$
+and a typing context $\Gamma$. We write $\reds{\Gamma}$ for
+$\redsc{\cempty}{\Gamma}$.
+
+\begin{align*}
+\todo{Write out definition}
+\end{align*}
+
+\subsection{Reducibility theorem}
+Well-typed terms are reducible under any reducible substitution
+\begin{align*}
+    &\Gamma \turnv v \types \tau
+      \quad \wedge \quad \sigma \in \reds{\Gamma}
+      \quad \implies \quad v[\sigma] \in \redv{\locs{\Gamma}}{\tau} \\
+    &\Gamma \turnc c \types \tau
+      \quad \wedge \quad \sigma \in \reds{\Gamma}
+      \quad \implies \quad c[\sigma] \in \redc{\locs{\Gamma}}{\tau} \\
+\end{align*}
+\begin{proof}
+\todo{Write out proof}
+\end{proof}
+
+As a corollary, since the substitution that replaces every variable with itself is reducible,
+we get:
+\begin{align*}
+    &\Gamma \turnv v \types \tau
+      \quad \implies \quad v \in \redv{\locs{\Gamma}}{\tau} \\
+    &\Gamma \turnc c \types \tau
+      \quad \implies \quad c \in \redc{\locs{\Gamma}}{\tau} \\
+\end{align*}
+from which immediately follows that well-typed terms are strongly normalizing.
 
 \section{Embedding the Simply-Typed Lambda Calculus}
 \label{apdx:embedding}
