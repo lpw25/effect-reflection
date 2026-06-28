@@ -178,7 +178,7 @@
 
 \newcommand{\todo}[1]{{\color{red}TODO: #1}}
 
-\title{Locality and Effect Reflection}
+\title{Effect Reflection}
 \author{Leo White}
 \affiliation{\institution{Jane Street}\country{UK}}
 \date{}
@@ -188,12 +188,10 @@
 
 \begin{abstract}
   Programming languages increasingly support algebraic effects and
-  handlers for writing effectful code in a principled way by extending a
-  language's \emph{ambient monad} \textbf{--} the monad describing which
-  effects ordinary functions can perform \textbf{--} with additional
-  effectful operations. However, integrating effects into type systems
-  typically requires specialized effect systems that add complexity to
-  the language.
+  handlers for writing effectful code in a principled way by temporarily
+  extending the language with additional effectful operations. However,
+  integrating effects into type systems typically requires specialized
+  effect systems that add complexity to the language.
 
   We introduce \emph{effect reflection}, an alternative presentation of
   algebraic effects and handlers that provides, for any algebraic
@@ -203,222 +201,330 @@
     \qquad \cong \qquad
     \yoneda{\Sigma} \arr \glob \tau
   \end{equation*}
-
-  where $\ind{\Sigma}(\tau)$ is the free algebra of $\Sigma$ at
-  $\tau$, $\yoneda{\Sigma}$ is a type representing how to inject
-  terms of $\Sigma$ into the current ambient monad, and $\glob$ is a
-  comonadic \emph{global modality} used to track which values do not
-  depend on the ambient monad. $\ind{\Sigma}$ is sometimes called the
-  \emph{freer monad} of $\Sigma$. This isomorphism emerges naturally
-  from the \emph{ambient monad model}, a novel semantic model of
-  algebraic effect handlers in terms of presheaves over bounded Lawvere
-  theories. It is a corollary of the Yoneda lemma in that model.
+  where:
+  \begin{itemize}
+  \item $\ind{\Sigma}(\tau)$ is the free algebra of $\Sigma$ at $\tau$,
+    sometimes called the \emph{freer monad} of $\Sigma$.
+  \item $\yoneda{\Sigma}$ is a type representing how to inject operations of
+    $\Sigma$ into the current \emph{ambient monad}: the monad describing
+  which effects ordinary functions can perform.
+  \item$\glob$ is a comonadic \emph{global modality} used to track which values do not
+  depend on the ambient monad.
+  \end{itemize}
+  This isomorphism emerges naturally, as a corollary of the Yoneda
+  lemma, from the \emph{Ambient Monad model}: a novel semantic model of
+  algebraic effects in terms of presheaves over bounded Lawvere
+  theories.
 
   Effect reflection provides all the expressiveness of typed algebraic
   effects without requiring language-level support for effect systems. We
   demonstrate this by implementing effect reflection as a library in
-  OxCaml~\cite{lorenzen2024oxidizing} and showing how classic effectful
-  programs can be written in natural direct style.
+  OxCaml~\cite{lorenzen2024oxidizing}.
 \end{abstract}
 
 \maketitle
 
-\section{Reflection for algebraic effects}
+\section{Effect reflection and the Ambient Monad model}
+Algebraic effects and effect handlers have emerged as a powerful
+approach to structured programming with effects. However, integrating
+effects into type systems typically requires adding specialized effect
+systems. Unfortunately, such effect systems require extensive effect
+annotations even for functions that do no use algebraic effects. This
+limits the wider adoption of algebraic effects into mainstream
+languages.
 
-\subsection{Algebraic effects}
-Algebraic effects and handlers have emerged as a powerful approach to
-structured programming with effects. Handlers allow the programmer to
-temporarily extend the \emph{ambient monad} of their language -- the
-monad describing which effects an ordinary function can perform -- with
-additional effectful operations.
+Recent work, in particular Brachthauser et
+al.\cite{brachthauser2022effects} and Tang et al.\cite{tang2025modal},
+improves the situation by lowering the annotation burden for functions
+not using effects. However, these systems still require specialized type
+system support. Can we get the benefits of algebraic effects and
+handlers without the need to specialized type system support?
+
+One of the attractive properties of algebraic effects is their elegant
+mathematical model. However, these more recent approaches do not come
+with such a model. Can we give a simple semantic model of algebraic
+effects that justifies our design?
+
+\subsection{Algebraic effects and effect handlers}
+Algebraic effects and effect handlers allow the programmer to
+temporarily extend the set of available effectful operations.
 
 For example, in OCaml, one can write:
 \begin{lstlisting}[style=oxcaml]
-  type 'a Effect.t +=
-    | Get : int Effect.t
-    | Set : int -> unit Effect.t
-
-  let handle_state (f : unit -> 'a) : 'a =
-    match f () with
-    | x -> fun _ -> x
-    | effect Get, k -> fun s -> continue k s s
-    | effect Set s', k -> fun _ -> continue k () s'
+    type 'a Effect.t +=
+      | Get : int Effect.t
+      | Set : int -> unit Effect.t
+  
+    let handle_state (f : unit -> 'a) : int -> 'a =
+      match f () with
+      | x -> fun _ -> x
+      | effect Get, k -> fun s -> continue k s s
+      | effect Set s', k -> fun _ -> continue k () s'
 \end{lstlisting}
 and for the duration of the \lstinline[style=oxcaml]{f ()} function call
-the ambient monad is extended with two additional effectful operations:
+two additional effectful operations are available:
 \begin{lstlisting}[style=oxcaml]
-  let get () : int = perform Get
-  let set (i : int) : unit = perform (Set i)
+    let get () : int = perform Get
+    let set (i : int) : unit = perform (Set i)
 \end{lstlisting}
 
-However, effect handlers face a fundamental tension: \emph{untracked}
-effects are unsafe, while \emph{tracked} effects require complex type
-system extensions.
+Effect handlers have a couple of key benefits compared to using an explicit monad:
+\begin{itemize}
+\item They allow writing code in ``direct style'' -- i.e. using ordinary
+  functions and native arrow types. In particular, higher-order
+  functions can automatically support effectful functions.
+\item Multiple effect handlers compose with each other automatically in an
+  easy-to-understand manner.
+\end{itemize}
+
+However, they also have an obvious issue: what happens if you try to
+call \lstinline[style=oxcaml]{get} or \lstinline[style=oxcaml]{set}
+outside of the \lstinline[style=oxcaml]{handle_state} handler?
 
 In OCaml, the effects are untracked: nothing prevents attempting to
-perform an algebraic effect operation that is not supported by the
-current ambient monad, resulting in an
-\lstinline[style=oxcaml]{Unhandled} exception being raised.
+perform an effectful operation that is not currently available,
+resulting in an \lstinline[style=oxcaml]{Unhandled} exception being
+raised. This is essentially the same approach as unchecked exceptions,
+which are a common source of bugs in many languages.
 
-In languages like Koka~\cite{leijen2017type} the type system is extended
-to explicitly track the effects that a function may perform. This
-prevents the unsafety on an unhandled effect but adds complexity to the
-language.
+\subsection{Effect systems}
 
-The ``effects as capabilities'' approach of the Effekt
-language~\cite{brachthauser2020effects} points the way by elegantly
-tracking effects without requiring explicit effect-tracking machinery in
-the type system. However, it is restricted to second-class
-functions\footnote{That restriction is lifted in more recent work on
-Effekt~\cite{brachthauser2022effects}, but only by falling back to explicit
-effect-tracking machinery.}. We aim to extend this approach to first
-class functions.
+Most algebraic effect systems (\cite{hillerstrom2016liberating},
+\cite{leijen2014koka}, \cite{convent2020doo},
+\cite{biernacki2019binders}, \cite{brachthauser2020effects},
+\cite{xie2022first}) solve the problem of unhandled effects by extending
+their type system to explicitly track the effects that a function may
+perform. The effect annotation on a function's type essentially
+describes the implicit monad used by that function.
 
-\subsection{Locality and effect reflection}
-Locality captures the general idea of a value depending on some notion
-of ``location''. Our key insight is that the ambient monad can be viewed
-as a form of location, allowing us to reuse existing type system
-features for tracking locality.
+In such a system, the operations of our integer state example would have
+types like:
+\begin{lstlisting}[style=oxcaml]
+    val handle_state : (unit -[istate | 'e]-> 'a) -> int -['e]-> 'a
+    val get : unit -[istate | 'e]-> int
+    val set : int -[istate | 'e]-> unit
+\end{lstlisting}
 
-We can represent locality in a type system using a comonadic
-\emph{global modality} $\glob$ that tracks which values do \emph{not}
-depend on their location. Values of an ordinary type $\tau$ are assumed
-to potentially depend on the current location, whereas values of the
-global type $\glob \tau$ are known not to.
+The details vary between systems, but to avoid excessive user
+annotation, such effect systems tend to have subtle inference built on
+implicit subtyping or row polymorphism
+(\cite{hillerstrom2016liberating}, \cite{leijen2014koka}).
 
-In our setting being global means not depending on the ambient
-monad. For example, $A \arr B$ represents computations that may
-use operations from the ambient monad, while $\glob (A \arr B)$
-contains only pure computations that ignore the ambient monad.
+A particular source of complexity in such systems is that they require
+\emph{effect polymorphism} to type higher-order functions. For example,
+the \lstinline[style=oxcaml]{List.map} function, which maps a function
+over a list, must be given a type like:
+\begin{lstlisting}[style=oxcaml]
+    val map : ('a -['e]-> 'b) -> 'a list -['e]-> 'b list
+\end{lstlisting}
+which includes effect annotations even though
+\lstinline[style=oxcaml]{map} does not use algebraic effects.
 
-Based on this relationship between locality and effects, we present
-\emph{effect reflection}, providing, for any algebraic signature
-$\Sigma$ and type $\tau$, an isomorphism:
+\subsection{Extending the Ambient Monad}
+
+Some more recent systems(\cite{brachthauser2020effects},
+\cite{brachthauser2022effects}, \cite{tang2025modal}) provide an elegant
+alternative to effect polymorphism: they treat effect handlers as
+extending the effects available in the \emph{ambient monad} -- the monad
+associated with ordinary unannotated arrows. This means that, within a
+handler for integer state, all functions are permitted to use integer
+state without needing to track this fact in their type. Any effect
+annotations on a function's type are requirements for additional effects
+over and above what is currently available in the ambient monad.
+
+In such systems the type of \lstinline[style=oxcaml]{List.map} can be:
+\begin{lstlisting}[style=oxcaml]
+    val map : ('a -> 'b) -> 'a list -> 'b list
+\end{lstlisting}
+whilst still allowing it to interoperate with functions using algebraic
+effects. The types of our integer state functions might be something like:
+\begin{lstlisting}[style=oxcaml]
+    val handle_state : (unit -[istate]-> 'a) -> int -> 'a
+    val get : unit -[istate]-> int
+    val set : int -[istate]-> unit
+\end{lstlisting}
+specifying that an integer state effect must be added to the ambient
+monad before they can be used.
+
+Brachth{\"a}user et al.~\cite{brachthauser2020effects} describe this
+approach as ``lightweight effect polymorphism'' because it brings much
+of the benefits of effect polymorphisms without requiring effect
+annotations on all higher-order functions.
+
+However, allowing functions to use any effects available at their
+definition site requires restricting them in some way: they must be
+prevented from leaving the scope of an effect handler because they may
+be implicitly relying on that effect handler.
+
+Existing systems accomplish this by making functions second-class, or
+via sophisticated modal effect or capability types that can be used to
+track which effect handlers a value may depend on. In this paper we will
+show that all that is really required is some type-level way to track
+locality such as Rust's lifetimes or OxCaml's
+\lstinline[style=oxcaml]{local} mode.
+
+\subsection{The Ambient Monad model}
+
+If we are going to make changing the ambient monad the basis of our
+algebraic effects then we should build a changeable ambient monad right
+into our semantic model. \emph{We should index the meaning of types and
+  terms by the ambient monad}.
+
+Rather than have the semantics of our types be sets:
 \begin{equation*}
-  \ind{\Sigma}(\tau)
-  \qquad \cong \qquad
-  \yoneda{\Sigma} \arr \glob \tau
+\sem{\tau} \types \setc
 \end{equation*}
-where $\ind{\Sigma}(\tau)$ is an inductive type representing the
-free algebra of $\Sigma$ at $\tau$, and $\yoneda{\Sigma}$ is a
-type representing how to inject terms of $\Sigma$ into the current
-ambient monad. $\ind{\Sigma}$ is sometimes called the \emph{freer monad}
-of $\Sigma$~\cite{kiselyov2015freer}.
+we should have them be functors from $\lawc$ to $\setc$:
+\begin{equation*}
+\sem{\tau} \types \lawc \arr \setc
+\end{equation*}
+where $\lawc$ is a category whose objects correspond to suitable monads
+and whose morphisms correspond to monad morphisms. For each object
+$L \types \lawc$ we write $T_L$ for its corresponding monad.
 
-This isomorphism reveals that effectful computations can be represented
-as ordinary functions, enabling direct-style programming with full
-effect safety.
+These functors are presheaves and so they support all the standard
+constructions (products, coproducts, exponentials, etc.) needed to
+support all the usual type formers (products, sums, arrows, etc.) in the
+standard way.
 
-\subsection{Effect reflection in OxCaml}
-OxCaml~\cite{lorenzen2024oxidizing} provides type system support for
-tracking locality and runtime support for algebraic effects. For
-backwards compatibility with OCaml, an unadorned arrow type
-\lstinline[style=oxcaml]{t -> s} is treated as if the parameter and
-return types were actually \lstinline[style=oxcaml]{[]t} and
-\lstinline[style=oxcaml]{[]s}. To get parameters or results that are not
-implicitly global we write \lstinline[style=oxcaml]{@ local} on them,
-e.g. \lstinline[style=oxcaml]{t @ local -> s @ local}.
+The semantics for function types includes the ambient monad:
+\begin{equation*}
+  \sem{\tau_1 \arr \tau_2}(L) = \sem{\tau_1}(L) \arr T_L(\sem{\tau_2}(L))
+\end{equation*}
+This is what allows ordinary functions to perform effects from the
+ambient monad.
 
-Using this support, we can provide effect reflection as a simple API.
-We represent algebraic signatures as modules with a single type
-constructor, providing $\ind{\Sigma}$ as
-\lstinline[style=oxcaml]{'a Term(Sigma).t} and $\yoneda{\Sigma}$ as
-\lstinline[style=oxcaml]{Handler(Sigma).t}.
+A few things fall out of this model for free, whose combination suggests
+an alternative presentation of algebraic effects.
 
-For example, we can use it to write an effect handler equivalent to the
-OCaml one above:
+\subsubsection{Reflecting operations}
+
+The Yoneda embedding of $L \types \lawc$ immediately gives us a suitable
+semantics for a type family of \emph{effect capabilities} $\yoneda{L}$:
+\begin{equation*}
+\sem{\yoneda{L}} = \homset{\lawc}{L}{\_}
+\end{equation*}
+Elements of $\sem{\yoneda{L}}(L^\prime)$ represent
+the ability to reflect effectful operations from $L$ into the ambient
+monad $T_{L^{\prime}}$.
+
+We can expose this ability as a reflection construct: for any
+parameterized operation $op \types \tau_p \rightarrowtail \tau_a$ in an
+algebraic signature $\Sigma$, we can provide a computation
+$\perform{v_h}{op}{v_p}$ that uses the effect capability
+$v_h \types \yoneda{\Sigma}$ to perform $op$ parameterized by the value
+$v_p \types \tau_p$, returning a value of type $\tau_a$.
+
+These effect capabilities are closely related to \emph{named handlers}
+(\cite{xie2022first}), and \emph{lexical effect handlers}
+(\cite{biernacki2019binders}). They can give you values that represent
+handlers that are currently in scope.
+
+The Yoneda Lemma applied to the semantics of computations tells us that
+functions from $\yoneda{L}$ correspond to the sum of the ambient monad
+$T_{L^{\prime}}$ with the monad $T_L$:
+\begin{equation*}
+\sem{\yoneda{L} \arr \tau}(L^{\prime}) \cong T_{L^{\prime}+L}(\sem{\tau}(L^{\prime}+L))
+\end{equation*}
+
+\subsubsection{The global modality}
+
+$\lawc$ has an initial element $\initial$ corresponding to the identity
+monad. We can use this to define a global comonad, closely
+related to the purity comonad of Choudhury and
+Krishnaswami\cite{choudhury2020recovering}:
+\begin{equation*}
+\glob(\sem{\tau})(L) = \sem{\tau}(\initial)
+\end{equation*}
+This amounts to restricting $\tau$ to only the elements which do not
+depend on the ambient monad. In particular,
+\begin{equation*}
+\glob(\sem{\tau_1 \arr \tau_2})(L) \cong \arrow{\sem{\tau_2}(\initial)}{\sem{\tau_1}(\initial)}
+\end{equation*}
+showing that functions within the global comonad correspond to pure
+mathematical functions.
+
+We will use this as the semantics for a global modality $glob$:
+\begin{equation*}
+\sem{\glob \tau} = \glob(\sem{\tau})
+\end{equation*}
+
+\subsubsection{Reifying terms}
+
+If we restrict our attention to monads that correspond to some algebraic
+signature $\Sigma$ with no equations -- i.e. the objects in $\lawc$ that
+correspond to free monads -- then we can represent the sum of
+$T_{\Sigma}$ with the ambient monad directly as an inductive type
+$\ind{\Sigma}$. $\ind{\Sigma}$ is sometimes called the freer
+monad~\cite{kiselyov2015freer}. It has a unit constructor and a
+constructor for each operation in $\Sigma$.
+
+Here is $\ind{\Sigma}$ for the signature of the integer state effect in OxCaml:
 \begin{lstlisting}[style=oxcaml]
-  module State = struct
-    type 'a t =
-      | Get : int t
-      | Set : int -> unit t
-  end
-
-  module State_eff = Reflection(State)
-
-  let handle_state (f : Handler(State).t @ local -> 'a) (i : int) : 'a =
-    let rec loop (s : int) : 'a Term(State).t @ local -> 'a  = function
-      | Return x -> x
-      | Op(Get, k) -> loop s (State_eff.continue_local k s)
-      | Op(Set s', k) -> loop s' (State_eff.continue_local k ())
-    in
-    loop i (State_eff.reify_local f)
+  type 'a t =
+    | Return of 'a @@ global
+    | Get of (int -> 'a t)
+    | Set of int * (unit -> 'a t)
 \end{lstlisting}
-which calls \lstinline[style=oxcaml]{f} and passes it a local value of
-type \lstinline[style=oxcaml]{Handler(State).t}. For the duration of the
-call to \lstinline[style=oxcaml]{f} the ambient monad is extended with
-two additional effectful operations, which can be used via reflection:
-\begin{lstlisting}[style=oxcaml]
-  let get (h : Handler(State).t @ local) : int =
-    State_eff.perform Get h
+where \lstinline[style=oxcaml]{@@ global} is the OxCaml syntax
+corresponding to the global modality.
 
-  let set (h : Handler(State).t @ local) (i : int) : unit =
-    State_eff.perform (Set i) h
-\end{lstlisting}
+By a theorem of Hyland et al.~\cite{hyland2006combining}, we have that:
+\begin{equation*}
+\sem{\ind{\Sigma}(\tau)}(L) \cong T_{L+\Sigma}(\sem{\tau}(\initial))
+\end{equation*}
+and thus we have an isomorphism:
+\begin{equation*}
+\sem{\ind{\Sigma}(\tau)} \cong \sem{\yoneda{\Sigma} \arr \glob \tau}
+\end{equation*}
 
-The locality of the \lstinline[style=oxcaml]{Handler(State).t} value
-passed to \lstinline[style=oxcaml]{f} ensures that these operations can
-only be performed when available in the ambient monad. The type system
-prevents this handler value from escaping the scope of
-\lstinline[style=oxcaml]{f}, which in turn prevents
-\lstinline[style=oxcaml]{get} or \lstinline[style=oxcaml]{set} from
-being called outside that scope.
+This isomorphism allows us to reify effectful computations as inductive
+types, giving the same expressive power as effect handlers. Note that it
+can be expressed with only effect capabilities, inductive types and a
+global modality.
 
-\subsection{The ambient monad model}
+The forwards direction of the isomorphism is actually already provided
+by reflection of operations. We can provide the backwards direction as a
+reification construct: for any signature $\Sigma$, we provide the
+computation $\reify{\loc}{c}$ that binds $\loc$ to an effect capability
+of type $\yoneda{\Sigma}$ in the computation $c \types \glob \tau$ and
+reifies the uses of $\loc$ in $c$ as a $\ind{\Sigma}(tau)$.
 
-This design emerges naturally from a semantic model of algenbraic
-effects where types are interpreted as presheaves over \emph{bounded
-  Lawvere theories} -- a categorical framework that makes the connection
-between locality and effects precise.
+\subsubsection{Bounded Lawvere Theories}
 
-The key idea is to index the semantics by the ambient monad: rather than
-interpreting types as sets, we interpret them as functions from ambient
-monads to sets. We represent ambient monads by their corresponding
-algebraic theories using bounded Lawvere theories.
+Note that the model we just outlined requires a suitable choice of
+category $\lawc$. In particular, it requires that $\lawc$ has all
+coproducts: that any pair of monads in it have a well-defined sum. We
+achieve this by restricting ourselves to those monads that can be
+defined as the free algebra of some algebraic theory.
 
-The key constructs of effect reflection are then defined as follows:
-\begin{itemize}
-\item Computations can be represented as a monad $\mon$ on such
-  presheaves, which maps each algebraic theory to its free algebras.
+This, in turn, requires us to fix a choice of definition for algebraic
+theory. The traditional definition is that of a (finitary) Lawvere
+Theory. However, that would restrict us to effects with a finite set of
+operations of finite arity.
 
-\item The global modality $\glob P$ is defined as the constant presheaf
-  that always ignores the ambient monad and instead returns
-  $P(\initial)$, where $\initial$ is the algebraic theory with no
-  operations or equations.
+In the algebraic effects literature the most common choice is to use
+countable Lawvere Theories as the definition of algebraic
+theory. However, this still restricts us to effects with a countable set
+of operations of countable arity: it supports a state effect for $\nat$
+but not for $\nat \arr \nat$.
 
-\item The semantics of our handler types $\yoneda{\Sigma}$ are given by
-  the Yoneda embedding
-
-\item The effect reflection isomorphism becomes a simple consequence of
-  the Yoneda lemma and a key property of the sums of algebraic theories.
-\end{itemize}
-
-\subsection{Structure of the paper} We proceed as follows:
-\begin{itemize}
-\item In Section \ref{sec:practice}, we give an overview of effect reflection in
-  practice in OxCaml.
-\item In Section \ref{sec:language}, we define a simply typed calculus featuring
-  effect reflection.
-\item In Section \ref{sec:semantics}, we describe our denotational
-  semantics of effect reflection.
-\item In Section \ref{sec:implementation}, we give an implementation of effect
-  reflection in OxCaml in terms of the untracked algebraic effects it
-  inherits from OCaml.
-\item In Section \ref{sec:related-work}, we discuss related work.
-\end{itemize}
-
-\section{Effect reflection in practice}
-\label{sec:practice}
-
-We provide effect reflection as a simple library API in OxCaml. In this
-section we describe this API and show how to use it to write typical
-examples of algebraic effects.
+This short-coming of models of algebraic effects in the literature is
+mostly glossed over, but here instead we solve it by defining the notion
+of \emph{Bounded Lawvere Theories}: those Lawvere theories whose set of
+operations and their arities are bound by some regular cardinal
+$\kappa$. Bounded Lawvere Theories correspond to monads of arbitrary
+rank. They allow us to use any type for the parameters or arity of an
+operation.
 
 \subsection{Locality in OxCaml}
+\label{sec:locality}
 
-The effect reflection API relies on OxCaml's support for tracking
-locality in types, which we describe here. For a full treatment see
-Lorenzen et al.~\cite{lorenzen2024oxidizing}.
+The Ambient Monad model suggests expressing effect reflection and
+reification only really requires a global modality, or more broadly some
+type system mechanism for tracking locality. OxCaml has support for
+tracking locality in types, which we describe here. For a full treatment
+see Lorenzen et al.~\cite{lorenzen2024oxidizing}.
 
 Values in OxCaml are associated with both a type -- which describes how
 values can be introduced and eliminated -- and a \emph{mode} -- which
@@ -494,168 +600,83 @@ region it will implicitly cause the second one to leave that region as
 well. This means the \lstinline[style=oxcaml]{global} mode is always
 deep.
 
-\subsection{Effect reflection interface}
-\label{sec:interface}
+\subsection{Effect reflection in OxCaml}
+\label{sec:reflection-in-oxcaml}
 
-The types and operations of our effect reflection API are parameterized
-by type constructors representing the operations of an algebraic
-effect. In OxCaml, such higher-kinded interfaces must be built using
-functors. We start with a simple module type
-\lstinline[style=oxcaml]{Op} to act as the parameter type for these
-functors:
+Using OxCaml's support for locality and the untracked algebraic effects
+it inherits from OCaml, we can implement effect reflection as a simple
+library with no specific compiler support.
+
+Given an algebraic signatures represented as a module with a single type
+constructor:
 \begin{lstlisting}[style=oxcaml]
-  module type Op = sig type 'a t end
+    module E : sig type 'a t end
 \end{lstlisting}
-The fundamental types of the API are the \lstinline[style=oxcaml]{Term}
-and \lstinline[style=oxcaml]{Handler} types.
+The library provides $\yoneda{\Sigma}$ as an abstract type
+\lstinline[style=oxcaml]{Handler(E).t}, and $\ind{\Sigma}$ as
+\lstinline[style=oxcaml]{'a Term(E).t}:
 \begin{lstlisting}[style=oxcaml]
-  module Continuation(O : Op) : sig
-    type ('a, 'b) t
-  end
-
-  module Term (O : Op) : sig
-    type 'a t =
+    type 'a t = 'a Term(E).t =
       | Return : 'a @@ global -> 'a t
-      | Op : 'r O.t @@ global * ('r, 'a) Continuation(O).t -> 'a t
-  end
-
-  module Handler(O : Op) : sig
-    type t
-  end
+      | Perform : 'r E.t @@ global * ('r, 'a) Continuation(E).t -> 'a t
 \end{lstlisting}
-These types directly implement the types from our core isomorphism.
-\lstinline[style=oxcaml]{'a Term(Sigma).t} corresponds to
-$\ind{\Sigma}(\tau)$ and represents terms in the free algebra of
-\lstinline[style=oxcaml]{Sigma}. \lstinline[style=oxcaml]{Handler(Sigma).t}
-corresponds to $\yoneda{\Sigma}$ and represents algebraic effect
-handlers handling \lstinline[style=oxcaml]{Sigma} in the current
-computation.
+For technical reasons (see Section \ref{sec:interface}) we use the type
+\lstinline[style=oxcaml]{('r, 'a) Continuation(E).t} in place of
+\lstinline[style=oxcaml]{'r -> 'a Term(E).t}. Elements of this type
+can be applied using a \lstinline[style=oxcaml]{continue} function.
 
-\lstinline[style=oxcaml]{('a, 'b) Continuation(Sigma).t} is equivalent
-to \lstinline[style=oxcaml]{'a -> 'b Term(Sigma).t} when global and
-equivalent to \lstinline[style=oxcaml]{'a -> 'b Term(Sigma).t @ local}
-when local. This ensures that the global modality distributes over
-\lstinline[style=oxcaml]{Term(Sigma).t}, which is an important property
-of $\ind{\Sigma}$. The need for it is an artifact of OxCaml's approach
-to locality: the global modality does not distribute over the function
-arrow in OxCaml. In the language we describe in
-Section~\ref{sec:language} it is replaced with an ordinary function
-type.
-
-The main piece of the API is a family of isomorphisms:
-\begin{equation*}
-  \text{\lstinline[style=oxcaml]{'a Term(O).t}} \qquad
-  \cong \qquad \text{\lstinline[style=oxcaml]{Handler(O).t @ local -> 'a}}
-\end{equation*}
-We expose this isomorphism as three functions:
+The reflection and reification operations are provided by the
+\lstinline[style=oxcaml]{Reflection} functor as functions
+\lstinline[style=oxcaml]{perform} and \lstinline[style=oxcaml]{reify}:
 \begin{lstlisting}[style=oxcaml]
-  module Reflection (O : Op) : sig
-    val reify : (Handler(O).t @ local -> 'a) -> 'a Term(O).t
+    val perform : 'a E.t -> Handler(E).t @ local -> 'a
 
-    val continue : ('a, 'b) Continuation(O).t -> 'a -> 'b Term(O).t
-
-    val reify_local :
-      (Handler(O).t @ local -> 'a) @ local -> 'a Term(O).t @ local
-
-    val continue_local :
-      ('a, 'b) Continuation(O).t @ local -> 'a -> 'b Term(O).t @ local
-
-    val perform : 'a O.t -> (Handler(O).t @ local -> 'a)
-  end
+    val reify : (Handler(E).t @ local -> 'a) @ local -> 'a Term(E).t @ local
 \end{lstlisting}
-\lstinline[style=oxcaml]{reify} and
-\lstinline[style=oxcaml]{reify_local} implement the left-to-right
-direction of the isomorphism. We need two separate functions because
-OxCaml lacks any form of mode polymorphism.
 
-\lstinline[style=oxcaml]{perform} is equivalent to the right-to-left
-direction of the isomorphism but is a more convenient primitive in
-practice. It amounts to reflection of individual operations as opposed
-to full terms. We can implement reflection of global full terms as:
+We can use this library to write an effect handler equivalent to the
+OCaml one in the opening section:
 \begin{lstlisting}[style=oxcaml]
-  let rec reflect t h =
-    match t with
-    | Return x -> x
-    | Op(op, k) -> reflect (continue_local k (perform op h)) h
+    module State = struct
+      type 'a t =
+        | Get : int t
+        | Set : int -> unit t
+    end
+
+    module State_eff = Reflection(State)
+
+    let handle_state (f : Handler(State).t @ local -> 'a) (i : int) : 'a =
+      let rec loop (s : int) : 'a Term(State).t -> 'a  = function
+        | Return x -> x
+        | Perform(Get, k) -> loop s (State_eff.continue k s)
+        | Perform(Set s', k) -> loop s' (State_eff.continue k ())
+      in
+      loop i (State_eff.reify f)
 \end{lstlisting}
-with type:
+The handler calls \lstinline[style=oxcaml]{f} and passes it a local value of
+type \lstinline[style=oxcaml]{Handler(State).t}. For the duration of the
+call to \lstinline[style=oxcaml]{f} the ambient monad is extended with
+two additional effectful operations, which can be used via reflection:
 \begin{lstlisting}[style=oxcaml]
-  val reflect : 'a Term(O).t -> (Handler(O).t @ local -> 'a)
+    let get (h : Handler(State).t @ local) : int =
+      State_eff.perform Get h
+
+    let set (h : Handler(State).t @ local) (i : int) : unit =
+      State_eff.perform (Set i) h
 \end{lstlisting}
-Reflection of local terms can be defined similarly.
 
-\subsection{Example: State}
+The locality of the \lstinline[style=oxcaml]{Handler(State).t} value
+passed to \lstinline[style=oxcaml]{f} ensures that these operations can
+only be performed when available in the ambient monad. The type system
+prevents this handler value from escaping the scope of
+\lstinline[style=oxcaml]{f}, which in turn prevents
+\lstinline[style=oxcaml]{get} or \lstinline[style=oxcaml]{set} from
+being called outside that scope.
 
-As shown in the introduction we can implement an effect handler for
-state using this API. We start by defining the operations of the effect:
-\begin{lstlisting}[style=oxcaml]
-  module State = struct
-    type 'a t =
-      | Get : int t
-      | Set : int -> unit t
-  end
-\end{lstlisting}
-Then we instantiate the reflection isomorphism for that effect and use
-it to write a handler:
-\begin{lstlisting}[style=oxcaml]
-  module State_eff = Reflection(State)
-  open Term(State)
+\subsubsection{Lightweight effect polymorphism}
 
-  let handle_state i f =
-    let rec loop (s : int) = function
-      | Return x -> x
-      | Op(Get, k) -> loop s (State_eff.continue_local k s)
-      | Op(Set s', k) -> loop s' (State_eff.continue_localk ())
-    in
-    loop i (State_eff.reify_local f)
-\end{lstlisting}
-Finally we add an alias for the handler type and some convenient
-wrappers for the generic effects:
-\begin{lstlisting}[style=oxcaml]
-  type handler = Handler(State).t
-
-  let get h =
-    State_eff.perform Get h
-
-  let set h i =
-    State_eff.perform (Set i) h
-\end{lstlisting}
-Giving us the following interface:
-\begin{lstlisting}[style=oxcaml]
-  type handler
-
-  val handle_state : int -> (handler @ local -> 'a) @ local -> 'a
-  val get : handler @ local -> int
-  val set : handler @ local -> int -> unit
-\end{lstlisting}
-Note that we are able to use \lstinline[style=oxcaml]{reify_local} to
-allow the function passed to \lstinline[style=oxcaml]{handle_state} to
-be local.
-
-This shows how to implement state using effect reflection, but note that
-the same interface can also be implemented directly in OxCaml using
-mutable state and locality:
-\begin{lstlisting}[style=oxcaml]
-  type handler = int ref
-
-  let handle_state i f = f (ref i)
-  let get r = !r
-  let set r i = r := i
-\end{lstlisting}
-This implementation gives the same behaviour as the one built using
-effect reflection. Crucially it is just as easy to reason about, which
-in turn means it is just as easy to reason about as the state
-monad. This shows that the improved reasoning ability of the state monad
-over ordinary mutable state is precisely captured by the notion of
-locality.
-
-This transformation from effect reflection to local mutable state works
-for any \emph{tail-resumptive}\cite{??} effect handler.
-
-\subsection{Lightweight effect polymorphism}
-
-The following function uses state to calculate the total of a list of
-integers:
+The following function uses the state handler to calculate the total of
+a list of integers:
 \begin{lstlisting}[style=oxcaml]
   let total l =
     handle_state 0 (fun h ->
@@ -675,230 +696,50 @@ use it to perform some effects.
 
 This ability for higher-order functions like
 \lstinline[style=oxcaml]{List.iter} to be reused with different ambient
-monads achieves the ``lightweight effect polymorphism'' described by
-Brachth{\"a}user et al.~\cite{brachthauser2020effects} without requiring
-second-class functions -- locality provides the necessary restrictions
-while maintaining first-class status.
+monads achieves ``lightweight effect polymorphism''.
 
-\subsection{Example: Generators}
+\subsection{Contributions}
 
-A more realistic use of effect reflection is a \emph{generator}
-effect. This effect has a single operation:
-\begin{lstlisting}[style=oxcaml]
-  module Gen = struct
-    type 'a t =
-      | Gen : int -> unit t
-  end
-\end{lstlisting}
-Along with a handler that turns computations using
-\lstinline[style=oxcaml]{Gen} into streams of integers.
-\begin{lstlisting}[style=oxcaml]
-  module Gen_eff = Reflection(Gen)
-  open Term(Gen)
+We make the following contributions:
+\begin{itemize}
+\item We propose \emph{effect reflecton}, a new presentation of effect
+  handlers that ensures all effectful operations are properly handled
+  without requiring an effect system.
+\item We present a simply-typed lambda calculus with effect
+  reflection. We prove that the extended system maintains subject
+  reduction, confluence and strong normalization. We prove that the
+  ordinary simply-typed lambda calculus embeds into it. (Section
+  \ref{sec:language})
+\item We propose the Ambient Monad model of effectful computations. We
+  use it to give a denotational semantics of our lambda calculus with
+  effect reflection.  We prove that this semantics is sound,
+  compositional and adequate.  (Section \ref{sec:semantics})
+\item We define the category of Bounded Lawvere Theories, and show it
+  has all the required structure for the Ambient Monad model. This
+  solves the size restrictions that are present in existing models of
+  algebraic effects based on countable Lawvere Theories. (Section
+  \ref{sec:bounded})
+\item We give a simple implementation of effect reflection in OxCaml
+  using its support for tracking locality in the type system and the
+  untracked algebraic effects it inherits from OCaml. We demonstrate its
+  usability with some classic examples algebraic effects. (Section
+  \ref{sec:practice}).
+\end{itemize}
 
-  type ints =
-    | Finished
-    | More of int * (unit -> ints)
-
-  let handle_gen f =
-    let rec loop = function
-      | Return () -> Finished
-      | Op(Gen i, k) -> More(i, fun () -> loop (Gen_eff.continue k ()))
-    in
-    loop (Gen_eff.reify f)
-\end{lstlisting}
-
-Unlike the state handler, here we must use
-\lstinline[style=oxcaml]{reify} rather than
-\lstinline[style=oxcaml]{reify_local} because our intention is that the
-resulting stream of integers be a global value that can escape the
-current region. Since it closes over the continuation
-\lstinline[style=oxcaml]{k}, we must use \lstinline[style=oxcaml]{reify}
-and require that \lstinline[style=oxcaml]{f} be global:
-\begin{lstlisting}[style=oxcaml]
-  val handle_gen : (Handler(Gen).t @ local -> unit) -> ints
-\end{lstlisting}
-
-\subsection{Example: Asynchronous I/O}
-
-Perhaps the most common use case for algebraic effects is for
-concurrency and asynchronous I/O. Implementing asynchronous I/O from
-scratch is beyond the scope of this paper, but we can build a simple
-version on top of an existing monadic concurrency library. Assuming we
-have a monadic future type \lstinline[style=oxcaml]{'a Deferred.t} we can
-write concurrent code in direct style by using an effect with a single
-\lstinline[style=oxcaml]{Await} operation that waits for a future to be
-completed:
-\begin{lstlisting}[style=oxcaml]
-  module Await : sig
-    type 'a t =
-      | Await : 'a Deferred.t -> 'a t
-  end
-\end{lstlisting}
-
-\begin{lstlisting}[style=oxcaml]
-  module Await_eff = Reflection(Await)
-  open Term(Await)
-
-  let handle_await f =
-    let rec loop = function
-      | Return x -> Deferred.return x
-      | Op(Await d, k) ->
-          Deferred.bind d (fun x -> loop (Await_eff.continue k x))
-    in
-    loop (Await_eff.reify f)
-
-  let await h d =
-    Await_eff.perform (Await d) h
-\end{lstlisting}
-
-Using this we can write direct-style code using asynchronous I/O:
-\begin{lstlisting}[style=oxcaml]
-  let copy_file h src dst =
-    let s = await h (File.read src) in
-    await h (File.write dst s)
-\end{lstlisting}
-
-\subsection{One-shot continuations}
-
-For various practical reasons, OCaml's algebraic effects are restricted
-to only allow continuations to be resumed a single time. This rules out
-interesting effects like backtracking search, but improves the ability
-to reason about the interaction of effects and resources.
-
-There is no fundamental reason that effect reflection should be
-restricted to only one-shot continuations, so for the purposes of this
-paper we shall ignore the restriction. However, for the same reasons as
-OCaml, our actual implementation is restricted one-shot
-continuations. Note that OxCaml's \lstinline[style=oxcaml]{once}
-mode~\cite{lorenzen2024oxidizing} allows us to enforce this restriction
-statically.
-
-\subsection{Nested effect handlers}
-
-A key feature of algebraic effects is how easily they compose. We can
-use state whilst using asynchronous I/O by simply nesting their
-handlers:
-\begin{lstlisting}[style=oxcaml]
-  handle_await (fun ah ->
-    handle_state i (fun sh ->
-      List.iter (fun fl ->
-        let s = await ah (File.read fl) in
-        let i = int_of_string s in
-        set sh (i + get sh)) files;
-      get sh))
-\end{lstlisting}
-
-This relies on the fact that the \lstinline[style=oxcaml]{handle_state}
-uses \lstinline[style=oxcaml]{reify_local} and so is able to operate on a
-local computation that closes over the local await handler value
-\lstinline[style=oxcaml]{ah}.
-
-If we tried to do something similar using our
-\lstinline[style=oxcaml]{handle_gen} handler, then we get an error:
-\begin{lstlisting}[style=oxcaml]
-  handle_await (fun ah ->
-    handle_gen (fun gh ->
-      List.iter (fun fl ->
-        let s = await ah (File.read fl) in
-        let i = int_of_string s in
-        gen gh i) files))
-  (*@ \textcolor{red}{Error: let s = await ah (File.read fl) in} @*)
-                       (*@ \textcolor{red}{\textasciicircum\textasciicircum} @*)
-  (*@ \textcolor{red}{ This value is local and would escape its region.} @*)
-\end{lstlisting}
-
-We could change the definition of \lstinline[style=oxcaml]{handle_gen}
-to use \lstinline[style=oxcaml]{reify_local} instead of
-\lstinline[style=oxcaml]{reify}, but then we would lose the property
-that the generator we produce can be passed around freely. Instead we
-need to build a handler that can \emph{forward} the
-\lstinline[style=oxcaml]{Await} operation to different effect handlers
-at different points in the program's execution.
-
-\subsection{Effect sums and effect forwarding}
-
-Composing handlers like \lstinline[style=oxcaml]{handle_gen}, that use
-\lstinline[style=oxcaml]{reify} rather than
-\lstinline[style=oxcaml]{reify_local}, is a fundamentally more involved
-operation. Consider the case of generators that are able to use
-asynchronous I/O. We are given a computation that performs both
-\lstinline[style=oxcaml]{Await} and \lstinline[style=oxcaml]{Gen}
-operations and we'd like to turn it into a stream of integers.  We would
-like to be able to freely pass this stream around. In particular, we do
-not wish the stream to be prevented from escaping the scope of the
-current \lstinline[style=oxcaml]{Await} handler.  However forcing parts
-of the stream requires performing additional
-\lstinline[style=oxcaml]{Await} operations, so whenever we force part of
-the stream we'll need to provide a handler for those
-\lstinline[style=oxcaml]{Await} operations again.
-
-To achieve this more general form of composition, we require an
-additional capability in our effect reflection API. We need to be able
-to manipulate \lstinline[style=oxcaml]{Handler} types for sums of
-effects.
-\begin{lstlisting}[style=oxcaml]
-  module Sum (L : Op) (R : Op) : sig
-    type 'a t =
-      | Left : 'a L.t -> 'a t
-      | Right : 'a R.t -> 'a t
-  end
-
-  module Project(L : Op) (R : Op) : sig
-    val outl : Handler(Sum(L)(R)).t @ local -> Handler(L).t @ local
-
-    val outr : Handler(Sum(L)(R)).t @ local -> Handler(R).t @ local
-  end
-\end{lstlisting}
-
-We can now write our desired handler for the
-\lstinline[style=oxcaml]{Gen} effect by instead writing a handler for
-\lstinline[style=oxcaml]{Sum(Await)(Gen)} that forwards all the
-\lstinline[style=oxcaml]{Await} operations on to another handler.
-
-\begin{lstlisting}[style=oxcaml]
-  module Eff = Reflection(Sum(Await)(Gen))
-  module Proj = Project(Await)(Gen)
-
-  type aints =
-    | Finished
-    | More of int * (Handler(Await).t @ local -> aints)
-
-  let handle_gen_in_await f ah =
-    let rec loop ah = function
-      | Return () -> Finished
-      | Op(Left op, k) -> loop ah (Eff.continue k (perform ah op))
-      | Op(Right(Gen i), k) ->
-          More(i, fun ah -> loop ah (Eff.continue k ()))
-    in
-    loop ah (Eff.reify (fun h -> f (Proj.outl h) (Proj.outr h))
-\end{lstlisting}
-
-The need for effect forwarding is a general short-coming of lexical
-handlers that applies to all such systems. Examples like this
-fundamentally require that performing an \lstinline[style=oxcaml]{Await}
-operation does work proportional to the number of handlers it is
-forwarded through. Lexical handlers do a constant amount of work to
-perform operations and so cannot handle such examples
-directly. Non-lexical effect handlers \textbf{always} do work
-proportional to the number of nested handlers, allowing them to support
-such examples directly but paying a higher cost for the cases that do
-not need forwarding.
-
-\section{A language with effect reflection}
+\section{Simply-typed lambda calculus with effect reflection}
 \label{sec:language}
 
-The design of effect reflection falls out naturally from the ambient
-monad model. To make this connection precise and demonstrate the key
-properties of effect reflection, we present a simply-typed calculus that
-directly incorporates the constructs needed for effect reflection.
+We present a simply-typed lambda calculus extended with effect
+reflection. This extension requires adding a separate syntax and typing
+judgement for computations, in the style of the Fine-Grained
+Call-By-Value lambda calculus\cite{levy2003modelling}, with function
+application treated as a computation.
 
 \subsection{The base language}
 
-Our language is simply typed, featuring all the usual type-formers. It
-uses a variation of fine-grained call-by-value: it has separate syntax
-and typing judgements for values and computations. The syntax and typing
-rules for the base language are shown in Fig.\ref{fig:typing-standard}.
+Our language is simply typed, featuring all the usual type-formers. The
+syntax and typing rules for the base language are shown in
+Fig.\ref{fig:typing-standard}.
 \begin{figure}
 \begin{align*}
   \mathrm{variables},&x \in& \vars \\
@@ -1062,7 +903,9 @@ Fig.\ref{fig:typing-locality}
 Effect reflection requires, for any signature $\Sigma$ that is being
 reflected, an inductive type $\ind{\Sigma}$ to represent the free
 algebras of $\Sigma$. $\ind{\Sigma}$ is sometimes called the \emph{freer
-  monad} of $\Sigma$~\cite{kiselyov2015freer}.
+  monad} of $\Sigma$~\cite{kiselyov2015freer}. They are a form of
+W-type, and in a dependently-typed setting we would probably use W-types
+directly.
 
 As is standard for algebraic effects systems, we only support handlers
 for algebraic theories without any equations, even though our semantics
@@ -1247,10 +1090,6 @@ which has this admissible typing rule:
 {\Gamma \turnc \; \reflect{v}{c} \types \glob \tau}
 \end{mathpar}
 
-We also provide projections $\outl$ and $\outr$ that decompose a mapping
-for $\Sigma_1 + \Sigma_2$ into mappings for $\Sigma_1$ and $\Sigma_2$
-respectively.
-
 \begin{example}
   The value from Example~\ref{example:negate} can also be constructed
   via reflection:
@@ -1262,6 +1101,12 @@ respectively.
   where $\mathit{negate}$ is the function that negates a boolean.
 \end{example}
 
+We also provide projections $\outl$ and $\outr$ that decompose a mapping
+for $\Sigma_1 + \Sigma_2$ into mappings for $\Sigma_1$ and $\Sigma_2$
+respectively. This is actually crucial to obtain the full expressivity
+of effect handlers. Without it the language would be equivalent to the
+more restrictive ``scoped resumptions'' form of effect handlers proposed
+by Xie et al.\cite{xie2020effect}.
 
 \subsection{Operational semantics}
 \label{sec:operational}
@@ -1330,8 +1175,8 @@ congruence rule for abstraction:
 \end{mathpar}
 
 We prove subject reduction for this semantics in
-Appendix~\ref{apdx:subject-reduction} by straightforward induction on
-the reduction relations.
+Appendix~\ref{apdx:subject-reduction} by induction on the reduction
+relations.
 \begin{lemma}
 \label{lemma:subject-reduction}
   \begin{align*}
@@ -1373,7 +1218,7 @@ of reductions $\snv$ and $\snc$ respectively.
       \quad \implies \quad c \in \snc \\
 \end{align*}
 \end{lemma}
-We prove this using logical relations\cite{??} in
+We prove this using logical relations in
 Appendix~\ref{apdx:strong-normalization}.
 
 \subsection{Embedding the Simply-Typed Lambda Calculus}
@@ -1381,7 +1226,7 @@ Appendix~\ref{apdx:strong-normalization}.
 Using the global modality and $\grun{c}$ construct we can embed the
 Simply Typed Lambda Calculus (STLC) into this language as values. This
 demonstrates that the language is a proper extension of STLC. We show this
-embedding and prove it correct in \ref{apdx:embedding}.
+embedding and prove it correct in Appendix~\ref{apdx:embedding}.
 
 \section{The ambient monad model}
 \label{sec:semantics}
@@ -1543,6 +1388,7 @@ is too large to be a set. This is closely related to the strict
 positivity restriction on inductive type definitions.
 
 \subsection{(Bounded) Lawvere theories}
+\label{sec:bounded}
 
 We use \emph{Lawvere theories} as our concrete representation of the
 ambient algebraic monad. Lawvere theories are a categorical
@@ -1917,90 +1763,175 @@ and adequate for contextual equality $\ctxeq$:
 We present the full semantics, precisely define contextual equality, and
 prove these properties in Appendix~\ref{apdx:denotational}.
 
-\section{Implementation}
-\label{sec:implementation}
+\section{Implementation in OxCaml}
+\label{sec:practice}
 
-\subsection{Implementation with untracked effect handlers}
+We provide effect reflection as a simple library API in OxCaml based on
+OxCaml's support for locality (see Section~\ref{sec:locality}). In this
+section we describe this API and its implementation.
 
-We can implement the interface from Section \ref{sec:interface} directly
-in terms of OCaml's untracked effect
-handlers~\cite{Sivaramakrishnan2021retrofitting}\footnote{For
-  convenience, we use the new handler syntax from OCaml 5.3. However,
-  the most recently released version of OxCaml is based on OCaml 5.2 so
-  the actual implementation uses
-  \lstinline[style=oxcaml]{Effect.Deep.match_with} instead}. The trick
-is to generate a fresh effect constructor for each reification, pass
-that constructor around as part of the
-\lstinline[style=oxcaml]{handler}, and then use it to perform operations
-during reflection. The full implementation is given in
-Fig.\ref{fig:implementation}.
+\subsection{Effect reflection interface}
+\label{sec:interface}
+
+The types of our the effect reflection interface are shown in
+Fig.~\ref{fig:ox-types}.
+\begin{figure}
+\begin{lstlisting}[style=oxcaml]
+  module type Sig = sig type 'a t end
+
+  module Continuation(E : Sig) : sig
+    type ('a, 'b) t
+  end
+
+  module Term (E : Sig) : sig
+    type 'a t =
+      | Return : 'a @@ global -> 'a t
+      | Perform : 'r E.t @@ global * ('r, 'a) Continuation(E).t -> 'a t
+  end
+
+  module Handler(E : Sig) : sig
+    type t
+  end
+\end{lstlisting}
+\caption{Effect reflection types}
+\label{fig:ox-types}
+\end{figure}
+
+These types are higher-kinded: they are parameterized by by type
+constructors representing the operations of an algebraic effect. In
+OxCaml, such types must be built using functors. We use a simple module
+type \lstinline[style=oxcaml]{Sig} to act as the parameter type for
+these functors.
+
+The \lstinline[style=oxcaml]{'a Term(E).t} type corresponds to
+$\ind{\Sigma}(\tau)$ and represents terms in the free algebra of
+\lstinline[style=oxcaml]{E}.
+
+The \lstinline[style=oxcaml]{Handler(E).t} corresponds to
+$\yoneda{\Sigma}$ and represents the capability to perform operations
+from \lstinline[style=oxcaml]{E}.
+
+\lstinline[style=oxcaml]{('a, 'b) Continuation(E).t} is equivalent to
+\lstinline[style=oxcaml]{'a -> 'b Term(E).t} when global and equivalent
+to \lstinline[style=oxcaml]{'a -> 'b Term(E).t @ local} when local. This
+ensures that the global modality distributes over
+\lstinline[style=oxcaml]{Term(E).t}, which is an important property of
+$\ind{\Sigma}$. The need for this type is an artifact of OxCaml's
+approach to locality: the global modality does not distribute over the
+function arrow in OxCaml.
 
 \begin{figure}
 \begin{lstlisting}[style=oxcaml]
-module Handler (O : Op) = struct
+  module Reflection (E : Sig) : sig
+    val reify :
+      (Handler(E).t @ local -> 'a) @ local -> 'a Term(E).t @ local
 
-  type t = { perform : 'r. 'r O.t -> 'r }
+    val reify_global : (Handler(E).t @ local -> 'a) -> 'a Term(E).t
 
-end
+    val perform : 'a E.t -> (Handler(E).t @ local -> 'a)
 
-module Reflection (O : Op) = struct
-  open Term(O)
-  open Handler(O)
+    val continue :
+      ('a, 'b) Continuation(E).t @ local -> 'a -> 'b Term(E).t @ local
 
-  let reify f =
-    let module Eff =
-      struct type 'a Effect.t += C : 'a O.t -> 'a Effect.t end
-    in
-    let handler =
-      { perform = fun o -> Effect.perform (Eff.C o) }
-    in
-    match f handler with
-    | v -> Return v
-    | effect Eff.C o, k -> Op(o, fun x -> Effect.continue k x)
-
-  let reify_local f = exclave
-    let module Eff =
-      struct type 'a Effect.t += C : 'a O.t -> 'a Effect.t end
-    in
-    let handler = { perform = fun o -> Effect.perform (Eff.C o) } in
-    match f handler with
-    | v -> Return v
-    | effect Eff.C o, k -> Op(o, fun x -> Effect.continue k x)
-
-  let perform t =
-   fun h -> h.perform t
-
-end
-
-module Project (L : Op) (R : Op) = struct
-  open Sum(L)(R)
-
-  let outl ({perform} : Handler(Sum(L)(R)).t) : Handler(L).t =
-    exclave {perform = fun op -> perform (Left op)}
-
-  let outr ({perform} : Handler(Sum(L)(R)).t) : Handler(R).t =
-    exclave {perform = fun op -> perform (Right op)}
-
-end
+    val continue_global : ('a, 'b) Continuation(E).t -> 'a -> 'b Term(E).t
+  end
 \end{lstlisting}
-\caption{Implementation}
-\label{fig:implementation}
+\caption{Effect reflection interface}
+\label{fig:ox-interface}
+\end{figure}
+The main piece of the API is a family of isomorphisms:
+\begin{equation*}
+  \text{\lstinline[style=oxcaml]{'a Term(E).t}} \qquad
+  \cong \qquad \text{\lstinline[style=oxcaml]{Handler(E).t @ local -> 'a}}
+\end{equation*}
+which we expose as three functions: \lstinline[style=oxcaml]{reify},
+\lstinline[style=oxcaml]{reify_global} and
+\lstinline[style=oxcaml]{perform}. These are provided by the
+\lstinline[style=oxcaml]{Reflection} functor
+(Fig.~\ref{fig:ox-interface}), along with the functions for continuing a
+continuation.
+
+\lstinline[style=oxcaml]{reify} and
+\lstinline[style=oxcaml]{reify_global} implement the left-to-right
+direction of the isomorphism. We need two separate functions because
+OxCaml currently lacks any form of locality polymorphism.
+
+\lstinline[style=oxcaml]{perform} is equivalent to the right-to-left
+direction of the isomorphism. It reflects individual operations as
+opposed to full terms, which is a more convenient primitive in
+practice. We can implement reflection of \lstinline[style=oxcaml]{local}
+full terms as:
+\begin{lstlisting}[style=oxcaml]
+  let rec reflect t h =
+    match t with
+    | Return x -> x
+    | Perform(op, k) -> reflect (continue k (perform op h)) h
+\end{lstlisting}
+with type:
+\begin{lstlisting}[style=oxcaml]
+  val reflect : 'a Term(E).t -> (Handler(E).t @ local -> 'a)
+\end{lstlisting}
+Reflection of global terms can be defined
+similarly.
+
+The final piece of the interface is the support for selection from
+effect capabilities for sums of signatures (i.e. $\outlname$ and
+$\outrname$). These are provided via \lstinline[style=oxcaml]{Sum}
+and \lstinline[style=oxcaml]{Select} functions shown in Fig.~\ref{fig:ox-selection}.
+\begin{figure}
+\begin{lstlisting}[style=oxcaml]
+  module Sum (L : Sig) (R : Sig) : sig
+    type 'a t =
+      | Left : 'a L.t -> 'a t
+      | Right : 'a R.t -> 'a t
+  end
+
+  module Select(L : Sig) (R : Sig) : sig
+    val outl : Handler(Sum(L)(R)).t @ local -> Handler(L).t @ local
+
+    val outr : Handler(Sum(L)(R)).t @ local -> Handler(R).t @ local
+  end
+\end{lstlisting}
+\caption{Effect selection}
+\label{fig:ox-selection}
 \end{figure}
 
-\subsection{More efficient implementation in terms of fibers}
+\subsection{Effect reflection implementation}
 
-In the implementation in Fig.\ref{fig:implementation}, whenever an
-operation is reflected we perform a linear search up the stack of
-handlers until we find the corresponding one. This search is not
-actually necessary: there is a one-to-one relationship between the
-handlers and the handler values used to reflect operations. The linear
-search could be eliminated by extending the OxCaml runtime to support
-direct references to handlers. By allowing local values to point
-directly to the fiber structures that implement effect handlers,
-operations can jump immediately to the correct handler without
-traversing the stack. This optimization maintains the same interface
-while providing constant-time operation dispatch. It is roughly the
-implementation technique described by Ma et al.~\cite{ma2024lexical}.
+We can implement the effect reflection interface directly in terms of
+OCaml's untracked effect
+handlers~\cite{Sivaramakrishnan2021retrofitting}. The entire
+implementation is only 44 lines of code and is given in
+Fig.\ref{fig:implementation}. The trick is to generate a fresh effect
+constructor for each reification, pass that constructor around as part
+of the \lstinline[style=oxcaml]{handler}, and then use it to perform
+operations during reflection. Performing effects involves a single
+indirect call and then an underlying perform operation, so its
+performance is essentially the same as the performance of OCaml's
+algebraic effects.
+
+For various practical reasons, OCaml's algebraic effects are restricted
+to only allow continuations to be resumed a single time. This rules out
+interesting effects like backtracking search, but improves the ability
+to reason about the interaction of effects and resources.
+
+There is no fundamental reason that effect reflection should be
+restricted to only one-shot continuations, so for the purposes of this
+paper we ignore the restriction. However, for the same reasons as
+OCaml, our actual implementation is restricted one-shot
+continuations. Note that OxCaml's \lstinline[style=oxcaml]{once}
+mode~\cite{lorenzen2024oxidizing} allows us to enforce this restriction
+statically.
+
+\subsection{Examples}
+
+We include additional examples and discussion in
+Appendix~\ref{apdx:examples}. Of particular note are the handler for
+Generators, which demonstrates the need for
+\lstinline[style=oxcaml]{reify_global}, and the handler for the
+combination of Generators and Asynchronous I/O, which demonstrates the
+need for \lstinline[style=oxcaml]{outl} and
+\lstinline[style=oxcaml]{outr}.
 
 \section{Related work}
 \label{sec:related-work}
@@ -2044,10 +1975,23 @@ effects, including the key property of sums of algebraic theories (our
 Lemma \ref{lemma:sums}) on which handlers are based.
 
 The original work on algebraic effect
-handlers~\cite{plotkin2009handlers,plotkin2013handling} gives a semantics
-in terms of free algebras but the semantics work with a fixed algebraic
-theory: handlers do not actually change the ambient monad. Our presheaf
-semantics naturally accommodates changing ambient monads.
+handlers~\cite{plotkin2009handlers,plotkin2013handling} gives a
+semantics in terms of free algebras but the semantics work with a fixed
+algebraic theory: handlers do not actually change the ambient monad. Our
+Ambient Monad model naturally accommodates changing ambient monad.
+
+Bauer and Pretnar\cite{bauer2015programming} give a denotational
+semantics for Eff but it is untyped. The same
+authors\cite{bauer2015programming} also give a denotational semantics
+for Eff that is typed, but where effects are treated as extrinsic to the
+semantics.
+
+Forster et al.~\cite{forster2017expressive} give a set-theoretic
+denotational semantics of a calculus with algebraic effect handlers. It
+is typed and represents effects using their free algebras. However,
+their calculus supports neither nesting effect handlers nor effect
+polymorphism, which means the handlers described are not modular or
+composable.
 
 \subsection{Comonadic purity}
 
@@ -2061,7 +2005,7 @@ same.
 
 \subsection{Locality and presheaves}
 
-Our presheaf semantics are closely related to presheaf semantics for
+The Ambient Monad model is closely related to presheaf semantics for
 higher-order abstract syntax~\cite{hu2022category}. In both cases
 presheaves are used to index the semantics of types and terms by some
 notion of context, with the Yoneda embedding used to access this context
@@ -2622,7 +2566,7 @@ We write $\clocs{\Gamma}$ for the effect context obtained by removing
 all the ordinary variable bindings from $\Gamma$ and keeping only the
 location bindings.
 
-As in Girard~\cite{??}, we will use the fact that strongly normalizable
+As in Girard~\cite{girard1989proofs}, we will use the fact that strongly normalizable
 terms must have a bound on the length of their possible reduction
 sequences.
 \begin{lemma}
@@ -2707,7 +2651,7 @@ well-defined because the predicates are monotonic in $\alpha$.
 \subsection{Properties of reducibility}
 
 We prove the three properties of reducibility refered to as CR1, CR2 and
-CR3 in Girard~\cite{??}.
+CR3 in Girard~\cite{girard1989proofs}.
 
 Reducible values and computations are strongly normalizing (CR1):
 \begin{lemma}
@@ -3088,9 +3032,9 @@ Selection terms are reducible when built from reducible subterms.
 \label{lemma:red-out}
 \begin{align*}
   &v_s \in \redv{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}
-    \; \implies \; \outl{v_s} \in \redv{\Delta}{\yoneda{Sigma_1}}
+    \; \implies \; \outl{v_s} \in \redv{\Delta}{\yoneda{\Sigma_1}}
   &v_s \in \redv{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}
-    \; \implies \; \outr{v_s} \in \redv{\Delta}{\yoneda{Sigma_2}}
+    \; \implies \; \outr{v_s} \in \redv{\Delta}{\yoneda{\Sigma_2}}
 \end{align*}
 \end{lemma}
 \begin{proof}
@@ -3449,4 +3393,341 @@ embedding correctly models STLC.
 \subsection{Contextual equivalence}
 \subsection{Compositionality}
 \subsection{Adequacy}
+
+\section{OxCaml implementation}
+\label{apdx:implementation}
+The implementation of our OxCaml effect reflection interface in terms of
+unchecked effects\footnote{For convenience, we use the new handler
+  syntax from OCaml 5.3. However, the most recently released version of
+  OxCaml is based on OCaml 5.2 so the actual implementation uses
+  \lstinline[style=oxcaml]{Effect.Deep.match_with} instead} is shown in
+Fig.~\ref{fig:implementation}.
+\begin{figure}
+\begin{lstlisting}[style=oxcaml]
+module Handler (E : Sig) = struct
+
+  type t = { perform : 'r. 'r E.t -> 'r }
+
+end
+
+module Reflection (E : Sig) = struct
+  open Term(E)
+  open Handler(E)
+
+  let reify f = exclave
+    let module Eff =
+      struct type 'a Effect.t += C : 'a E.t -> 'a Effect.t end
+    in
+    let handler = { perform = fun o -> Effect.perform (Eff.C o) } in
+    match f handler with
+    | v -> Return v
+    | effect Eff.C o, k -> Perform(o, fun x -> Effect.continue k x)
+
+  let reify_global f =
+    let module Eff =
+      struct type 'a Effect.t += C : 'a E.t -> 'a Effect.t end
+    in
+    let handler =
+      { perform = fun o -> Effect.perform (Eff.C o) }
+    in
+    match f handler with
+    | v -> Return v
+    | effect Eff.C o, k -> Perform(o, fun x -> Effect.continue k x)
+
+  let perform t =
+   fun h -> h.perform t
+
+end
+
+module Select (L : Sig) (R : Sig) = struct
+  open Sum(L)(R)
+
+  let outl ({perform} : Handler(Sum(L)(R)).t) : Handler(L).t =
+    exclave {perform = fun op -> perform (Left op)}
+
+  let outr ({perform} : Handler(Sum(L)(R)).t) : Handler(R).t =
+    exclave {perform = fun op -> perform (Right op)}
+
+end
+\end{lstlisting}
+\caption{Implementation}
+\label{fig:implementation}
+\end{figure}
+
+\subsection{More efficient implementation in terms of fibers}
+
+In the implementation in Fig.\ref{fig:implementation}, because we are
+using OCaml's existing algebraic effect support, whenever an operation
+is reflected we perform a linear search up the stack of handlers until
+we find the corresponding one. This search is not actually necessary:
+there is a one-to-one relationship between the handlers and the handler
+values used to reflect operations. The linear search could be eliminated
+by extending the OxCaml runtime to support direct references to
+handlers. By allowing local values to point directly to the fiber
+structures that implement effect handlers, operations can jump
+immediately to the correct handler without traversing the stack. This
+optimization maintains the same interface while providing constant-time
+operation dispatch. It is roughly the implementation technique described
+by Ma et al.~\cite{ma2024lexical}.
+
+\section{Effect reflection in practice}
+\label{apdx:examples}
+\subsection{Example: State}
+
+As shown in the introduction we can implement an effect handler for
+state using out effect reflection API (Fig.~\ref{fig:ex-state}).
+
+\begin{figure}
+\begin{lstlisting}[style=oxcaml]
+  module State = struct
+    type 'a t =
+      | Get : int t
+      | Set : int -> unit t
+  end
+
+  module State_eff = Reflection(State)
+  type handler = Handler(State).t
+  open Term(State)
+
+  let handle_state i f =
+    let rec loop (s : int) = function
+      | Return x -> x
+      | Perform(Get, k) -> loop s (State_eff.continue k s)
+      | Perform(Set s', k) -> loop s' (State_eff.continue k ())
+    in
+    loop i (State_eff.reify f)
+
+  let get h =
+    State_eff.perform Get h
+
+  let set h i =
+    State_eff.perform (Set i) h
+\end{lstlisting}
+\caption{Example: State}
+\label{fig:ex-state}
+\end{figure}
+
+The implementation has the following interface:
+\begin{lstlisting}[style=oxcaml]
+    type handler
+
+    val handle_state : int -> (handler @ local -> 'a) @ local -> 'a
+    val get : handler @ local -> int
+    val set : handler @ local -> int -> unit
+\end{lstlisting}
+Note that we are able to use \lstinline[style=oxcaml]{reify} rather to
+than \lstinline[style=oxcaml]{reify_global} allowing the function passed
+to \lstinline[style=oxcaml]{handle_state} to be local.
+
+This shows how to implement state using effect reflection, but the same
+interface can also be implemented directly in OxCaml using mutable state
+and locality:
+\begin{lstlisting}[style=oxcaml]
+    type handler = int ref
+
+    let handle_state i f = f (ref i)
+    let get r = !r
+    let set r i = r := i
+\end{lstlisting}
+This implementation gives the same behaviour as the one built using
+effect reflection. Crucially it is just as easy to reason about, which
+in turn means it is just as easy to reason about as the state
+monad. This shows that the improved reasoning ability of the state monad
+over ordinary mutable state is precisely captured by the notion of
+locality.
+
+This transformation from effect reflection to local mutable state works
+for any \emph{tail-resumptive}\cite{xie2020effect} effect handler.
+
+\subsection{Example: Generators}
+
+A more realistic use of effect reflection is a \emph{generator}
+effect (Fig.~\ref{ex-generator}).
+
+\begin{figure}
+\begin{lstlisting}[style=oxcaml]
+  module Gen = struct
+    type 'a t =
+      | Gen : int -> unit t
+  end
+
+  module Gen_eff = Reflection(Gen)
+  open Term(Gen)
+
+  type ints =
+    | Finished
+    | More of int * (unit -> ints)
+
+  let handle_gen f =
+    let rec loop = function
+      | Return () -> Finished
+      | Perform(Gen i, k) -> More(i, fun () -> loop (Gen_eff.continue_global k ()))
+    in
+    loop (Gen_eff.reify_global f)
+
+  let gen h i =
+    Gen_eff.perform (Gen i) h
+\end{lstlisting}
+\caption{Example: Generators}
+\label{fig:ex-generator}
+\end{figure}
+
+This effect has a single operation \lstinline[style=oxcaml]{Gen}, along
+with a handler that turns computations using
+\lstinline[style=oxcaml]{Gen} into streams of integers.
+
+Unlike the state handler, here we must use
+\lstinline[style=oxcaml]{reify_global} rather than
+\lstinline[style=oxcaml]{reify} because our intention is that the
+resulting stream of integers be a global value that can escape the
+current region. Since it closes over the continuation
+\lstinline[style=oxcaml]{k}, we must use \lstinline[style=oxcaml]{reify_global}
+and require that \lstinline[style=oxcaml]{f} be global:
+\begin{lstlisting}[style=oxcaml]
+  val handle_gen : (Handler(Gen).t @ local -> unit) -> ints
+\end{lstlisting}
+
+\subsection{Example: Asynchronous I/O}
+
+Perhaps the most common use case for algebraic effects is for
+concurrency and asynchronous I/O. Implementing asynchronous I/O from
+scratch is beyond the scope of this paper, but we can build a simple
+version on top of an existing monadic concurrency library
+(Fig.~\ref{fig:ex-aio}). Assuming we have a monadic future type
+\lstinline[style=oxcaml]{'a Deferred.t} we can write concurrent code in
+direct style by using an effect with a single
+\lstinline[style=oxcaml]{Await} operation that waits for a future to be
+completed.
+
+\begin{figure}
+\begin{lstlisting}[style=oxcaml]
+  module Await : sig
+    type 'a t =
+      | Await : 'a Deferred.t -> 'a t
+  end
+
+  module Await_eff = Reflection(Await)
+  open Term(Await)
+
+  let handle_await f =
+    let rec loop = function
+      | Return x -> Deferred.return x
+      | Perform(Await d, k) ->
+          Deferred.bind d (fun x -> loop (Await_eff.continue_global k x))
+    in
+    loop (Await_eff.reify_global f)
+
+  let await h d =
+    Await_eff.perform (Await d) h
+\end{lstlisting}
+\caption{Example: Asynchronous I/O}
+\label{fig:ex-aio}
+\end{figure}
+
+Using this we can write direct-style code using asynchronous I/O:
+\begin{lstlisting}[style=oxcaml]
+    let copy_file h src dst =
+      let s = await h (File.read src) in
+      await h (File.write dst s)
+\end{lstlisting}
+
+\subsection{Nested effect handlers}
+
+A key feature of algebraic effects is how easily they compose. We can
+use state whilst using asynchronous I/O by simply nesting their
+handlers:
+\begin{lstlisting}[style=oxcaml]
+    handle_await (fun ah ->
+      handle_state i (fun sh ->
+        List.iter (fun fl ->
+          let s = await ah (File.read fl) in
+          let i = int_of_string s in
+          set sh (i + get sh)) files;
+        get sh))
+\end{lstlisting}
+
+This relies on the fact that \lstinline[style=oxcaml]{handle_state}
+uses \lstinline[style=oxcaml]{reify} rather than
+\lstinline[style=oxcaml]{reify_global} and so is able to operate on a
+local computation that closes over the local await handler value
+\lstinline[style=oxcaml]{ah}.
+
+If we try to do something similar using our
+\lstinline[style=oxcaml]{handle_gen} handler, then we get an error:
+\begin{lstlisting}[style=oxcaml]
+    handle_await (fun ah ->
+      handle_gen (fun gh ->
+        List.iter (fun fl ->
+          let s = await ah (File.read fl) in
+          let i = int_of_string s in
+          gen gh i) files))
+    (*@ \textcolor{red}{Error: let s = await ah (File.read fl) in} @*)
+                         (*@ \textcolor{red}{\textasciicircum\textasciicircum} @*)
+    (*@ \textcolor{red}{ This value is local and would escape its region.} @*)
+\end{lstlisting}
+
+We could change the definition of \lstinline[style=oxcaml]{handle_gen}
+to use \lstinline[style=oxcaml]{reify} instead of
+\lstinline[style=oxcaml]{reify_global}, but then we would lose the property
+that the generator we produce can be passed around freely. Instead we
+need to build a handler that can \emph{forward} the
+\lstinline[style=oxcaml]{Await} operation to different effect handlers
+at different points in the program's execution.
+
+\subsection{Effect sums and effect forwarding}
+
+Composing handlers like \lstinline[style=oxcaml]{handle_gen}, that use
+\lstinline[style=oxcaml]{reify_global} rather than
+\lstinline[style=oxcaml]{reify}, is a fundamentally more involved
+operation. Consider the case of generators that are able to use
+asynchronous I/O. We are given a computation that performs both
+\lstinline[style=oxcaml]{Await} and \lstinline[style=oxcaml]{Gen}
+operations and we'd like to turn it into a stream of integers.  We would
+like to be able to freely pass this stream around. In particular, we do
+not wish the stream to be prevented from escaping the scope of the
+current \lstinline[style=oxcaml]{Await} handler.  However forcing parts
+of the stream requires performing additional
+\lstinline[style=oxcaml]{Await} operations, so whenever we force part of
+the stream we'll need to provide a handler for those
+\lstinline[style=oxcaml]{Await} operations again.
+
+To achieve this more general form of composition, we must use the
+selection operations \lstinline[style=oxcaml]{outl} and
+\lstinline[style=oxcaml]{outr}. Using these we can write our desired
+handler for the \lstinline[style=oxcaml]{Gen} effect by instead writing
+a handler for \lstinline[style=oxcaml]{Sum(Await)(Gen)} that forwards
+all the \lstinline[style=oxcaml]{Await} operations on to another
+handler.
+
+\begin{lstlisting}[style=oxcaml]
+  module Eff = Reflection(Sum(Await)(Gen))
+  module Sel = Select(Await)(Gen)
+
+  type aints =
+    | Finished
+    | More of int * (Handler(Await).t @ local -> aints)
+
+  let handle_gen_in_await f ah =
+    let rec loop ah = function
+      | Return () -> Finished
+      | Perform(Left op, k) -> loop ah (Eff.continue_global k (perform ah op))
+      | Perform(Right(Gen i), k) ->
+          More(i, fun ah -> loop ah (Eff.continue_global k ()))
+    in
+    loop ah (Eff.reify_global (fun h -> f (Sel.outl h) (Sel.outr h))
+\end{lstlisting}
+
+The need for explicit effect forwarding is a short-coming of all systems
+based around effect capabilities. This includes named handlers
+(\cite{xie2022first}) and lexical effect handlers
+(\cite{biernacki2019binders}). Examples like this one fundamentally
+require that performing an \lstinline[style=oxcaml]{Await} operation
+does work proportional to the number of handlers it is forwarded
+through. Effect capabilities do a constant amount of work to perform
+operations and so cannot handle such examples directly. Traditional
+effect handlers, on the other hand, \textbf{always} do work proportional
+to the number of nested handlers, allowing them to support such examples
+directly but paying a higher cost for the cases that do not need
+forwarding.
+
 \end{document}

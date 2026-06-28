@@ -1,29 +1,15 @@
 
 # Section 1
 
-- Expand on the motivation in Section 1 and give more surrounding
-  context.
+- Improve the description of the inductive type of a signature
 
-- Include an example from Effekt in Section 1 to illustrate lexical
-  effect handlers. It should also explicitly discuss the trade-offs
-  bewteen lexical and non-lexical handlers.
+# Section 2
 
-- Delay the full OxCaml state example until Section 2, rather than
-  repeating it, to give us some more space.
-
-- In Section 1, replace the overview of the paper with an explicit list
-  of contributions based on the list from the rebuttal.
-
-- Include the shift from countable to bounded Lawvere theories as a
-  contribution.
+- Consider adding global parameters so that the embedding of STLC is direct.
 
 # Section 3
 
-- Add crisp version of rec.
-
-# Section 4
-
-- Add additional citations to section 4. There are currently no
+- Add additional citations to section 3. There are currently no
   citations for the general background material (e.g. Lawvere theories)
   or the semantics of algebraic effects.
 
@@ -52,20 +38,10 @@
 
 # Section 5
 
-- Add some sentences to Section (Implementation) discussing the
-  performance of the implementation compared to directly using OCaml's
-  algebraic effects.
-
-# Section 6
-
-- Rework parts of Section (Related Work) to improve the comparison with
+- Rework parts of Section 5 (Related Work) to improve the comparison with
   other work.
 
 # Appendices
-
-- Write the proof for subject reduction
-
-- Write the proof for strong normalization
 
 - Write proofs of the lemmas about Psh(Law^op)
 
@@ -86,3 +62,6 @@
 - Add an artifact to the submission. Just the contents Figure 8 plus
   some build rules and instructions.
 
+- Replace any use of "handler type" with "effect capability type"
+
+- Rename Bounded Lawvere Theories to Small Lawvere Theories and rename Law to Law_s
