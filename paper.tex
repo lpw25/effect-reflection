@@ -52,7 +52,7 @@
 \newcommand{\psh}{\widehat{\cat}}
 \newcommand{\terminal}{\top}
 \newcommand{\initial}{\bot}
-\newcommand{\lawc}{\mathrm{Law}}
+\newcommand{\lawc}{\mathrm{Law_s}}
 \newcommand{\lawcop}{\lawc^{\mathtt{op}}}
 \newcommand{\pshlawcop}{\widehat{\lawcop}}
 \newcommand{\freef}{Free}
@@ -213,7 +213,7 @@
   \end{itemize}
   This isomorphism emerges naturally, as a corollary of the Yoneda
   lemma, from the \emph{Ambient Monad model}: a novel semantic model of
-  algebraic effects in terms of presheaves over bounded Lawvere
+  algebraic effects in terms of presheaves over small Lawvere
   theories.
 
   Effect reflection provides all the expressiveness of typed algebraic
@@ -294,21 +294,23 @@ Most algebraic effect systems (\cite{hillerstrom2016liberating},
 \cite{biernacki2019binders}, \cite{brachthauser2020effects},
 \cite{xie2022first}) solve the problem of unhandled effects by extending
 their type system to explicitly track the effects that a function may
-perform. The effect annotation on a function's type essentially
-describes the implicit monad used by that function.
+perform.
 
 In such a system, the operations of our integer state example would have
 types like:
 \begin{lstlisting}[style=oxcaml]
     val handle_state : (unit -[istate | 'e]-> 'a) -> int -['e]-> 'a
-    val get : unit -[istate | 'e]-> int
-    val set : int -[istate | 'e]-> unit
+    val get : unit -[istate]-> int
+    val set : int -[istate]-> unit
 \end{lstlisting}
+with effect annotations on function arrows describing the monad
+implicitly used by those functions, and effect variables used to relate
+the monads of different functions.
 
 The details vary between systems, but to avoid excessive user
 annotation, such effect systems tend to have subtle inference built on
-implicit subtyping or row polymorphism
-(\cite{hillerstrom2016liberating}, \cite{leijen2014koka}).
+row polymorphism (\cite{hillerstrom2016liberating},
+\cite{leijen2014koka}) or implicit subtyping.
 
 A particular source of complexity in such systems is that they require
 \emph{effect polymorphism} to type higher-order functions. For example,
@@ -337,14 +339,17 @@ In such systems the type of \lstinline[style=oxcaml]{List.map} can be:
     val map : ('a -> 'b) -> 'a list -> 'b list
 \end{lstlisting}
 whilst still allowing it to interoperate with functions using algebraic
-effects. The types of our integer state functions might be something like:
+effects. The types of our integer state operations might be something like:
 \begin{lstlisting}[style=oxcaml]
-    val handle_state : (unit -[istate]-> 'a) -> int -> 'a
     val get : unit -[istate]-> int
     val set : int -[istate]-> unit
 \end{lstlisting}
 specifying that an integer state effect must be added to the ambient
-monad before they can be used.
+monad before they can be used. The type of their handler would be:
+\begin{lstlisting}[style=oxcaml]
+    val handle_state : (unit -[istate]-> 'a) -> int -> 'a
+\end{lstlisting}
+indicating that it extends the ambient monad with an additional effect.
 
 Brachth{\"a}user et al.~\cite{brachthauser2020effects} describe this
 approach as ``lightweight effect polymorphism'' because it brings much
@@ -353,24 +358,57 @@ annotations on all higher-order functions.
 
 However, allowing functions to use any effects available at their
 definition site requires restricting them in some way: they must be
-prevented from leaving the scope of an effect handler because they may
-be implicitly relying on that effect handler.
+prevented from leaving the scope of an effect handler in case they are
+implicitly relying on that effect handler.
 
 Existing systems accomplish this by making functions second-class, or
 via sophisticated modal effect or capability types that can be used to
 track which effect handlers a value may depend on. In this paper we will
-show that all that is really required is some type-level way to track
-locality such as Rust's lifetimes or OxCaml's
-\lstinline[style=oxcaml]{local} mode.
+show that all that is required is some type-level way to track locality
+such as Rust's lifetimes or OxCaml's \lstinline[style=oxcaml]{local}
+mode.
 
 \subsection{The Ambient Monad model}
 
 If we are going to make changing the ambient monad the basis of our
 algebraic effects then we should build a changeable ambient monad right
-into our semantic model. \emph{We should index the meaning of types and
-  terms by the ambient monad}.
+into our semantic model.
 
-Rather than have the semantics of our types be sets:
+\subsubsection{Which monads?}
+
+The first question we must answer is: which monads should be allowed as
+the ambient monad?
+
+The sum of two arbitrary monads does not necessarily exist. This is why
+monads do not always compose easily. The key to the composability of
+algebraic effects lies in the fact that two monads built out of
+algebraic theories always have a sum. We'd like to restrict ourselves to
+such monads.
+
+The categorical representation of the traditional notion of algebraic
+theory is a \emph{(finitary) Lawvere Theory}. These have a finite set of
+operations with finite arities. Restricting ourselves to just the monads
+built out of these would be too restictive: we could support
+Boolean state but not state holding natural numbers.
+
+In the algebraic effects literature the most common choice is to use
+countable Lawvere Theories. However, this still restricts us to
+algebraic theories with a countable set of operations of countable
+arity: it supports a state effect for $\nat$ but not for
+$\nat \arr \nat$.
+
+This short-coming of models of algebraic effects in the literature is
+mostly glossed over, but here instead we solve it by defining the notion
+of \emph{small Lawvere Theory}: a Lawvere theory corresponding to
+an algebraic theories whose set of operations and their arities are bound
+by some regular cardinal $\kappa$. This allows us to use any type for
+the parameters or arity of an operation.
+
+\subsection{The ambient monad}
+
+Now that we have a representation for possible ambient monads \emph{we
+  should index the meaning of types and terms by the ambient
+  monad}. Rather than have the semantics of our types be sets:
 \begin{equation*}
 \sem{\tau} \types \setc
 \end{equation*}
@@ -378,9 +416,8 @@ we should have them be functors from $\lawc$ to $\setc$:
 \begin{equation*}
 \sem{\tau} \types \lawc \arr \setc
 \end{equation*}
-where $\lawc$ is a category whose objects correspond to suitable monads
-and whose morphisms correspond to monad morphisms. For each object
-$L \types \lawc$ we write $T_L$ for its corresponding monad.
+where $\lawc$ is the category of small Lawvere Theories. For each
+object $L \types \lawc$ we write $T_L$ for its corresponding monad.
 
 These functors are presheaves and so they support all the standard
 constructions (products, coproducts, exponentials, etc.) needed to
@@ -400,7 +437,7 @@ an alternative presentation of algebraic effects.
 \subsubsection{Reflecting operations}
 
 The Yoneda embedding of $L \types \lawc$ immediately gives us a suitable
-semantics for a type family of \emph{effect capabilities} $\yoneda{L}$:
+semantics for a family of \emph{effect capability} types $\yoneda{L}$:
 \begin{equation*}
 \sem{\yoneda{L}} = \homset{\lawc}{L}{\_}
 \end{equation*}
@@ -416,16 +453,17 @@ $v_h \types \yoneda{\Sigma}$ to perform $op$ parameterized by the value
 $v_p \types \tau_p$, returning a value of type $\tau_a$.
 
 These effect capabilities are closely related to \emph{named handlers}
-(\cite{xie2022first}), and \emph{lexical effect handlers}
-(\cite{biernacki2019binders}). They can give you values that represent
-handlers that are currently in scope.
+(\cite{xie2022first}) and \emph{lexical effect handlers}
+(\cite{biernacki2019binders}). They give you values that can represent
+the handlers that are currently in scope.
 
 The Yoneda Lemma applied to the semantics of computations tells us that
 functions from $\yoneda{L}$ correspond to the sum of the ambient monad
 $T_{L^{\prime}}$ with the monad $T_L$:
-\begin{equation*}
+\begin{equation}
+\label{eq:yoneda}
 \sem{\yoneda{L} \arr \tau}(L^{\prime}) \cong T_{L^{\prime}+L}(\sem{\tau}(L^{\prime}+L))
-\end{equation*}
+\end{equation}
 
 \subsubsection{The global modality}
 
@@ -444,7 +482,7 @@ depend on the ambient monad. In particular,
 showing that functions within the global comonad correspond to pure
 mathematical functions.
 
-We will use this as the semantics for a global modality $glob$:
+We will use this as the semantics for a global modality $\glob$:
 \begin{equation*}
 \sem{\glob \tau} = \glob(\sem{\tau})
 \end{equation*}
@@ -456,24 +494,32 @@ signature $\Sigma$ with no equations -- i.e. the objects in $\lawc$ that
 correspond to free monads -- then we can represent the sum of
 $T_{\Sigma}$ with the ambient monad directly as an inductive type
 $\ind{\Sigma}$. $\ind{\Sigma}$ is sometimes called the freer
-monad~\cite{kiselyov2015freer}. It has a unit constructor and a
-constructor for each operation in $\Sigma$.
+monad~\cite{kiselyov2015freer}.
 
-Here is $\ind{\Sigma}$ for the signature of the integer state effect in OxCaml:
+$\ind{\Sigma}{\tau}$ has a unit constructor $\ret{v_r}$ where
+$v_r \types \tau$, and for each parameterized operation
+$op \types \tau_p \rightarrowtail \tau_a$ in $\Sigma$ it has a
+constructor $\indintro{op}{v_p}{v_k}$ where $v_p \types \tau_p$ and
+$v_k \types \glob \tau_a \arr \ind{\Sigma}(\tau)$.
+
+\begin{example}
+  $\ind{\Sigma}$ for the signature of the integer state effect in OxCaml
+  is equivalent to:
 \begin{lstlisting}[style=oxcaml]
-  type 'a t =
-    | Return of 'a @@ global
-    | Get of (int -> 'a t)
-    | Set of int * (unit -> 'a t)
+    type 'a t =
+      | Return of 'a @@ global
+      | Get of (int -> 'a t)
+      | Set of int * (unit -> 'a t)
 \end{lstlisting}
-where \lstinline[style=oxcaml]{@@ global} is the OxCaml syntax
-corresponding to the global modality.
+  where \lstinline[style=oxcaml]{@@ global} is the OxCaml syntax
+  corresponding to the global modality.
+\end{example}
 
 By a theorem of Hyland et al.~\cite{hyland2006combining}, we have that:
 \begin{equation*}
 \sem{\ind{\Sigma}(\tau)}(L) \cong T_{L+\Sigma}(\sem{\tau}(\initial))
 \end{equation*}
-and thus we have an isomorphism:
+which, combined with (\ref{eq:yoneda}), gives us an isomorphism:
 \begin{equation*}
 \sem{\ind{\Sigma}(\tau)} \cong \sem{\yoneda{\Sigma} \arr \glob \tau}
 \end{equation*}
@@ -488,34 +534,7 @@ by reflection of operations. We can provide the backwards direction as a
 reification construct: for any signature $\Sigma$, we provide the
 computation $\reify{\loc}{c}$ that binds $\loc$ to an effect capability
 of type $\yoneda{\Sigma}$ in the computation $c \types \glob \tau$ and
-reifies the uses of $\loc$ in $c$ as a $\ind{\Sigma}(tau)$.
-
-\subsubsection{Bounded Lawvere Theories}
-
-Note that the model we just outlined requires a suitable choice of
-category $\lawc$. In particular, it requires that $\lawc$ has all
-coproducts: that any pair of monads in it have a well-defined sum. We
-achieve this by restricting ourselves to those monads that can be
-defined as the free algebra of some algebraic theory.
-
-This, in turn, requires us to fix a choice of definition for algebraic
-theory. The traditional definition is that of a (finitary) Lawvere
-Theory. However, that would restrict us to effects with a finite set of
-operations of finite arity.
-
-In the algebraic effects literature the most common choice is to use
-countable Lawvere Theories as the definition of algebraic
-theory. However, this still restricts us to effects with a countable set
-of operations of countable arity: it supports a state effect for $\nat$
-but not for $\nat \arr \nat$.
-
-This short-coming of models of algebraic effects in the literature is
-mostly glossed over, but here instead we solve it by defining the notion
-of \emph{Bounded Lawvere Theories}: those Lawvere theories whose set of
-operations and their arities are bound by some regular cardinal
-$\kappa$. Bounded Lawvere Theories correspond to monads of arbitrary
-rank. They allow us to use any type for the parameters or arity of an
-operation.
+reifies the uses of $\loc$ in $c$ as a $\ind{\Sigma}(\tau)$.
 
 \subsection{Locality in OxCaml}
 \label{sec:locality}
@@ -714,11 +733,11 @@ We make the following contributions:
   use it to give a denotational semantics of our lambda calculus with
   effect reflection.  We prove that this semantics is sound,
   compositional and adequate.  (Section \ref{sec:semantics})
-\item We define the category of Bounded Lawvere Theories, and show it
+\item We define the category of small Lawvere Theories, and show it
   has all the required structure for the Ambient Monad model. This
   solves the size restrictions that are present in existing models of
   algebraic effects based on countable Lawvere Theories. (Section
-  \ref{sec:bounded})
+  \ref{sec:small})
 \item We give a simple implementation of effect reflection in OxCaml
   using its support for tracking locality in the type system and the
   untracked algebraic effects it inherits from OCaml. We demonstrate its
@@ -815,11 +834,11 @@ rather than a computation. We can define a computation version as:
 
 \subsection{Locality}
 
-We track locality in the language via a global comonadic modality
-$\glob$. In our setting being global means not depending on the ambient
-monad. For example, $1 \arr 1$ represents computations that may
-use operations from the ambient monad, while $\glob (1 \arr 1)$
-contains only pure computations that ignore the ambient monad.
+We track locality via a global comonadic modality $\glob$. In our
+setting being global means not depending on the ambient monad. For
+example, $1 \arr 1$ represents computations that may use operations from
+the ambient monad, while $\glob (1 \arr 1)$ contains only pure
+computations that ignore the ambient monad.
 
 When using $\gbox{v}$ to build a value with a global type, we can only
 use existing values that also have a global type. We achieve this using
@@ -1020,19 +1039,19 @@ components.
 
 \subsection{Effect reflection}
 
-The language provides a type $\yoneda{\Sigma}$ for each $\Sigma$ to
-represent mappings from the operations of $\Sigma$ into the current
-ambient monad. Effect reflection appears in the language as two
-constructs: reflection and reification. Reflection $\performraw{v}{op}$
-uses a value $v \types \yoneda{\Sigma}$ to map the operation $op$ from
-$\Sigma$ into the ambient monad.  Reification $\reifyname$ extends the
-ambient monad with the operations from some $\Sigma$, providing a value
-of type $\yoneda{\Sigma}$ for constructing those operations via
-reflection.  These constructs implement the core isomorphism of effect
-reflection: reification can convert functions
-$\yoneda{\Sigma} \arr \glob \tau$ into terms $\ind{\Sigma}(\tau)$, while
-reflection provides the inverse direction. Their syntax and typing rules
-are shown in Fig.\ref{fig:typing-reflection}.
+We provides a type $\yoneda{\Sigma}$ for each algebraic signature
+$\Sigma$ to represent mappings from the operations of $\Sigma$ into the
+current ambient monad. Effect reflection appears as two constructs:
+reflection and reification. Reflection $\performraw{v}{op}$ uses a value
+$v \types \yoneda{\Sigma}$ to map the operation $op$ from $\Sigma$ into
+the ambient monad.  Reification $\reifyname$ extends the ambient monad
+with the operations from some $\Sigma$, providing a value of type
+$\yoneda{\Sigma}$ for constructing those operations via reflection.
+These constructs implement the core isomorphism of effect reflection:
+reification can convert functions $\yoneda{\Sigma} \arr \glob \tau$ into
+terms $\ind{\Sigma}(\tau)$, while reflection provides the inverse
+direction. Their syntax and typing rules are shown in
+Fig.\ref{fig:typing-reflection}.
 
 \begin{figure}
 \begin{align*}
@@ -1228,33 +1247,31 @@ Simply Typed Lambda Calculus (STLC) into this language as values. This
 demonstrates that the language is a proper extension of STLC. We show this
 embedding and prove it correct in Appendix~\ref{apdx:embedding}.
 
-\section{The ambient monad model}
+\section{The Ambient Monad model}
 \label{sec:semantics}
 
 The design of effect reflection falls out naturally from a novel
-semantic model built on presheaves. This semantic foundation not only
-validates our approach but also makes the connection between locality
-and effects precise. The key idea is to index the meaning of types by an
-ambient algebraic monad of effects: rather than have the semantics of
-each type be a set of elements, the semantics of each type is a mapping
-from the ambient monad to a set of elements. We give a denotational
-semantics to the language from Section~\ref{sec:language} using this
-model.
+semantic model of effectful computations. The key idea is to index the
+meaning of types and terms by an ambient algebraic monad of effects:
+rather than have the semantics of each type be a set of elements, the
+semantics of each type is a mapping from the ambient monad to a set of
+elements. We give a denotational semantics to the language from
+Section~\ref{sec:language} using this model.
 
 \subsection{Algebraic monads}
 
 In order to index the meaning of our types by the ambient monad we need
 some way of representing that ambient monad. As with all approaches to
 algebraic effects, we must restrict ourselves to monads that have some
-nice properties, in particular we need the sum of two of these monads to
-always exists.
+nice properties, in particular we need the sum of any two of these
+monads to exist.
 
 To this end, we will restrict the ambient monad to be an \emph{algebraic
-  monad}: one that can be expressed as the free algebras of an algebraic
-theory. Note that this definition of algebraic monad is not precise:
-different choices for the definition of ``algebraic theory'' give you
-different meanings for ``algebraic monad''. We'll make our particular
-choice over the course of this section.
+  monad}: one that can be expressed as the free algebras of some
+algebraic theory. Note that this definition of algebraic monad is not
+yet precise: different choices for the definition of ``algebraic
+theory'' give you different meanings for ``algebraic monad''. We'll make
+our particular choice over the course of this section.
 
 We recall the definitions of algebraic signature, terms of a signature,
 algebraic theory and models of a theory.
@@ -1315,10 +1332,10 @@ algebraic theory and models of a theory.
 \end{example}
 
 Arities in algebraic signatures are often considered as natural numbers,
-but they can equivalently be just sets, with families of terms indexed
-by that set used as the arguments of that operator in a term. It is also
-convenient to allow families of operations parameterized by some set. As
-such, we can present a signature in the form:
+but they can equivalently be sets, with families of terms indexed by
+that set used as the arguments of that operator in a term. It is also
+convenient to allow families of operations parameterized by some
+set. This gives us signatures of the form:
 \begin{equation*}
 \{ op_1 \types P_1 \rightarrowtail A_1; \ldots; op_n
 \types P_n \rightarrowtail A_n \}
@@ -1372,8 +1389,8 @@ require more generality. $\nat$ state needs countable arities, while
 $\nat \rightarrow \nat$ state requires uncountable arities.  For these
 we must extend algebraic signatures to allow for arbitrary sets of
 operations with arbitrary sets as arities. Such algebraic theories are
-called \emph{bounded infinitary algebraic theories}. They are
-``bounded'' because for each such theory there is some regular cardinal
+called \emph{small infinitary algebraic theories}. They are
+``small'' because for each such theory there is some regular cardinal
 $\kappa$ that is a bound on the arities of the theory. An algebraic
 theory with some bound $\kappa$ corresponds to a monad with rank
 $\kappa$. Thus we take monads with a rank as our precise definition of
@@ -1387,8 +1404,8 @@ algebraic operations for the continuation monad you get something that
 is too large to be a set. This is closely related to the strict
 positivity restriction on inductive type definitions.
 
-\subsection{(Bounded) Lawvere theories}
-\label{sec:bounded}
+\subsection{Small Lawvere theories}
+\label{sec:small}
 
 We use \emph{Lawvere theories} as our concrete representation of the
 ambient algebraic monad. Lawvere theories are a categorical
@@ -1409,13 +1426,13 @@ $L \rightarrow \setc$.
 Lawvere theories correspond to the traditional form of algebraic
 theories: those with a finite set of operations with finite arities, but
 we can extend the definition to get something that corresponds to
-\emph{bounded infinitary algebraic theories}.
+\emph{small infinitary algebraic theories}.
 \begin{definition}
-  A \emph{Bounded Lawvere theory} is a small category $L$ with small
+  A \emph{Small Lawvere theory} is a small category $L$ with small
   products in which every object is isomorphic to some small cartesian
   product $\Pi_S X$ of a distinguished object $X$.
 \end{definition}
-Note that the ``bounded'' aspect of the definition comes from the
+Note that the ``small'' aspect of the definition comes from the
 restriction that the category be small.
 
 We will mostly describe Lawvere theories and constructions on them in
@@ -1423,7 +1440,7 @@ terms of their presentations as algebraic theories, so an understanding
 the details of Lawvere theories is not required for understanding the
 rest of this paper.
 
-Bounded Lawvere theories form a category $\lawc$ whose morphisms are
+Small Lawvere theories form a category $\lawc$ whose morphisms are
 equivalent to maps from the operations of one theory to the operations
 of another that preserve the equations of the first theory according to
 the equations of the second.
@@ -1556,7 +1573,7 @@ $\glob$ bindings.
 \begin{align*}
 &\sem{\glob \tau} = \glob \sem{\tau} \\
 &\sem{\gbind{\Gamma}{x}{\tau}} = \sem{\Gamma} \times \glob \sem{\tau} \\
-&\sem{\tau_1 \arr \tau_2} = \arrow{\glob \sem{\tau_1}}{\mon(\sem{\tau_2})}
+&\sem{\tau_1 \arr \tau_2} = \arrow{\glob \sem{\tau_1}}{\mon(\sem{\tau_2})} \\
 &\sem{\gbind{\Gamma}{x}{\tau} \turnv x \types \tau} = \epsilon \circ \snd \\
 &\sem{\Gamma \turnv \gbox{v} \types \glob \tau} =
   \glob \sem{\cdiv{\Gamma} \turnv v \types \tau}
@@ -1607,7 +1624,7 @@ and some presheaf $P$, we can build a morphism:
 which uses an element of $\yoneda{L}$ to map $op$ into the ambient monad
 and then uses that to construct a term in the free algebras monad.
 
-We use $\yoneda{L}$ as the semantics for our handler types, and
+We use $\yoneda{L}$ as the semantics for our effect capabilities, and
 $op_{\mon{P}}$ as the semantics for reflection.
 \begin{align*}
 &\sem{\yoneda{\Sigma}} = \yoneda{\sem{\Sigma}} \\

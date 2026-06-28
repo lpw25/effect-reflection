@@ -1,12 +1,4 @@
 
-# Section 1
-
-- Improve the description of the inductive type of a signature
-
-# Section 2
-
-- Consider adding global parameters so that the embedding of STLC is direct.
-
 # Section 3
 
 - Add additional citations to section 3. There are currently no
@@ -61,7 +53,3 @@
 
 - Add an artifact to the submission. Just the contents Figure 8 plus
   some build rules and instructions.
-
-- Replace any use of "handler type" with "effect capability type"
-
-- Rename Bounded Lawvere Theories to Small Lawvere Theories and rename Law to Law_s
