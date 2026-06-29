@@ -5,15 +5,6 @@
   citations for the general background material (e.g. Lawvere theories)
   or the semantics of algebraic effects.
 
-- Add the following lemmas about Psh(Law^op):
-
-    * It is a topos. This relies on coslices in Law being essentially small.
-    * It has a natural number object
-    * The Yoneda Lemma and Yoneda embedding work. I think this follows
-      from Law being locally small.
-
-  The proofs of these will be added to the appendices.
-
 - Give more detailed descriptions of the following constructions:
 
     * The construction of the free algebras monad
@@ -53,3 +44,6 @@
 
 - Add an artifact to the submission. Just the contents Figure 8 plus
   some build rules and instructions.
+
+- Consider adjusting the definition of morphism for small Lawvere
+  theories such that the choice of bound does not matter.

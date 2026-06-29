@@ -53,8 +53,10 @@
 \newcommand{\terminal}{\top}
 \newcommand{\initial}{\bot}
 \newcommand{\lawc}{\mathrm{Law_s}}
+\newcommand{\lawfc}{\mathrm{Law_f}}
 \newcommand{\lawcop}{\lawc^{\mathtt{op}}}
 \newcommand{\pshlawcop}{\widehat{\lawcop}}
+\newcommand{\pshlawc}{\widehat{\lawc}}
 \newcommand{\freef}{Free}
 \newcommand{\constfname}{\Omega}
 \newcommand{\constf}[1]{\constfname #1}
@@ -386,20 +388,20 @@ algebraic theories always have a sum. We'd like to restrict ourselves to
 such monads.
 
 The categorical representation of the traditional notion of algebraic
-theory is a \emph{(finitary) Lawvere Theory}. These have a finite set of
+theory is a \emph{(finitary) Lawvere theory}. These have a finite set of
 operations with finite arities. Restricting ourselves to just the monads
 built out of these would be too restictive: we could support
-Boolean state but not state holding natural numbers.
+boolean state but not state holding natural numbers.
 
 In the algebraic effects literature the most common choice is to use
-countable Lawvere Theories. However, this still restricts us to
+countable Lawvere theories. However, this still restricts us to
 algebraic theories with a countable set of operations of countable
 arity: it supports a state effect for $\nat$ but not for
 $\nat \arr \nat$.
 
 This short-coming of models of algebraic effects in the literature is
 mostly glossed over, but here instead we solve it by defining the notion
-of \emph{small Lawvere Theory}: a Lawvere theory corresponding to
+of \emph{small Lawvere theory}: a Lawvere theory corresponding to
 an algebraic theories whose set of operations and their arities are bound
 by some regular cardinal $\kappa$. This allows us to use any type for
 the parameters or arity of an operation.
@@ -416,7 +418,7 @@ we should have them be functors from $\lawc$ to $\setc$:
 \begin{equation*}
 \sem{\tau} \types \lawc \arr \setc
 \end{equation*}
-where $\lawc$ is the category of small Lawvere Theories. For each
+where $\lawc$ is the category of small Lawvere theories. For each
 object $L \types \lawc$ we write $T_L$ for its corresponding monad.
 
 These functors are presheaves and so they support all the standard
@@ -733,10 +735,10 @@ We make the following contributions:
   use it to give a denotational semantics of our lambda calculus with
   effect reflection.  We prove that this semantics is sound,
   compositional and adequate.  (Section \ref{sec:semantics})
-\item We define the category of small Lawvere Theories, and show it
+\item We describe the category of small Lawvere theories, and show it
   has all the required structure for the Ambient Monad model. This
   solves the size restrictions that are present in existing models of
-  algebraic effects based on countable Lawvere Theories. (Section
+  algebraic effects based on countable Lawvere theories. (Section
   \ref{sec:small})
 \item We give a simple implementation of effect reflection in OxCaml
   using its support for tracking locality in the type system and the
@@ -1251,27 +1253,25 @@ embedding and prove it correct in Appendix~\ref{apdx:embedding}.
 \label{sec:semantics}
 
 The design of effect reflection falls out naturally from a novel
-semantic model of effectful computations. The key idea is to index the
+semantic model of algebraic effects. The key idea is to index the
 meaning of types and terms by an ambient algebraic monad of effects:
 rather than have the semantics of each type be a set of elements, the
 semantics of each type is a mapping from the ambient monad to a set of
 elements. We give a denotational semantics to the language from
 Section~\ref{sec:language} using this model.
 
-\subsection{Algebraic monads}
+\subsection{Algebraic Theories and Free Algebras}
 
-In order to index the meaning of our types by the ambient monad we need
-some way of representing that ambient monad. As with all approaches to
-algebraic effects, we must restrict ourselves to monads that have some
-nice properties, in particular we need the sum of any two of these
-monads to exist.
+We need the monads we use for the ambient monad to have a well-defined
+notion of sum. This is a requirement for composable effect handlers:
+within the effect handler the ambient monad will be the sum of the
+handled effect and the ambient monad outside of the hander. That rules
+out allowing all monads as the ambient monad, since the sum of two
+arbitrary monads may not exist.
 
-To this end, we will restrict the ambient monad to be an \emph{algebraic
-  monad}: one that can be expressed as the free algebras of some
-algebraic theory. Note that this definition of algebraic monad is not
-yet precise: different choices for the definition of ``algebraic
-theory'' give you different meanings for ``algebraic monad''. We'll make
-our particular choice over the course of this section.
+Algebraic effects ensure that such a sum always exists by only
+supporting monads that are the free algebra of some algebraic theory. We
+use the same approach for the Ambient Monad model.
 
 We recall the definitions of algebraic signature, terms of a signature,
 algebraic theory and models of a theory.
@@ -1383,34 +1383,12 @@ $\Sigma$ with arity $k$ and each $a_i$ is an element of $A$.
   \end{lstlisting}
 \end{example}
 
-Traditional algebraic signatures are restricted to the case of a finite
-set of operations each with a finite arity, but programming languages
-require more generality. $\nat$ state needs countable arities, while
-$\nat \rightarrow \nat$ state requires uncountable arities.  For these
-we must extend algebraic signatures to allow for arbitrary sets of
-operations with arbitrary sets as arities. Such algebraic theories are
-called \emph{small infinitary algebraic theories}. They are
-``small'' because for each such theory there is some regular cardinal
-$\kappa$ that is a bound on the arities of the theory. An algebraic
-theory with some bound $\kappa$ corresponds to a monad with rank
-$\kappa$. Thus we take monads with a rank as our precise definition of
-algebraic monad.
+\subsection{Lawvere theories}
 
-Most monads used in practice for programming are algebraic by this
-definition, with the notable exception of the continuation monad. The
-issue with trying to represent non-algebraic monads algebraically is
-essentially one of size: if you try to write down the collection of
-algebraic operations for the continuation monad you get something that
-is too large to be a set. This is closely related to the strict
-positivity restriction on inductive type definitions.
-
-\subsection{Small Lawvere theories}
-\label{sec:small}
-
-We use \emph{Lawvere theories} as our concrete representation of the
-ambient algebraic monad. Lawvere theories are a categorical
-representation of algebraic theories that doesn't depend on the
-particular choice of operations and equations.
+\emph{Lawvere theories} are a categorical representation of algebraic
+theories that doesn't depend on the particular choice of operations and
+equations. We will use them as our concrete representation of the
+ambient monad.
 
 \begin{definition}
   A \emph{Lawvere theory} is a category $L$ with finite products in
@@ -1423,70 +1401,106 @@ of $L$ with $n$ free variables quotiented by the equations in $L$. A
 model of a Lawvere theory $L$ is a product-preserving functor
 $L \rightarrow \setc$.
 
-Lawvere theories correspond to the traditional form of algebraic
-theories: those with a finite set of operations with finite arities, but
-we can extend the definition to get something that corresponds to
-\emph{small infinitary algebraic theories}.
-\begin{definition}
-  A \emph{Small Lawvere theory} is a small category $L$ with small
-  products in which every object is isomorphic to some small cartesian
-  product $\Pi_S X$ of a distinguished object $X$.
-\end{definition}
-Note that the ``small'' aspect of the definition comes from the
-restriction that the category be small.
-
 We will mostly describe Lawvere theories and constructions on them in
 terms of their presentations as algebraic theories, so an understanding
 the details of Lawvere theories is not required for understanding the
-rest of this paper.
+bulk of this paper
 
-Small Lawvere theories form a category $\lawc$ whose morphisms are
+Lawvere theories form a category $\lawfc$ whose morphisms are
 equivalent to maps from the operations of one theory to the operations
 of another that preserve the equations of the first theory according to
 the equations of the second.
 
-$\lawc$ has an initial object $\initial$, which is the algebraic theory
-with no operations. It also has coproducts $L + L^{\prime}$ which is the
-theory made by unioning the operations and equations of $L$ and
-$L^{\prime}$.
+\subsection{Small Lawvere theories}
+\label{sec:small}
+
+Traditional algebraic signatures are restricted to the case of a finite
+set of operations each with a finite arity, but programming languages
+require more generality. In terms of effect reflection, this would
+amonut to demanding, for any operation
+$op \types \tau_p \rightarrowtail \tau_a$, that $\tau_p$ and $\tau_a$ be
+finite types. This would allow for boolean state, but would not support
+$\nat$ state.
+
+In the algebraic effects literature the most common choice is to use
+countable algebraic signatures. However, this is still too restritive,
+supporting $\nat$ state but not supporting $\nat \rightarrow \nat$
+state.
+
+We want to allow arbitrary types for the parameters and arities of our
+operations. We can achieve this by using \emph{bounded infinitary
+  algebraic theories}, where the set of operations and their arities are
+bound by some regular cardinal $\kappa$. An algebraic theory with some
+bound $\kappa$ corresponds to a monad with rank $\kappa$.
+
+We can extend the definition of Lawvere theory to support bounded
+infinitary algebraic theories.
+\begin{definition}
+  A \emph{small Lawvere theory} is a small category $L$ with all
+  products smaller that some regular cardinal $\kappa$, and in which
+  every object is isomorphic to some product $\Pi_{\lambda < \kappa} X$
+  of a distinguished object $X$.
+\end{definition}
+The restriction that the category be small enforces that there be some
+bound on the set of operations and their arities. The models of a small
+Lawvere theory $L$ are the product-preserving functors from $L$ to
+$\setc$.
+
+Morphisms between small Lawvere theories are product-preserving functors
+that preserve the distinguished object $X$. Such functors correspond to
+homomorphisms of algebraic theories: maps from the operations of one
+theory to the operations of another that preserve the equations of the
+first theory according to the equations of the second.
+
+Small Lawvere theories and their morphisms form a locally small category
+$\lawc$. This category has coproducts $L + L^{\prime}$ which correspond
+to the algebraic theory made by unioning the operations and equations of
+$L$ and $L^{\prime}$. It also has an initial object $\initial$, which is
+the algebraic theory with no operations and corresponds to the identity
+monad. We prove these properties of $\lawc$ in Appendix\ref{apdx:small}.
 
 \subsection{Presheaves}
+
+Now that we have a concrete representation for potential ambient monads,
+we can define our semantics in terms of sets indexed by such
+monads. More specifically, we can use functors $\setc^{\lawc}$ as the
+semantics of our types. By using functors rather than ordinary functions
+we ensure terms and types at a particular ambient monad can always be
+mapped naturally to a larger ambient monad. These functors have many
+convenient properties because they are \emph{presheaves}.
 
 For a category $\cat$, $\psh = \setc^{\catop}$ is the category of
 presheaves over $\cat$. Its objects are contravariant functors from
 $\cat$ to $\setc$ and it's morphisms are natural transformations between
 such functors.
 
-A common use of presheaves is where $\cat$ has finite products and is
-thought of as some form of context over which everything is
-parameterized. We use presheaves over $\lawc$ because types should be
-parameterized by the ambient algebraic theory--but contravariantly,
-since we want to be parameterized by theories that can be handled by the
-ambient monad.
-
-As such, we use
+In these terms, we use
 \begin{equation*}
   \pshlawcop = \setc^{\lawc}
 \end{equation*}
-as the basis of the ambient monad model. The $\op$ in the definition of
+as the basis of the Ambient Monad model. The $\op$ in the definition of
 presheaves and the $\op$ due to our dependence being contravariant
-cancel out, but it is still best to think in terms of presheaves as that
-is a more precise description of what we are doing.
+cancel out, but it is still profitable to think in terms of presheaves
+as presheaves come with a lot of useful technology.
 
-The ambient monad model uses objects from $\pshlawcop$ to represent
+The Ambient Monad model uses objects from $\pshlawcop$ to represent
 types and contexts, and morphisms in $\pshlawcop$ to represent
-values. This allows their meanings to be parameterized by the ambient
-monad. By using presheaves rather than ordinary functions we ensure
-terms and types at a particular ambient monad can always be mapped
-naturally to a larger ambient monad.
-
+values.
 \begin{equation*}
 \sem{\tau} \mathrel{:} \pshlawcop \qquad
 \sem{\Gamma} \mathrel{:} \pshlawcop \qquad
 \sem{\Gamma \turnv v \types \tau} \mathrel{:} \homset{\pshlawcop}{\sem{\Gamma}}{\sem{\tau}}
 \end{equation*}
 
-Categories of presheaves have products and coproducts, which are defined
+A category of presheaves over a small category is a topos, which gives
+it many useful properties. Unfortuately, $\lawcop$ is not a small
+category. However, $\lawcop$'s slice categories are essentially small
+which is actually sufficient to ensure that $\pshlawcop$ is a
+topos \cite[Section A2.1, Example 2.1.5]{johnstone2002sketches}. We prove
+that the slice categories of $\lawcop$ are essentially small in
+Appendix~\ref{apdx:slices}.
+
+As a topos, $\pshlawcop$ has products and coproducts, which are defined
 pointwise. We will use these as the semantics of product types and sum
 types.
 \begin{equation*}
@@ -1506,16 +1520,16 @@ We also use products for the semantics of contexts:
 \subsection{Representing computations: The free algebras monad}
 
 Our aim is to have a semantics where the meaning of types is indexed by
-the ambient monad -- or more precisely by the algebraic theory whose
-free algebras are the ambient monad. In particular, we would like the
-interpretation of computation types to be applications of the ambient
-monad.
+the ambient monad -- or more precisely by a representation of the
+algebraic theory whose free algebras are the ambient monad. In
+particular, we would like the interpretation of computation types to be
+applications of the ambient monad.
 
-Given a Lawvere theory $L$, the underlying sets of its free algebras
-form a monad $T_L$ on $\setc$. In addition to the unit of the monad, we
-can construct elements of $T_L$ using the operations of $L$. For an
-operation $op \types P \rightarrowtail A$ of a Lawvere theory $L$ and
-some set $S$, there is a function
+Given a small Lawvere theory $L$, the underlying sets of its free
+algebras form a monad $T_L$ on $\setc$. In addition to the unit of the
+monad, we can construct elements of $T_L$ using the operations of
+$L$. For an operation $op \types P \rightarrowtail A$ of a Lawvere
+theory $L$ and some set $S$, there is a function
 $op_{T_L} \types (P \times (A \rightarrow T_L(S))) \rightarrow T_L(S)$
 that constructs terms in the free algebra using $op$.
 
@@ -1525,7 +1539,7 @@ $\pshlawcop$ such that:
 \mon(P)(L) = T_L(P(L))
 \end{equation*}
 We call $\mon$ the \emph{free algebras monad}, and it is the
-representation of computations in the ambient monad model.
+representation of computations in the Ambient Monad model.
 \begin{align*}
   &\sem{\Gamma \turnc v \types \tau} \mathrel{:}
     \homset{\pshlawcop}{\sem{\Gamma}}{\mon(\sem{\tau})} \\
@@ -1540,7 +1554,7 @@ representation of computations in the ambient monad model.
 where $\eta$, $\mu$ and $t$ are the unit, multiplication and strength
 respectively of $\mon$.
 
-Categories of presheaves also have exponentials, which combine with the
+As a topos, $\pshlawcop$ also has exponentials, which combine with the
 free algebras monad to give us our semantics for function types.
 \begin{equation*}
   \sem{\tau_1 \arr \tau_2} = \arrow{\sem{\tau_1}}{\mon(\sem{\tau_2})}
@@ -1604,45 +1618,43 @@ of context, the elements of $y(\catobj)$ can be used to represent
 variables of type $\catobj$.
 
 $\lawcop$ embeds into $\pshlawcop$ via the Yoneda embedding: for each
-Lawvere theory $L$ there is a presheaf $\yoneda{L}$ in $\pshlawcop$ such
-that:
+small Lawvere theory $L$ there is a presheaf $\yoneda{L}$ in
+$\pshlawcop$ such that:
 \begin{align*}
 &\yoneda{L}(L^{\prime}) = \homset{\lawc}{L}{L^{\prime}} \\
 &\yoneda{L}(l^{\prime}) = \lambda f.\; l^{\prime} \circ f
 \end{align*}
 
-For an operation $op \types P \rightarrowtail A$ of a Lawvere theory $L$
-and some presheaf $P$, we can build a morphism:
+For an operation $op \types P \rightarrowtail A$ of a Lawvere theory
+$L$, we can build a morphism:
 \begin{align*}
-&op_{\mon{P}} \types
+&op_{\mon} \types
   \homset{\pshlawcop}
-         {\yoneda{L} \times \glob P \times \arrow{\glob A}{(\mon{P})}}
-         {\mon{P}} \\
-&{(op_{\mon{P}})}_{L^\prime}
-  = \lambda(y, p, k). (y(op))_{T_{L^\prime}}(p, \lambda a. k_{L^\prime}(id_{L^\prime}, a))
+         {\yoneda{L} \times \glob P}
+         {\mon{\glob A}} \\
+&{(op_{\mon})}_{L^\prime}
+  = \lambda(y, p). (y(op))_{T_{L^\prime}}(p, \eta_{A})
 \end{align*}
 which uses an element of $\yoneda{L}$ to map $op$ into the ambient monad
 and then uses that to construct a term in the free algebras monad.
 
 We use $\yoneda{L}$ as the semantics for our effect capabilities, and
-$op_{\mon{P}}$ as the semantics for reflection.
+$op_{\mon}$ as the semantics for reflection.
 \begin{align*}
 &\sem{\yoneda{\Sigma}} = \yoneda{\sem{\Sigma}} \\
-&\sem{\Gamma \turnc \perform{v_1}{op}{v_2}{x}{c} \types \tau} = \\
-&\quad op_{\mon{\sem{\tau}}}
+&\sem{\Gamma \turnc \perform{v_1}{op}{v_2} \types \tau_a} = \\
+&\quad op_{\mon}
        \circ \langle \sem{\Gamma \turnv v_1 \types \yoneda{\Sigma}},
-                      \sem{\Gamma \turnv v_2 \types \tau_p},
-                      \currymap(\sem{\lbind{\Gamma}{x}{\tau_a} \turnc c \types \tau})
-             \rangle
+                      \sem{\Gamma \turnv v_2 \types \tau_p} \rangle
 \end{align*}
-where $\sem{\Sigma}$ is the Lawvere theory corresponding to the
+where $\sem{\Sigma}$ is the small Lawvere theory corresponding to the
 signature $\Sigma$. If $\Sigma$ is:
 \begin{equation*}
   \{ \, op_1 \types \tau_{p_1} \rightarrowtail \tau_{a_1} \seq
   \ldots \seq
   op_n \types \tau_{p_n} \rightarrowtail \tau_{a_n} \, \}
 \end{equation*}
-then $\sem{\Sigma}$ is the Lawvere theory for:
+then $\sem{\Sigma}$ is the small Lawvere theory for:
 \begin{equation*}
   \{ \, op_1 \types \sem{\tau_{p_1}}(\initial)
                     \rightarrowtail \sem{\tau_{a_1}}(\initial) \seq
@@ -1693,7 +1705,7 @@ The key to this process is the following
 lemma~\cite{hyland2006combining}.
 \begin{lemma}
 \label{lemma:sums}
-  For any Lawvere theory $L$ and algebraic signature $\Sigma$
+  For any small Lawvere theory $L$ and algebraic signature $\Sigma$
   \begin{equation*}
   T_{L + \Sigma}(S) \cong \mu X.T_L(S + F_\Sigma(X))
   \end{equation*}
@@ -1705,11 +1717,13 @@ recursive structure that separates the two effect sources -- exactly
 what effect handlers need.
 
 Effect reification works by exposing $\mu X.T_L(S + F_\Sigma(X))$ to the
-user via an inductive type. Categories of presheaves have initial
-algebras of polynomial endofunctors, i.e. W-types, so we can construct
-the required initial algebra as a presheaf. Given an algebraic
-signature $\Sigma$ and a presheaf $P$, we define the following family
-of initial algebras:
+user via an inductive type. In addition to being a topos, $\pshlawcop$
+has a Natural Number Object, which we prove in \ref{apdx:NNO}. Thus it
+has initial algebras of polynomial endofunctors
+\cite{moerdijk2000wellfounded}, i.e. W-types, so we can construct the
+required initial algebra as a presheaf. Given an algebraic signature
+$\Sigma$ and a presheaf $P$, we define the following family of initial
+algebras:
 \begin{align*}
 &\ind{\Sigma} \types [\pshlawcop, \pshlawcop] \\
 &\ind{\Sigma}(P) = \mu X. ((\glob P) + F_\Sigma \circ \mon{X})
@@ -1717,7 +1731,7 @@ of initial algebras:
 and observe the following variation on Lemma \ref{lemma:sums}.
 \begin{lemma}
 \label{lemma:sums2}
-  For any Lawvere theory $L$ and algebraic signature $\Sigma$
+  For any small Lawvere theory $L$ and algebraic signature $\Sigma$
   \begin{equation*}
   T_{L + \Sigma}(P(\initial)) \cong \mon{(\ind{\Sigma}(P))}(L)
   \end{equation*}
@@ -1753,7 +1767,7 @@ which we call $\reifyc{\Sigma}{}$.
 $\reifyc{\Sigma}{}$ gives us our semantics for reification.
 \begin{align*}
 &\sem{\Gamma \turnc \reify{\loc}{c} \types \ind{\Sigma}(\glob \tau)} =
-  \reifyc{\Sigma}{\tau} \circ \currymap(\sem{\lbind{\Gamma}{\loc}{\yoneda{\Sigma}} \turnc c \types \glob \tau}) \\
+  \reifyc{\Sigma}{\tau} \circ \currymap(\sem{\lbind{\Gamma}{\loc}{\Sigma} \turnc c \types \glob \tau}) \\
 \end{align*}
 
 \subsection{Properties of the denotational semantics}
@@ -3403,6 +3417,52 @@ STLC embed to neutral and normal forms respectively.
 Since our langauge is strongly normalizing
 (\ref{lemma:strong-normalization}) this is sufficient to show that the
 embedding correctly models STLC.
+
+\section{Small Lawvere theories}
+\label{apdx:small}
+In this section be demonstrate that the category of small Lawvere
+theories $\lawc$ has the properties needed for the Ambient Monad model.
+
+Recalling the definitions from Section~\ref{sec:small}, a small Lawvere
+theory is a small category $L$ with small products in which every object
+is isomorphic to some small product $\Pi_S X$ of a distinguished object
+$X$. Morphisms between small Lawvere theories are product-preserving
+functors that preserve the distinguished object $X$.
+
+\subsection{Locally small category}
+
+\begin{lemma}
+\label{lemma:small-cat}
+Small Lawvere theories and their morphisms form a category $\lawc$
+\end{lemma}
+\begin{proof}
+This follow immediately from basic properties of functors and their
+composition. The composition of two product-preserving functors is
+itself product-preserving and the composition of two functors that
+preserve the distinguished object preserves the distinguished object.
+\end{proof}
+
+\begin{lemma}
+\label{lemma:small-cat}
+$\lawc$ is locally small
+\end{lemma}
+\begin{proof}
+Functors between small categories are themselves small.
+\end{proof}
+
+\subsection{Coproducts}
+
+\todo{Add lemma and proof}
+
+\subsection{Essentially small slices}
+\label{apdx:slices}
+
+\todo{Add lemma and proof}
+
+\subsection{Natural Number Object}
+\label{apdx:NNO}
+
+\todo{Add lemma and proof}
 
 \section{Denotational semantics}
 \label{apdx:denotational}
