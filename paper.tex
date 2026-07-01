@@ -1,6 +1,7 @@
 \documentclass[acmsmall, screen, review, anonymous]{acmart}
 
 \usepackage{listings}
+\usepackage{subcaption}
 \usepackage{amsfonts}
 \usepackage{amsmath}
 \usepackage{stmaryrd}
@@ -52,8 +53,9 @@
 \newcommand{\psh}{\widehat{\cat}}
 \newcommand{\terminal}{\top}
 \newcommand{\initial}{\bot}
-\newcommand{\lawc}{\mathrm{Law_s}}
-\newcommand{\lawfc}{\mathrm{Law_f}}
+\newcommand{\lawc}{\mathrm{Law_{\kappa}}}
+\newcommand{\lawfc}{\mathrm{Law}}
+\newcommand{\lawn}{\mathrm{Law_{\nat}}}
 \newcommand{\lawcop}{\lawc^{\mathtt{op}}}
 \newcommand{\pshlawcop}{\widehat{\lawcop}}
 \newcommand{\pshlawc}{\widehat{\lawc}}
@@ -65,6 +67,13 @@
 \newcommand{\homset}[3]{\mathrm{Hom}_{#1}(#2, #3)}
 \newcommand{\arrow}[2]{{#2}^{#1}}
 \newcommand{\sem}[1]{\llbracket #1 \rrbracket}
+\newcommand{\unit}[1]{\eta^{#1}}
+\newcommand{\mult}[1]{\mu^{#1}}
+\newcommand{\strength}[1]{t^{#1}}
+\newcommand{\counit}[1]{\epsilon^{#1}}
+\newcommand{\comult}[1]{\delta^{#1}}
+\newcommand{\ununit}{\rho}
+
 \newcommand{\reflectname}{\mathord{\Uparrow}}
 \newcommand{\reflectraw}[1]{\mathop{\reflectname(#1)}}
 \newcommand{\reflect}[2]{\reflectraw{#1}(#2)}
@@ -215,7 +224,7 @@
   \end{itemize}
   This isomorphism emerges naturally, as a corollary of the Yoneda
   lemma, from the \emph{Ambient Monad model}: a novel semantic model of
-  algebraic effects in terms of presheaves over small Lawvere
+  algebraic effects in terms of presheaves over Lawvere
   theories.
 
   Effect reflection provides all the expressiveness of typed algebraic
@@ -374,43 +383,9 @@ mode.
 
 If we are going to make changing the ambient monad the basis of our
 algebraic effects then we should build a changeable ambient monad right
-into our semantic model.
-
-\subsubsection{Which monads?}
-
-The first question we must answer is: which monads should be allowed as
-the ambient monad?
-
-The sum of two arbitrary monads does not necessarily exist. This is why
-monads do not always compose easily. The key to the composability of
-algebraic effects lies in the fact that two monads built out of
-algebraic theories always have a sum. We'd like to restrict ourselves to
-such monads.
-
-The categorical representation of the traditional notion of algebraic
-theory is a \emph{(finitary) Lawvere theory}. These have a finite set of
-operations with finite arities. Restricting ourselves to just the monads
-built out of these would be too restictive: we could support
-boolean state but not state holding natural numbers.
-
-In the algebraic effects literature the most common choice is to use
-countable Lawvere theories. However, this still restricts us to
-algebraic theories with a countable set of operations of countable
-arity: it supports a state effect for $\nat$ but not for
-$\nat \arr \nat$.
-
-This short-coming of models of algebraic effects in the literature is
-mostly glossed over, but here instead we solve it by defining the notion
-of \emph{small Lawvere theory}: a Lawvere theory corresponding to
-an algebraic theories whose set of operations and their arities are bound
-by some regular cardinal $\kappa$. This allows us to use any type for
-the parameters or arity of an operation.
-
-\subsection{The ambient monad}
-
-Now that we have a representation for possible ambient monads \emph{we
-  should index the meaning of types and terms by the ambient
-  monad}. Rather than have the semantics of our types be sets:
+into our semantic model. \emph{we should index the meaning of types and
+  terms by the ambient monad}. Rather than have the semantics of our
+types be sets:
 \begin{equation*}
 \sem{\tau} \types \setc
 \end{equation*}
@@ -418,7 +393,7 @@ we should have them be functors from $\lawc$ to $\setc$:
 \begin{equation*}
 \sem{\tau} \types \lawc \arr \setc
 \end{equation*}
-where $\lawc$ is the category of small Lawvere theories. For each
+where $\lawc$ a suitable category of algebraic theories. For each
 object $L \types \lawc$ we write $T_L$ for its corresponding monad.
 
 These functors are presheaves and so they support all the standard
@@ -735,11 +710,6 @@ We make the following contributions:
   use it to give a denotational semantics of our lambda calculus with
   effect reflection.  We prove that this semantics is sound,
   compositional and adequate.  (Section \ref{sec:semantics})
-\item We describe the category of small Lawvere theories, and show it
-  has all the required structure for the Ambient Monad model. This
-  solves the size restrictions that are present in existing models of
-  algebraic effects based on countable Lawvere theories. (Section
-  \ref{sec:small})
 \item We give a simple implementation of effect reflection in OxCaml
   using its support for tracking locality in the type system and the
   untracked algebraic effects it inherits from OCaml. We demonstrate its
@@ -1411,7 +1381,7 @@ equivalent to maps from the operations of one theory to the operations
 of another that preserve the equations of the first theory according to
 the equations of the second.
 
-\subsection{Small Lawvere theories}
+\subsection{Bounded Lawvere theories}
 \label{sec:small}
 
 Traditional algebraic signatures are restricted to the case of a finite
@@ -1428,36 +1398,37 @@ supporting $\nat$ state but not supporting $\nat \rightarrow \nat$
 state.
 
 We want to allow arbitrary types for the parameters and arities of our
-operations. We can achieve this by using \emph{bounded infinitary
-  algebraic theories}, where the set of operations and their arities are
-bound by some regular cardinal $\kappa$. An algebraic theory with some
-bound $\kappa$ corresponds to a monad with rank $\kappa$.
+operations. However, we also wish our category of Lawvere theories to be
+small. To achieve this we will parameterize our model and semantics by a
+regular cardinal $\kappa$, and use algebraic theories whose set of
+operations and arites are bound by $\kappa$.
 
-We can extend the definition of Lawvere theory to support bounded
-infinitary algebraic theories.
+We can extend the definition of Lawvere theory to support algebraic
+theories bounded by $\kappa$:
 \begin{definition}
-  A \emph{small Lawvere theory} is a small category $L$ with all
-  products smaller that some regular cardinal $\kappa$, and in which
-  every object is isomorphic to some product $\Pi_{\lambda < \kappa} X$
-  of a distinguished object $X$.
+  A \emph{$\kappa$-bounded Lawvere theory} is a small category whose set
+  of objects has cardinality $\lambda < \kappa$ and whose set of
+  morphims also has cardinality strictly less than $\kappa$, which has
+  all products smaller than $\lambda$, and in which every object is
+  isomorphic to some product $\Pi_{\alpha < \lambda} X$ of a
+  distinguished object $X$.
 \end{definition}
-The restriction that the category be small enforces that there be some
-bound on the set of operations and their arities. The models of a small
-Lawvere theory $L$ are the product-preserving functors from $L$ to
-$\setc$.
+The models of a $\kappa$-bounded Lawvere theory $L$ are the
+product-preserving functors from $L$ to $\setc$.
 
-Morphisms between small Lawvere theories are product-preserving functors
-that preserve the distinguished object $X$. Such functors correspond to
-homomorphisms of algebraic theories: maps from the operations of one
-theory to the operations of another that preserve the equations of the
-first theory according to the equations of the second.
+Morphisms between $\kappa$-bounded Lawvere theories are
+product-preserving functors that preserve the distinguished object
+$X$. Such functors correspond to homomorphisms of algebraic theories:
+maps from the operations of one theory to the operations of another that
+preserve the equations of the first theory according to the equations of
+the second.
 
-Small Lawvere theories and their morphisms form a locally small category
-$\lawc$. This category has coproducts $L + L^{\prime}$ which correspond
-to the algebraic theory made by unioning the operations and equations of
-$L$ and $L^{\prime}$. It also has an initial object $\initial$, which is
-the algebraic theory with no operations and corresponds to the identity
-monad. We prove these properties of $\lawc$ in Appendix\ref{apdx:small}.
+$\kappa$-bounded Lawvere theories and their morphisms form a locally
+small category $\lawc$. This category has coproducts $L + L^{\prime}$
+which correspond to the algebraic theory made by unioning the operations
+and equations of $L$ and $L^{\prime}$. It also has an initial object
+$\initial$, which is the algebraic theory with no operations and
+corresponds to the identity monad. Note that $\lawfc$ is $\lawn$.
 
 \subsection{Presheaves}
 
@@ -1492,17 +1463,10 @@ values.
 \sem{\Gamma \turnv v \types \tau} \mathrel{:} \homset{\pshlawcop}{\sem{\Gamma}}{\sem{\tau}}
 \end{equation*}
 
-A category of presheaves over a small category is a topos, which gives
-it many useful properties. Unfortuately, $\lawcop$ is not a small
-category. However, $\lawcop$'s slice categories are essentially small
-which is actually sufficient to ensure that $\pshlawcop$ is a
-topos \cite[Section A2.1, Example 2.1.5]{johnstone2002sketches}. We prove
-that the slice categories of $\lawcop$ are essentially small in
-Appendix~\ref{apdx:slices}.
-
-As a topos, $\pshlawcop$ has products and coproducts, which are defined
-pointwise. We will use these as the semantics of product types and sum
-types.
+A category of presheaves over a small category, such as $\lawc$, is a
+topos, which gives it many useful properties. As a topos, $\pshlawcop$
+has products and coproducts, which are defined pointwise. We will use
+these as the semantics of product types and sum types.
 \begin{equation*}
 \sem{1} = 1 \qquad
 \sem{\tau_1 \times \tau_2} = \sem{\tau_1} \times \sem{\tau_2} \qquad
@@ -1525,7 +1489,7 @@ algebraic theory whose free algebras are the ambient monad. In
 particular, we would like the interpretation of computation types to be
 applications of the ambient monad.
 
-Given a small Lawvere theory $L$, the underlying sets of its free
+Given a $\kappa$-bounded Lawvere theory $L$, the underlying sets of its free
 algebras form a monad $T_L$ on $\setc$. In addition to the unit of the
 monad, we can construct elements of $T_L$ using the operations of
 $L$. For an operation $op \types P \rightarrowtail A$ of a Lawvere
@@ -1544,15 +1508,15 @@ representation of computations in the Ambient Monad model.
   &\sem{\Gamma \turnc v \types \tau} \mathrel{:}
     \homset{\pshlawcop}{\sem{\Gamma}}{\mon(\sem{\tau})} \\
   &\sem{\Gamma \turnc \return{v} \types \tau} =
-    \eta_{\sem{\tau}} \circ \sem{\Gamma \turnv v \types \tau} \\
+    \unit{\mon}_{\sem{\tau}} \circ \sem{\Gamma \turnv v \types \tau} \\
   &\sem{\Gamma \turnc \letv{x}{c_1}{c_2} \types \tau_2} =
-    \mu_{\sem{\tau_2}}
+    \mult{\mon}_{\sem{\tau_2}}
     \circ \mon(\sem{\lbind{\Gamma}{x}{\tau_1} \turnc c_2 \types \tau_2})
-    \circ t_{\sem{\Gamma}, \sem{\tau_1}}
+    \circ \strength{\mon}_{\sem{\Gamma}, \sem{\tau_1}}
     \circ \langle id_{\sem{\Gamma}}, \sem{\Gamma \turnc c_1 \types \tau_1} \rangle
 \end{align*}
-where $\eta$, $\mu$ and $t$ are the unit, multiplication and strength
-respectively of $\mon$.
+where $\unit{\mon}$, $\mult{\mon}$ and $\strength{\mon}$ are the unit,
+multiplication and strength respectively of $\mon$.
 
 As a topos, $\pshlawcop$ also has exponentials, which combine with the
 free algebras monad to give us our semantics for function types.
@@ -1587,24 +1551,24 @@ $\glob$ bindings.
 \begin{align*}
 &\sem{\glob \tau} = \glob \sem{\tau} \\
 &\sem{\gbind{\Gamma}{x}{\tau}} = \sem{\Gamma} \times \glob \sem{\tau} \\
-&\sem{\tau_1 \arr \tau_2} = \arrow{\glob \sem{\tau_1}}{\mon(\sem{\tau_2})} \\
-&\sem{\gbind{\Gamma}{x}{\tau} \turnv x \types \tau} = \epsilon \circ \snd \\
+&\sem{\gbind{\Gamma}{x}{\tau} \turnv x \types \tau} = \counit{\glob}_{\sem{\tau}} \circ \snd \\
 &\sem{\Gamma \turnv \gbox{v} \types \glob \tau} =
   \glob \sem{\cdiv{\Gamma} \turnv v \types \tau}
-  \circ \eta \circ \bdiv{\Gamma} \\
+  \circ \comult{\glob}_{\sem{\cdiv{\Gamma}}} \circ \bdiv{\Gamma} \\
 &\sem{\Gamma \turnv \gunbox{x}{v_1}{v_2} \types \tau_2} =
   \sem{\gbind{\Gamma}{x}{\tau_1} \turnv v_2 \types \tau_2}
   \circ \langle id_{\sem{\Gamma}},
                 \sem{\Gamma \turnv v_1 \types \glob \tau_1} \rangle \\
 &\sem{\Gamma \turnv \grun{c} \types \glob \tau} =
-  \rho_{\sem{\tau}}
+  \ununit_{\sem{\tau}}
   \circ \glob \sem{\cdiv{\Gamma} \turnc c \types \tau}
-  \circ \eta \circ \bdiv{\Gamma}\\
+  \circ \comult{\glob}_{\sem{\cdiv{\Gamma}}} \circ \bdiv{\Gamma}\\
 \end{align*}
-where $\epsilon$ and $\eta$ are the counit and comultiplication of
-$\glob$, $\bdiv{\Gamma} \types \Gamma \rightarrow \cdiv{\Gamma}$ is the
-morphism that projects the global bindings from $\Gamma$, and $\rho_P$
-is the isomorphism from $\glob \mon(P)$ to $\glob P$.
+where $\counit{\glob}$ and $\comult{\glob}$ are the counit and
+comultiplication of $\glob$,
+$\bdiv{\Gamma} \types \Gamma \rightarrow \cdiv{\Gamma}$ is the morphism
+that projects the global bindings from $\Gamma$, and $\ununit_P$ is the
+isomorphism from $\glob \mon(P)$ to $\glob P$.
 
 \subsection{Reflecting operations: The Yoneda embedding}
 
@@ -1618,7 +1582,7 @@ of context, the elements of $y(\catobj)$ can be used to represent
 variables of type $\catobj$.
 
 $\lawcop$ embeds into $\pshlawcop$ via the Yoneda embedding: for each
-small Lawvere theory $L$ there is a presheaf $\yoneda{L}$ in
+$\kappa$-bounded Lawvere theory $L$ there is a presheaf $\yoneda{L}$ in
 $\pshlawcop$ such that:
 \begin{align*}
 &\yoneda{L}(L^{\prime}) = \homset{\lawc}{L}{L^{\prime}} \\
@@ -1633,7 +1597,7 @@ $L$, we can build a morphism:
          {\yoneda{L} \times \glob P}
          {\mon{\glob A}} \\
 &{(op_{\mon})}_{L^\prime}
-  = \lambda(y, p). (y(op))_{T_{L^\prime}}(p, \eta_{A})
+  = \lambda(y, p). (y(op))_{T_{L^\prime}}(p, \unit{T_{L^\prime}}_{A})
 \end{align*}
 which uses an element of $\yoneda{L}$ to map $op$ into the ambient monad
 and then uses that to construct a term in the free algebras monad.
@@ -1647,14 +1611,14 @@ $op_{\mon}$ as the semantics for reflection.
        \circ \langle \sem{\Gamma \turnv v_1 \types \yoneda{\Sigma}},
                       \sem{\Gamma \turnv v_2 \types \tau_p} \rangle
 \end{align*}
-where $\sem{\Sigma}$ is the small Lawvere theory corresponding to the
+where $\sem{\Sigma}$ is the $\kappa$-bounded Lawvere theory corresponding to the
 signature $\Sigma$. If $\Sigma$ is:
 \begin{equation*}
   \{ \, op_1 \types \tau_{p_1} \rightarrowtail \tau_{a_1} \seq
   \ldots \seq
   op_n \types \tau_{p_n} \rightarrowtail \tau_{a_n} \, \}
 \end{equation*}
-then $\sem{\Sigma}$ is the small Lawvere theory for:
+then $\sem{\Sigma}$ is the $\kappa$-bounded Lawvere theory for:
 \begin{equation*}
   \{ \, op_1 \types \sem{\tau_{p_1}}(\initial)
                     \rightarrowtail \sem{\tau_{a_1}}(\initial) \seq
@@ -1705,7 +1669,7 @@ The key to this process is the following
 lemma~\cite{hyland2006combining}.
 \begin{lemma}
 \label{lemma:sums}
-  For any small Lawvere theory $L$ and algebraic signature $\Sigma$
+  For any $\kappa$-bounded Lawvere theory $L$ and algebraic signature $\Sigma$
   \begin{equation*}
   T_{L + \Sigma}(S) \cong \mu X.T_L(S + F_\Sigma(X))
   \end{equation*}
@@ -1731,7 +1695,7 @@ algebras:
 and observe the following variation on Lemma \ref{lemma:sums}.
 \begin{lemma}
 \label{lemma:sums2}
-  For any small Lawvere theory $L$ and algebraic signature $\Sigma$
+  For any $\kappa$-bounded Lawvere theory $L$ and algebraic signature $\Sigma$
   \begin{equation*}
   T_{L + \Sigma}(P(\initial)) \cong \mon{(\ind{\Sigma}(P))}(L)
   \end{equation*}
@@ -2841,7 +2805,7 @@ Reducibility can have its effect context weakened:
 \end{align*}
 \end{lemma}
 \begin{proof}
-  We prove this by induction on $\tau$ and $alpha$. All the value cases
+  We prove this by induction on $\tau$ and $\alpha$. All the value cases
   follow immediately by the induction hypotheses as they do not mention
   $\Delta$ otherwise. The computation case follows by the induction
   hypothesis and the fact that context membership is preserved by
@@ -3302,19 +3266,17 @@ predicate $\redsc{\Delta}{\Gamma}$ indexed by an effect context $\Delta$
 and a typing context $\Gamma$. We write $\reds{\Gamma}$ for
 $\redsc{\cempty}{\Gamma}$.
 
-\begin{align*}
 \todo{Write out definition}
-\end{align*}
 
 \subsection{Reducibility theorem}
 Well-typed terms are reducible under any reducible substitution
 \begin{align*}
     &\Gamma \turnv v \types \tau
       \quad \wedge \quad \sigma \in \reds{\Gamma}
-      \quad \implies \quad v[\sigma] \in \redv{\locs{\Gamma}}{\tau} \\
+      \quad \implies \quad v[\sigma] \in \redv{\clocs{\Gamma}}{\tau} \\
     &\Gamma \turnc c \types \tau
       \quad \wedge \quad \sigma \in \reds{\Gamma}
-      \quad \implies \quad c[\sigma] \in \redc{\locs{\Gamma}}{\tau} \\
+      \quad \implies \quad c[\sigma] \in \redc{\clocs{\Gamma}}{\tau} \\
 \end{align*}
 \begin{proof}
 \todo{Write out proof}
@@ -3324,9 +3286,9 @@ As a corollary, since the substitution that replaces every variable with itself 
 we get:
 \begin{align*}
     &\Gamma \turnv v \types \tau
-      \quad \implies \quad v \in \redv{\locs{\Gamma}}{\tau} \\
+      \quad \implies \quad v \in \redv{\clocs{\Gamma}}{\tau} \\
     &\Gamma \turnc c \types \tau
-      \quad \implies \quad c \in \redc{\locs{\Gamma}}{\tau} \\
+      \quad \implies \quad c \in \redc{\clocs{\Gamma}}{\tau} \\
 \end{align*}
 from which immediately follows that well-typed terms are strongly normalizing.
 
@@ -3418,54 +3380,102 @@ Since our langauge is strongly normalizing
 (\ref{lemma:strong-normalization}) this is sufficient to show that the
 embedding correctly models STLC.
 
-\section{Small Lawvere theories}
-\label{apdx:small}
-In this section be demonstrate that the category of small Lawvere
-theories $\lawc$ has the properties needed for the Ambient Monad model.
-
-Recalling the definitions from Section~\ref{sec:small}, a small Lawvere
-theory is a small category $L$ with small products in which every object
-is isomorphic to some small product $\Pi_S X$ of a distinguished object
-$X$. Morphisms between small Lawvere theories are product-preserving
-functors that preserve the distinguished object $X$.
-
-\subsection{Locally small category}
-
-\begin{lemma}
-\label{lemma:small-cat}
-Small Lawvere theories and their morphisms form a category $\lawc$
-\end{lemma}
-\begin{proof}
-This follow immediately from basic properties of functors and their
-composition. The composition of two product-preserving functors is
-itself product-preserving and the composition of two functors that
-preserve the distinguished object preserves the distinguished object.
-\end{proof}
-
-\begin{lemma}
-\label{lemma:small-cat}
-$\lawc$ is locally small
-\end{lemma}
-\begin{proof}
-Functors between small categories are themselves small.
-\end{proof}
-
-\subsection{Coproducts}
-
-\todo{Add lemma and proof}
-
-\subsection{Essentially small slices}
-\label{apdx:slices}
-
-\todo{Add lemma and proof}
-
-\subsection{Natural Number Object}
-\label{apdx:NNO}
-
-\todo{Add lemma and proof}
-
 \section{Denotational semantics}
 \label{apdx:denotational}
+
+In this section we prove that the denotatoinal semantics is sound and
+adequate with respect to the operational semantics. We start by writing
+out the full denotational semantcs in
+Figs.~\ref{fig:denotational-types}, \ref{fig:denotational-values} and
+\ref{fig:denotational-computations}.
+
+
+where 
+
+\begin{figure}
+  \begin{subfigure}[T]{0.4\textwidth}
+\begin{align*}
+\sem{\tau} &\mathrel{:} \pshlawcop \\
+\sem{1} &= 1 \\
+\sem{\tau_1 \times \tau_2} &= \sem{\tau_1} \times \sem{\tau_2} \\
+\sem{\tau_1 + \tau_2} &= \sem{\tau_1} + \sem{\tau_2} \\
+\sem{\tau_1 \arr \tau_2} &= \arrow{\sem{\tau_1}}{\mon(\sem{\tau_2})} \\
+\sem{\glob \tau} &= \glob \sem{\tau} \\
+\sem{\yoneda{\Sigma}} &= \yoneda{\sem{\Sigma}} \\
+\sem{\ind{\Sigma}(\tau)} = \ind{\sem{\Sigma}}(\sem{\tau})
+\end{align*}
+\end{subfigure}
+\begin{subfigure}[T]{0.4\textwidth}
+\begin{align*}
+\sem{\Gamma} &\mathrel{:} \pshlawcop \\
+\sem{\cempty} &= 1 \\
+\sem{\lbind{\Gamma}{x}{\tau}} &= \sem{\Gamma} \times \sem{\tau} \\
+\sem{\gbind{\Gamma}{x}{\tau}} &= \sem{\Gamma} \times \glob \sem{\tau} \\
+\sem{\lbind{\Gamma}{\loc}{\Sigma}} &= \sem{\Gamma} \times \yoneda{\sem{\Sigma}} \\
+\end{align*}
+\begin{itemize}
+\item $\sem{\Sigma}$ is the $\kappa$-bounded Lawvere theory corresponding to the
+  signature $\Sigma$.
+\end{itemize}
+\end{subfigure}
+\caption{Denotational semantics: Types and Contexts}
+\label{fig:denotational-types}
+\end{figure}
+
+\begin{figure}
+\begin{align*}
+\sem{\Gamma \turnv v \types \tau} &\mathrel{:} \homset{\pshlawcop}{\sem{\Gamma}}{\sem{\tau}} \\
+\sem{\lbind{\Gamma}{x}{\tau} \turnv x \types \tau} &= \snd \\
+\sem{\gbind{\Gamma}{x}{\tau} \turnv x \types \tau} &= \counit{\glob}_{\sem{\tau}} \circ \snd \\
+\sem{\lbind{\Gamma}{\loc}{\Sigma} \turnv \loc \types \yoneda{\Sigma}} &= \snd \\
+\sem{\Gamma \turnv \gbox{v} \types \glob \tau} &=
+  \glob \sem{\cdiv{\Gamma} \turnv v \types \tau}
+  \circ \comult{\glob}_{\sem{\cdiv{\Gamma}}} \circ \bdiv{\Gamma} \\
+\sem{\Gamma \turnv \gunbox{x}{v_1}{v_2} \types \tau_2} &=
+  \sem{\gbind{\Gamma}{x}{\tau_1} \turnv v_2 \types \tau_2}
+  \circ \langle id_{\sem{\Gamma}},
+                \sem{\Gamma \turnv v_1 \types \glob \tau_1} \rangle \\
+\sem{\Gamma \turnv \grun{c} \types \glob \tau} &=
+  \ununit_{\sem{\tau}}
+  \circ \glob \sem{\cdiv{\Gamma} \turnc c \types \tau}
+  \circ \comult{\glob}_{\sem{\cdiv{\Gamma}}} \circ \bdiv{\Gamma}
+\end{align*}
+\begin{itemize}
+\item $\counit{\glob}$ is the counit of $\glob$.
+\item $\comult{\glob}$ is the comultiplication of $\glob$.
+\item $\bdiv{\Gamma} \types \Gamma \rightarrow \cdiv{\Gamma}$ is the morphism
+that projects the global bindings from $\Gamma$
+\item $\ununit_P$ is the isomorphism from $\glob \mon(P)$ to $\glob P$.
+\end{itemize}
+\caption{Denotational semantics: Values}
+\label{fig:denotational-values}
+\end{figure}
+
+\begin{figure}
+\begin{align*}
+\sem{\Gamma \turnc v \types \tau} &\mathrel{:} \homset{\pshlawcop}{\sem{\Gamma}}{\mon(\sem{\tau})} \\
+\sem{\Gamma \turnc \return{v} \types \tau} &= \unit{\mon}_{\sem{\tau}} \circ \sem{\Gamma \turnv v \types \tau} \\
+\sem{\Gamma \turnc \letv{x}{c_1}{c_2} \types \tau_2} &=
+    \mult{\mon}_{\sem{\tau_2}}
+    \circ \mon(\sem{\lbind{\Gamma}{x}{\tau_1} \turnc c_2 \types \tau_2})
+    \circ \strength{\mon}_{\sem{\Gamma}, \sem{\tau_1}}
+    \circ \langle id_{\sem{\Gamma}}, \sem{\Gamma \turnc c_1 \types \tau_1} \rangle \\
+\sem{\Gamma \turnc \perform{v_1}{op}{v_2} \types \tau_a} &=
+  op_{\mon}
+       \circ \langle \sem{\Gamma \turnv v_1 \types \yoneda{\Sigma}},
+                      \sem{\Gamma \turnv v_2 \types \tau_p} \rangle \\
+\sem{\Gamma \turnc \reify{\loc}{c} \types \ind{\Sigma}(\glob \tau)} &=
+  \reifyc{\Sigma}{\tau} \circ \currymap(\sem{\lbind{\Gamma}{\loc}{\Sigma} \turnc c \types \glob \tau}) \\
+\end{align*}
+\begin{itemize}
+\item $\unit{\mon}$ is the unit of $\mon$.
+\item $\mult{\mon}$ is the multiplication of $\mon$.
+\item $\strength{\mon}$ is the strength of $\mon$.
+\end{itemize}
+\caption{Denotational semantics: Computations}
+\label{fig:denotational-computations}
+\end{figure}
+
 \subsection{Soundness}
 \subsection{Contextual equivalence}
 \subsection{Compositionality}

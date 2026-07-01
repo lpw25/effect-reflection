@@ -26,8 +26,6 @@
 
 # Appendices
 
-- Write proofs of the lemmas about Psh(Law^op)
-
 - Write out full denotational semantics
 
 - Write the proof for soundness
