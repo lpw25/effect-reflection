@@ -19,11 +19,6 @@
 
 - Add the semantics for the crisp induction on W types
 
-# Section 5
-
-- Rework parts of Section 5 (Related Work) to improve the comparison with
-  other work.
-
 # Appendices
 
 - Write out full denotational semantics
@@ -42,6 +37,3 @@
 
 - Add an artifact to the submission. Just the contents Figure 8 plus
   some build rules and instructions.
-
-- Consider adjusting the definition of morphism for small Lawvere
-  theories such that the choice of bound does not matter.

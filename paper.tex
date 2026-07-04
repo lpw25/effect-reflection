@@ -190,7 +190,8 @@
 \newcommand{\melse}{\mathop{\mathrm{else}}}
 \newcommand{\embed}[1]{\mathopen{\lbag}#1\mathclose{\rbag}}
 \newcommand{\ctxeq}{\cong_{\mathrm{ctx}}}
-\newcommand{\ctx}[1]{\mathcal{C}[#1]}
+\newcommand{\ctxv}[1]{\mathcal{C}_V[#1]}
+\newcommand{\ctxc}[1]{\mathcal{C}_C[#1]}
 \newcommand{\trans}{\Rightarrow}
 
 \newcommand{\todo}[1]{{\color{red}TODO: #1}}
@@ -756,7 +757,7 @@ Fig.\ref{fig:typing-standard}.
 \inferrule{\lbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2}
 {\Gamma \turnv \abs{x}{c} \types \tau_1 \arr \tau_2}
 \and
-\inferrule{\Gamma \turnv v_1 \types \tau_1 \\ \Gamma \turnv v_1 \types \tau_1}
+\inferrule{\Gamma \turnv v_1 \types \tau_1 \\ \Gamma \turnv v_2 \types \tau_2}
 {\Gamma \turnv (v_1, v_2) \types \tau_1 \times \tau_2}
 \and
 \inferrule{\Gamma \turnv v \types \tau_1 \times \tau_2}
@@ -1758,14 +1759,14 @@ and adequate for contextual equality $\ctxeq$:
 \label{lemma:adequacy}
   \begin{equation*}
     \sem{\turnv v_1 \types \tau} = \sem{\turnv v_2 \types \tau}
-    \implies v_1 \ctxeq v_2
+    \implies \turnv v_1 \ctxeq v_2 \types \tau
   \end{equation*}
 \end{lemma}
 
 We present the full semantics, precisely define contextual equality, and
 prove these properties in Appendix~\ref{apdx:denotational}.
 
-\section{Implementation in OxCaml}
+\section{Effect reflection in practice}
 \label{sec:practice}
 
 We provide effect reflection as a simple library API in OxCaml based on
@@ -1857,24 +1858,9 @@ continuation.
 \lstinline[style=oxcaml]{reify_global} implement the left-to-right
 direction of the isomorphism. We need two separate functions because
 OxCaml currently lacks any form of locality polymorphism.
-
 \lstinline[style=oxcaml]{perform} is equivalent to the right-to-left
 direction of the isomorphism. It reflects individual operations as
-opposed to full terms, which is a more convenient primitive in
-practice. We can implement reflection of \lstinline[style=oxcaml]{local}
-full terms as:
-\begin{lstlisting}[style=oxcaml]
-  let rec reflect t h =
-    match t with
-    | Return x -> x
-    | Perform(op, k) -> reflect (continue k (perform op h)) h
-\end{lstlisting}
-with type:
-\begin{lstlisting}[style=oxcaml]
-  val reflect : 'a Term(E).t -> (Handler(E).t @ local -> 'a)
-\end{lstlisting}
-Reflection of global terms can be defined
-similarly.
+opposed to full terms, which is a more convenient primitive in practice.
 
 The final piece of the interface is the support for selection from
 effect capabilities for sums of signatures (i.e. $\outlname$ and
@@ -1904,7 +1890,7 @@ We can implement the effect reflection interface directly in terms of
 OCaml's untracked effect
 handlers~\cite{Sivaramakrishnan2021retrofitting}. The entire
 implementation is only 44 lines of code and is given in
-Fig.\ref{fig:implementation}. The trick is to generate a fresh effect
+Appendix \ref{apdx:implementation}. The trick is to generate a fresh effect
 constructor for each reification, pass that constructor around as part
 of the \lstinline[style=oxcaml]{handler}, and then use it to perform
 operations during reflection. Performing effects involves a single
@@ -1925,15 +1911,131 @@ continuations. Note that OxCaml's \lstinline[style=oxcaml]{once}
 mode~\cite{lorenzen2024oxidizing} allows us to enforce this restriction
 statically.
 
-\subsection{Examples}
+\subsection{Example: Generators}
 
-We include additional examples and discussion in
-Appendix~\ref{apdx:examples}. Of particular note are the handler for
-Generators, which demonstrates the need for
-\lstinline[style=oxcaml]{reify_global}, and the handler for the
-combination of Generators and Asynchronous I/O, which demonstrates the
-need for \lstinline[style=oxcaml]{outl} and
-\lstinline[style=oxcaml]{outr}.
+A more realistic use of effect reflection than local state is a
+\emph{generator} effect. This effect has a single operation
+\lstinline[style=oxcaml]{Gen} from \lstinline[style=oxcaml]{int} to
+\lstinline[style=oxcaml]{unit}, along with a handler that turns
+computations using \lstinline[style=oxcaml]{Gen} into streams of
+integers, shown in Fig.~\ref{fig:gen}.
+\begin{figure}
+\begin{lstlisting}[style=oxcaml]
+  type ints = Finished | More of int * (unit -> ints)
+
+  let handle_gen f =
+    let rec loop = function
+      | Return () -> Finished
+      | Perform(Gen i, k) ->
+          More(i, fun () -> loop (Gen_eff.continue_global k ()))
+    in
+    loop (Gen_eff.reify_global f)
+\end{lstlisting}
+\caption{Handler for integer generators}
+\label{fig:gen}
+\end{figure}
+Unlike the state handler, here we must use
+\lstinline[style=oxcaml]{reify_global} rather than
+\lstinline[style=oxcaml]{reify} because our intention is that the
+resulting stream of integers be a global value that can escape the
+current region. This in turn forces us to require that the handled
+function be global.
+
+\subsection{Example: Asynchronous I/O}
+
+Perhaps the most common use case for algebraic effects is for
+concurrency and asynchronous I/O. Implementing asynchronous I/O from
+scratch is beyond the scope of this paper, but we can build a simple
+version on top of an existing monadic concurrency library
+(Fig.~\ref{fig:aio}). Assuming we have a monadic future type
+\lstinline[style=oxcaml]{'a Deferred.t} we can write concurrent code in
+direct style by using an effect with a single
+\lstinline[style=oxcaml]{Await} operation that waits for a future to be
+completed.
+\begin{figure}
+\begin{lstlisting}[style=oxcaml]
+  let handle_await f =
+    let rec loop = function
+      | Return x -> Deferred.return x
+      | Perform(Await d, k) ->
+          Deferred.bind d (fun x -> loop (Await_eff.continue_global k x))
+    in
+    loop (Await_eff.reify_global f)
+\end{lstlisting}
+\caption{Handler for Asynchronous I/O}
+\label{fig:aio}
+\end{figure}
+
+\subsection{Nested effect handlers}
+
+A key feature of algebraic effects is how easily they compose. We can
+use state whilst using asynchronous I/O by simply nesting their
+handlers:
+\begin{lstlisting}[style=oxcaml]
+    handle_await (fun ah ->
+      handle_state i (fun sh ->
+        List.iter (fun fl ->
+          let s = await ah (File.read fl) in
+          set sh (int_of_string s + get sh)) files;
+        get sh))
+\end{lstlisting}
+This relies on the fact that \lstinline[style=oxcaml]{handle_state} uses
+\lstinline[style=oxcaml]{reify} rather than
+\lstinline[style=oxcaml]{reify_global} and so is able to operate on a
+local computation that closes over the local await handler value
+\lstinline[style=oxcaml]{ah}.
+
+\subsection{Effect sums and effect forwarding}
+
+If we tried to do something similar using our
+\lstinline[style=oxcaml]{handle_gen} handler instead of
+\lstinline[style=oxcaml]{handle_state}, then we would get an error. We
+could change the definition of \lstinline[style=oxcaml]{handle_gen} to
+use \lstinline[style=oxcaml]{reify} instead of
+\lstinline[style=oxcaml]{reify_global}, but then we would lose the
+property that the generator we produce can be passed around
+freely.
+
+Instead we need to build a handler that can \emph{forward} the
+\lstinline[style=oxcaml]{Await} operation to different effect handlers
+at different points in the program's execution. This more general form
+of composition requires the selection operations
+\lstinline[style=oxcaml]{outl} and \lstinline[style=oxcaml]{outr}. Using
+these we can write our desired handler for the
+\lstinline[style=oxcaml]{Gen} effect by instead writing a handler for
+\lstinline[style=oxcaml]{Sum(Await)(Gen)} that forwards all the
+\lstinline[style=oxcaml]{Await} operations on to another handler
+(Fig.~\ref{fig:gen-aio}).
+
+\begin{figure}
+\begin{lstlisting}[style=oxcaml]
+  module Eff = Reflection(Sum(Await)(Gen))
+  module Sel = Select(Await)(Gen)
+  type aints = Finished | More of int * (Handler(Await).t @ local -> aints)
+
+  let handle_gen_in_await f ah =
+    let rec loop ah = function
+      | Return () -> Finished
+      | Perform(Left op, k) -> loop ah (Eff.continue_global k (perform ah op))
+      | Perform(Right(Gen i), k) ->
+          More(i, fun ah -> loop ah (Eff.continue_global k ()))
+    in
+    loop ah (Eff.reify_global (fun h -> f (Sel.outl h) (Sel.outr h))
+\end{lstlisting}
+\caption{Handler for generators what can use asynchronous I/O}
+\label{fig:gen-aio}
+\end{figure}
+
+Explicit effect forwarding is required by all systems based on effect
+capabilities. Examples like this one fundamentally require that
+performing an \lstinline[style=oxcaml]{Await} operation does work
+proportional to the number of handlers it is forwarded through. Effect
+capabilities only ever do a constant amount of work to perform
+operations and so cannot handle such examples directly. Traditional
+effect handlers, on the other hand, always do work proportional to the
+number of nested handlers, allowing them to support such examples
+directly but paying a higher cost for the cases that do not need
+forwarding.
 
 \section{Related work}
 \label{sec:related-work}
@@ -3660,12 +3762,15 @@ and similarly for global bindings.
 
 \subsection{Soundness}
 
+\begin{lemma}
+\label{lemma:soundness}
 \begin{equation*}
   \Gamma \turnv v_1 \types \tau
   \wedge v_1 \stepstov v_2
   \implies \sem{\Gamma \turnv v_1 \types \tau}
     = \sem{\Gamma \turnv v_2 \types \tau}
 \end{equation*}
+\end{lemma}
 \begin{proof}
   By induction on the reduction relation. The congruence rules all
   follow immediately by the inductive hypothesis, leaving just the rules
@@ -3760,129 +3865,124 @@ and similarly for global bindings.
 \subsection{Contextual equivalence}
 
 In order to proof adequecy we need to provide a precise definition of
-contextual equivalence. The rules defininng of an execution contexts $\ctx{}$ are given in Fig.~\ref{fig:execution-context}.
-
+contextual equivalence. The syntax of value and computatoin evaluation
+contexts is given in Fig.~\ref{fig:execution-context}. We write
+$\ctxv{v}$ and $\ctxc{v}$ for the value and computation respecitvely
+obtained by replacing the $\_$ in the evaluation context with $v$.
 \begin{figure}
-
-\caption{Execution contexts}
+\begin{align*}
+  \mathrm{value\ contexts}, \ctxv{\_} ::=\;& \_
+      \mid \abs{x}{\ctxc{\_}}
+      \mid (\ctxv{\_}, v) \mid (v, \ctxv{\_})
+      \mid \fst{\ctxv{\_}} \mid \snd{\ctxv{\_}} \\
+    \mid& \inl{\ctxv{\_}} \mid \inr{\ctxv{\_}}
+      \mid \case{\ctxv{\_}}{x}{v}{x}{v}
+      \mid \case{v}{x}{\ctxv{\_}}{x}{v}
+      \mid \case{v}{x}{v}{x}{\ctxv{\_}} \\
+    \mid& \gbox{\ctxv{\_}}
+      \mid \gunbox{x}{\ctxv{\_}}{v} \mid \gunbox{x}{v}{\ctxv{\_}}
+      \mid \grun{\ctxc{\_}} \\
+    \mid& \casebox{\ctxv{\_}}{x}{v}{x}{v}
+      \mid \casebox{v}{x}{\ctxv{\_}}{x}{v}
+      \mid \casebox{v}{x}{v}{x}{\ctxv{\_}} \\
+    \mid& \indintro{op}{\ctxv{\_}}{v} \mid \indintro{op}{v}{\ctxv{\_}}
+      \mid \ret{\ctxv{\_}}
+      \mid \outl{\ctxv{\_}} \mid \outr{\ctxv{\_}} \\
+    \mid& \indelimm{\ctxv{\_}}
+             {\indretcase{x}{v} \seq
+              \indcase{op}{x}{x}{v} \seq \ldots \seq
+              \indcase{op}{x}{x}{v}} \\
+    \mid& \indelimm{v}
+             {\indretcase{x}{\ctxv{\_}} \seq
+              \indcase{op}{x}{x}{v} \seq \ldots \seq
+              \indcase{op}{x}{x}{v}} \\
+    \mid& \indelimm{v}
+             {\indretcase{x}{v} \seq \ldots \seq
+              \indcase{op}{x}{x}{\ctxv{\_}} \seq \ldots \seq
+              \indcase{op}{x}{x}{v}} \\
+  \mathrm{computation\ contexts}, \ctxc{\_} ::=\;& \_
+      \mid \return{\ctxv{\_}}
+      \mid \letv{x}{\ctxc{\_}}{c} \mid \letv{x}{c}{\ctxc{\_}} \\
+    \mid& \app{\ctxv{\_}}{v} \mid \app{v}{\ctxv{\_}}
+      \mid \perform{\ctxv{\_}}{op}{v} \mid \perform{v}{op}{\ctxv{\_}}
+      \mid \reify{\loc}{\ctxc{\_}}
+\end{align*}
+\caption{Syntax of execution contexts}
 \label{fig:execution-context}
 \end{figure}
-\begin{mathpar}
-\inferrule{\\}
-{\ccons{\lbind{\Gamma_1}{x}{\tau}}{\Gamma_2} \turnv x \types \tau}
-\and
-\inferrule{\lbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2}
-{\Gamma \turnv \abs{x}{c} \types \tau_1 \arr \tau_2}
-\and
-\inferrule{\Gamma \turnv v_1 \types \tau_1 \\ \Gamma \turnv v_1 \types \tau_1}
-{\Gamma \turnv (v_1, v_2) \types \tau_1 \times \tau_2}
-\and
-\inferrule{\Gamma \turnv v \types \tau_1 \times \tau_2}
-{\Gamma \turnv \fst{v} \types \tau_1}
-\and
-\inferrule{\Gamma \turnv v \types \tau_1 \times \tau_2}
-{\Gamma \turnv \snd{v} \types \tau_2}
-\and
-\inferrule{\\}
-{\Gamma \turnv () \types 1}
-\and
-\inferrule{\Gamma \turnv v \types \tau_1}
-{\Gamma \turnv \inl{v} \types \tau_1 + \tau_2}
-\and
-\inferrule{\Gamma \turnv v \types \tau_2}
-{\Gamma \turnv \inr{v} \types \tau_1 + \tau_2}
-\and
-\inferrule{\Gamma \turnv v_1 \types \tau_1 + \tau_2 \\
-           \lbind{\Gamma}{x_1}{\tau_1} \turnv v_2 \types \tau_3 \\
-           \lbind{\Gamma}{x_2}{\tau_2} \turnv v_3 \types \tau_3}
-{\Gamma \turnv \case{v_1}{x_1}{v_2}{x_2}{v_3} \types \tau_3}
-\and
-\inferrule{\Gamma \turnv v \types \tau}
-{\Gamma \turnc \return{v} \types \tau}
-\and
-\inferrule{\Gamma \turnc c_1 \types \tau_1 \\
-           \lbind{\Gamma}{x}{\tau_1} \turnc c_2 \types \tau_2}
-{\Gamma \turnc \letv{x}{c_1}{c_2} \types \tau_2}
-\and
-\inferrule{\Gamma \turnv v_1 \types \tau_1 \arr \tau_2 \\
-           \Gamma \turnv v_2 \types \tau_1}
-{\Gamma \turnc \app{v_1}{v_2} \types \tau_2}
-\and
-\inferrule{\\}
-{\ccons{\mbind{\Gamma_1}{x}{\tau}}{\Gamma_2} \turnv x \types \tau}
-\and
-\inferrule{\cdiv{\Gamma} \turnv v \types \tau}
-{\Gamma \turnv \gbox{v} \types \glob \tau}
-\and
-\inferrule{\Gamma \turnv v_1 \types \glob \tau_1 \\
-           \gbind{\Gamma}{x}{\tau_1} \turnv v_2 \types \tau_2}
-{\Gamma \turnv \gunbox{x}{v_1}{v_2} \types \tau_2}
-\and
-\inferrule{\cmdiv{\Gamma} \turnv v_1 \types \tau_1 + \tau_2 \\
-           \mbind{\Gamma}{x_1}{\tau_1} \turnv v_2 \types \tau_3 \\
-           \mbind{\Gamma}{x_2}{\tau_2} \turnv v_3 \types \tau_3}
-{\Gamma \turnv \casem{v_1}{x_1}{v_2}{x_2}{v_3} \types \tau_3}
-\and
-\inferrule{\cdiv{\Gamma} \turnc c \types \tau}
-{\Gamma \turnv \grun{c} \types \tau}
-\and
-\inferrule{op \types \tau_1 \rightarrowtail \tau_2 \in \Sigma \\
-           \cdiv{\Gamma} \turnv v_1 \types \tau_1 \\
-           \Gamma \turnv v_2 \types \glob \tau_2 \arr \ind{\Sigma}(\tau)}
-{\Gamma \turnv \indintro{op}{v_1}{v_2} \types \ind{\Sigma}(\tau)}
-\and
-\inferrule{\cdiv{\Gamma} \turnv v \types \tau}
-{\Gamma \turnv \ret{v} \types \ind{\Sigma}(\tau)}
-\and
-\inferrule{\cmdiv{\Gamma} \turnv v_s \types \ind{\Sigma}(\tau_1) \\
-           \Sigma = \{ op_1 \types \tau_{p_1} \rightarrowtail \tau_{a_1};
-             \ldots; op_n\types \tau_{p_n} \rightarrowtail \tau_{a_n} \} \\
-           \gbind{\Gamma}{x_r}{\tau_1} \turnv v_e \types \tau_2 \\
-           \mbind{\gbind{\Gamma}{x_{p_1}}{\tau_{p_1}}}{x_{k_1}}{\glob \tau_{a_1} \arr \tau_2} \turnv v_1 \types \tau_2 \\
-           \ldots \\
-           \mbind{\gbind{\Gamma}{x_{p_n}}{\tau_{p_n}}}{x_{k_n}}{\glob \tau_{a_n} \arr \tau_2} \turnv v_n \types \tau_2}
-{\Gamma \turnv \indelimm{v_s}{\indretcase{x_r}{v_e} \seq
-                                   \indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} \seq \ldots \seq
-                                   \indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}} \types \tau_2}
-\and
-\inferrule{\\}
-{\ccons{\lbind{\Gamma_1}{\loc}{\Sigma}}{\Gamma_2} \turnv \loc \types \yoneda{\Sigma}}
-\and
-\inferrule{\Gamma \turnv v \types \yoneda{\Sigma_1 + \Sigma_2}}
-{\Gamma \turnv \outl{v} \types \yoneda{\Sigma_1}}
-\and
-\inferrule{\Gamma \turnv v \types \yoneda{\Sigma_1 + \Sigma_2}}
-{\Gamma \turnv \outr{v} \types \yoneda{\Sigma_2}}
-\and
-\inferrule{\Gamma \turnv v_1 \types \yoneda{\Sigma} \\
-           op \types \tau_1 \rightarrowtail \tau_2 \in \Sigma \\
-           \cdiv{\Gamma} \turnv v_2 \types \tau_1}
-{\Gamma \turnc \; \perform{v_1}{op}{v_2} \types \glob \tau_2}
-\and
-\inferrule{\lbind{\Gamma}{\loc}{\Sigma} \turnc c \types \glob \tau}
-{\Gamma \turnc \; \reify{\loc}{c} \types \ind{\Sigma}(\tau)}
-\end{mathpar}
-\todo{Fix this up}
+
+We write
+$\ctxv{_} \types \Gamma_1 \turnv \tau_1 \trans \Gamma_2 \turnv \tau_2$
+and
+$\ctxc{_} \types \Gamma_1 \turnv \tau_1 \trans \Gamma_2 \turnc \tau_2$
+for the mutually inductive context typing relations that indicate that
+if $\Gamma_1 \turnv v \types \tau_1$ then
+$\Gamma_2 \turnv \ctxv{v} \tau_2$ and $\Gamma_2 \turnc \ctxc{v} \tau_2$
+respectively.
+
+Two values are contextually equivalent if they reduce to the same normal
+forms in closed boolean evaluation contexts.
+\begin{align*}
+\Gamma \turnv v_1 \ctxeq v_2 \tau \quad = \quad
+\forall \ctxv{_}.
+  \ctxv{_} \types \Gamma \turnv \tau \trans \turnv 1 + 1
+  \quad \implies \quad
+  \forall \omega.
+  \ctxv{v_1} \reducestov \omega \iff \ctxv{v_2} \reducestov \omega
+\end{align*}
 
 \subsection{Compositionality}
 
+The denotational semantics is compositional:
+\begin{lemma}
+\label{lemma:compositionality}
 \begin{align*}
-  \sem{\Gamma \turnv v_1 \types \tau_1}
-    = \sem{\Gamma \turnv v_2 \types \tau_1}
-  \quad \wedge \quad \Gamma \turnv \ctx{\_} \types \tau_1 \trans \tau_2
-  \quad \implies \quad 
-  \sem{\Gamma \turnv \ctx{v_1} \types \tau_2}
-  = \sem{\Gamma \turnv \ctx{v_2} \types \tau_2}
+  &\sem{\Gamma_1 \turnv v_1 \types \tau_1}
+    = \sem{\Gamma_1 \turnv v_2 \types \tau_1}
+  \quad \wedge \quad \ctxv{\_} \types \Gamma_1 \turnv \tau_1 \trans \Gamma_2 \turnv \tau_2
+  \quad \implies \quad
+  \sem{\Gamma_2 \turnv \ctxv{v_1} \types \tau_2}
+  = \sem{\Gamma_2 \turnv \ctxv{v_2} \types \tau_2} \\
+  &\sem{\Gamma_1 \turnv v_1 \types \tau_1}
+    = \sem{\Gamma_1 \turnv v_2 \types \tau_1}
+  \quad \wedge \quad \ctxc{\_} \types \Gamma_1 \turnv \tau_1 \trans \Gamma_2 \turnc \tau_2
+  \quad \implies \quad
+  \sem{\Gamma_2 \turnc \ctxc{v_1} \types \tau_2}
+  = \sem{\Gamma_2 \turnc \ctxc{v_2} \types \tau_2}
 \end{align*}
-\todo{Prove this}
+\end{lemma}
+\begin{proof}
+  By induction on the evaluation context typing rules. All the
+  denotations only refer to subterms via the denotations of those
+  subterms, so all the cases that correspond to typing rules go through
+  directly using the induction hypothis on the subterm that is an
+  evaluation context. The other case is for the $\_$ rule, which goes
+  through by hypothesis.
+\end{proof}
 
 \subsection{Adequacy}
 
+The denotational semantics is adequate with respect to the operational semantics.
 \begin{equation*}
     \sem{\turnv v_1 \types \tau} = \sem{\turnv v_2 \types \tau}
-    \implies v_1 \ctxeq v_2  
+    \implies \turnv v_1 \ctxeq v_2  \tau
 \end{equation*}
-\todo{Prove this}
+\begin{proof}
+  Given a context $\ctxv{_}$ such that
+  $\ctxv{_} \types \turnv \tau \trans \turnv 1 + 1$, we know by
+  confluence (\ref{lemma:church-rosser}) and strong normalization
+  (\ref{lemma:strong-normalization}) that there is a unique normal form
+  $\omega_1$ such that $\ctxv{v_1} \reducestov \omega_1$ and a unique
+  normal form $\omega_2$ such that $\ctxv{v_2} \reducestov \omega_2$. We
+  know by subject reduction (\ref{lemma:subject-reduction}) that these
+  normal forms are either $\inl{()}$ or $\inr{()}$. We also know by
+  compositionality (\ref{lemma:compositionality}) and soundness
+  (\ref{lemma:soundness}) that
+  $\sem{\turnv \omega_1 \types 1 + 1} = \sem{\turnv \omega_2 \types 1 +
+    1}$. Since we know that
+  $\sem{\turnv \inl{()}} \neq \sem{\turnv \inr{()}}$ it must be the case
+  that $\omega_1 = \omega_2$.
+\end{proof}
 
 \section{OxCaml implementation}
 \label{apdx:implementation}
@@ -3943,282 +4043,5 @@ end
 \caption{Implementation}
 \label{fig:implementation}
 \end{figure}
-
-\subsection{More efficient implementation in terms of fibers}
-
-In the implementation in Fig.\ref{fig:implementation}, because we are
-using OCaml's existing algebraic effect support, whenever an operation
-is reflected we perform a linear search up the stack of handlers until
-we find the corresponding one. This search is not actually necessary:
-there is a one-to-one relationship between the handlers and the handler
-values used to reflect operations. The linear search could be eliminated
-by extending the OxCaml runtime to support direct references to
-handlers. By allowing local values to point directly to the fiber
-structures that implement effect handlers, operations can jump
-immediately to the correct handler without traversing the stack. This
-optimization maintains the same interface while providing constant-time
-operation dispatch. It is roughly the implementation technique described
-by Ma et al.~\cite{ma2024lexical}.
-
-\section{Effect reflection in practice}
-\label{apdx:examples}
-\subsection{Example: State}
-
-As shown in the introduction we can implement an effect handler for
-state using out effect reflection API (Fig.~\ref{fig:ex-state}).
-
-\begin{figure}
-\begin{lstlisting}[style=oxcaml]
-  module State = struct
-    type 'a t =
-      | Get : int t
-      | Set : int -> unit t
-  end
-
-  module State_eff = Reflection(State)
-  type handler = Handler(State).t
-  open Term(State)
-
-  let handle_state i f =
-    let rec loop (s : int) = function
-      | Return x -> x
-      | Perform(Get, k) -> loop s (State_eff.continue k s)
-      | Perform(Set s', k) -> loop s' (State_eff.continue k ())
-    in
-    loop i (State_eff.reify f)
-
-  let get h =
-    State_eff.perform Get h
-
-  let set h i =
-    State_eff.perform (Set i) h
-\end{lstlisting}
-\caption{Example: State}
-\label{fig:ex-state}
-\end{figure}
-
-The implementation has the following interface:
-\begin{lstlisting}[style=oxcaml]
-    type handler
-
-    val handle_state : int -> (handler @ local -> 'a) @ local -> 'a
-    val get : handler @ local -> int
-    val set : handler @ local -> int -> unit
-\end{lstlisting}
-Note that we are able to use \lstinline[style=oxcaml]{reify} rather to
-than \lstinline[style=oxcaml]{reify_global} allowing the function passed
-to \lstinline[style=oxcaml]{handle_state} to be local.
-
-This shows how to implement state using effect reflection, but the same
-interface can also be implemented directly in OxCaml using mutable state
-and locality:
-\begin{lstlisting}[style=oxcaml]
-    type handler = int ref
-
-    let handle_state i f = f (ref i)
-    let get r = !r
-    let set r i = r := i
-\end{lstlisting}
-This implementation gives the same behaviour as the one built using
-effect reflection. Crucially it is just as easy to reason about, which
-in turn means it is just as easy to reason about as the state
-monad. This shows that the improved reasoning ability of the state monad
-over ordinary mutable state is precisely captured by the notion of
-locality.
-
-This transformation from effect reflection to local mutable state works
-for any \emph{tail-resumptive}\cite{xie2020effect} effect handler.
-
-\subsection{Example: Generators}
-
-A more realistic use of effect reflection is a \emph{generator}
-effect (Fig.~\ref{fig:ex-generator}).
-
-\begin{figure}
-\begin{lstlisting}[style=oxcaml]
-  module Gen = struct
-    type 'a t =
-      | Gen : int -> unit t
-  end
-
-  module Gen_eff = Reflection(Gen)
-  open Term(Gen)
-
-  type ints =
-    | Finished
-    | More of int * (unit -> ints)
-
-  let handle_gen f =
-    let rec loop = function
-      | Return () -> Finished
-      | Perform(Gen i, k) ->
-          More(i, fun () -> loop (Gen_eff.continue_global k ()))
-    in
-    loop (Gen_eff.reify_global f)
-
-  let gen h i =
-    Gen_eff.perform (Gen i) h
-\end{lstlisting}
-\caption{Example: Generators}
-\label{fig:ex-generator}
-\end{figure}
-
-This effect has a single operation \lstinline[style=oxcaml]{Gen}, along
-with a handler that turns computations using
-\lstinline[style=oxcaml]{Gen} into streams of integers.
-
-Unlike the state handler, here we must use
-\lstinline[style=oxcaml]{reify_global} rather than
-\lstinline[style=oxcaml]{reify} because our intention is that the
-resulting stream of integers be a global value that can escape the
-current region. Since it closes over the continuation
-\lstinline[style=oxcaml]{k}, we must use \lstinline[style=oxcaml]{reify_global}
-and require that \lstinline[style=oxcaml]{f} be global:
-\begin{lstlisting}[style=oxcaml]
-  val handle_gen : (Handler(Gen).t @ local -> unit) -> ints
-\end{lstlisting}
-
-\subsection{Example: Asynchronous I/O}
-
-Perhaps the most common use case for algebraic effects is for
-concurrency and asynchronous I/O. Implementing asynchronous I/O from
-scratch is beyond the scope of this paper, but we can build a simple
-version on top of an existing monadic concurrency library
-(Fig.~\ref{fig:ex-aio}). Assuming we have a monadic future type
-\lstinline[style=oxcaml]{'a Deferred.t} we can write concurrent code in
-direct style by using an effect with a single
-\lstinline[style=oxcaml]{Await} operation that waits for a future to be
-completed.
-
-\begin{figure}
-\begin{lstlisting}[style=oxcaml]
-  module Await : sig
-    type 'a t =
-      | Await : 'a Deferred.t -> 'a t
-  end
-
-  module Await_eff = Reflection(Await)
-  open Term(Await)
-
-  let handle_await f =
-    let rec loop = function
-      | Return x -> Deferred.return x
-      | Perform(Await d, k) ->
-          Deferred.bind d (fun x -> loop (Await_eff.continue_global k x))
-    in
-    loop (Await_eff.reify_global f)
-
-  let await h d =
-    Await_eff.perform (Await d) h
-\end{lstlisting}
-\caption{Example: Asynchronous I/O}
-\label{fig:ex-aio}
-\end{figure}
-
-Using this we can write direct-style code using asynchronous I/O:
-\begin{lstlisting}[style=oxcaml]
-    let copy_file h src dst =
-      let s = await h (File.read src) in
-      await h (File.write dst s)
-\end{lstlisting}
-
-\subsection{Nested effect handlers}
-
-A key feature of algebraic effects is how easily they compose. We can
-use state whilst using asynchronous I/O by simply nesting their
-handlers:
-\begin{lstlisting}[style=oxcaml]
-    handle_await (fun ah ->
-      handle_state i (fun sh ->
-        List.iter (fun fl ->
-          let s = await ah (File.read fl) in
-          let i = int_of_string s in
-          set sh (i + get sh)) files;
-        get sh))
-\end{lstlisting}
-
-This relies on the fact that \lstinline[style=oxcaml]{handle_state}
-uses \lstinline[style=oxcaml]{reify} rather than
-\lstinline[style=oxcaml]{reify_global} and so is able to operate on a
-local computation that closes over the local await handler value
-\lstinline[style=oxcaml]{ah}.
-
-If we try to do something similar using our
-\lstinline[style=oxcaml]{handle_gen} handler, then we get an error:
-\begin{lstlisting}[style=oxcaml]
-    handle_await (fun ah ->
-      handle_gen (fun gh ->
-        List.iter (fun fl ->
-          let s = await ah (File.read fl) in
-          let i = int_of_string s in
-          gen gh i) files))
-    (*@ \textcolor{red}{Error: let s = await ah (File.read fl) in} @*)
-                         (*@ \textcolor{red}{\textasciicircum\textasciicircum} @*)
-    (*@ \textcolor{red}{ This value is local and would escape its region.} @*)
-\end{lstlisting}
-
-We could change the definition of \lstinline[style=oxcaml]{handle_gen}
-to use \lstinline[style=oxcaml]{reify} instead of
-\lstinline[style=oxcaml]{reify_global}, but then we would lose the property
-that the generator we produce can be passed around freely. Instead we
-need to build a handler that can \emph{forward} the
-\lstinline[style=oxcaml]{Await} operation to different effect handlers
-at different points in the program's execution.
-
-\subsection{Effect sums and effect forwarding}
-
-Composing handlers like \lstinline[style=oxcaml]{handle_gen}, that use
-\lstinline[style=oxcaml]{reify_global} rather than
-\lstinline[style=oxcaml]{reify}, is a fundamentally more involved
-operation. Consider the case of generators that are able to use
-asynchronous I/O. We are given a computation that performs both
-\lstinline[style=oxcaml]{Await} and \lstinline[style=oxcaml]{Gen}
-operations and we'd like to turn it into a stream of integers.  We would
-like to be able to freely pass this stream around. In particular, we do
-not wish the stream to be prevented from escaping the scope of the
-current \lstinline[style=oxcaml]{Await} handler.  However forcing parts
-of the stream requires performing additional
-\lstinline[style=oxcaml]{Await} operations, so whenever we force part of
-the stream we'll need to provide a handler for those
-\lstinline[style=oxcaml]{Await} operations again.
-
-To achieve this more general form of composition, we must use the
-selection operations \lstinline[style=oxcaml]{outl} and
-\lstinline[style=oxcaml]{outr}. Using these we can write our desired
-handler for the \lstinline[style=oxcaml]{Gen} effect by instead writing
-a handler for \lstinline[style=oxcaml]{Sum(Await)(Gen)} that forwards
-all the \lstinline[style=oxcaml]{Await} operations on to another
-handler.
-
-\begin{lstlisting}[style=oxcaml]
-  module Eff = Reflection(Sum(Await)(Gen))
-  module Sel = Select(Await)(Gen)
-
-  type aints =
-    | Finished
-    | More of int * (Handler(Await).t @ local -> aints)
-
-  let handle_gen_in_await f ah =
-    let rec loop ah = function
-      | Return () -> Finished
-      | Perform(Left op, k) -> loop ah (Eff.continue_global k (perform ah op))
-      | Perform(Right(Gen i), k) ->
-          More(i, fun ah -> loop ah (Eff.continue_global k ()))
-    in
-    loop ah (Eff.reify_global (fun h -> f (Sel.outl h) (Sel.outr h))
-\end{lstlisting}
-
-The need for explicit effect forwarding is a short-coming of all systems
-based around effect capabilities. This includes named handlers
-(\cite{xie2022first}) and lexical effect handlers
-(\cite{biernacki2019binders}). Examples like this one fundamentally
-require that performing an \lstinline[style=oxcaml]{Await} operation
-does work proportional to the number of handlers it is forwarded
-through. Effect capabilities do a constant amount of work to perform
-operations and so cannot handle such examples directly. Traditional
-effect handlers, on the other hand, \textbf{always} do work proportional
-to the number of nested handlers, allowing them to support such examples
-directly but paying a higher cost for the cases that do not need
-forwarding.
 
 \end{document}
