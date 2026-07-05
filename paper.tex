@@ -112,6 +112,15 @@
 \newcommand{\inl}[1]{\inlname #1}
 \newcommand{\inrname}{\mathop{\mathtt{in}_R}}
 \newcommand{\inr}[1]{\inrname #1}
+\newcommand{\bang}[1]{\mathop{!_{#1}}}
+\newcommand{\inlc}[2]{{\iota_1}_{(#1, #2)}}
+\newcommand{\inrc}[2]{{\iota_2}_{(#1, #2)}}
+\newcommand{\copair}[2]{[#1, #2]}
+\newcommand{\distc}[3]{\mathit{dist}_{(#1, #2, #3)}}
+\newcommand{\gdist}[2]{d^{\Box}_{(#1, #2)}}
+\newcommand{\retcw}[1]{\retname_{\ind{#1}}}
+\newcommand{\opcw}[2]{{#1}_{\ind{#2}}}
+\newcommand{\foldc}[3]{\mathit{fold}_{(#1, #2)}(#3)}
 \newcommand{\casename}{\mathtt{case}}
 \newcommand{\case}[5]{\mathop{\casename} #1 \,\{\,\inl{#2} \Rightarrow #3 \seq \inr{#4} \Rightarrow #5 \,\}}
 \newcommand{\casemname}{\casename^{m}}
@@ -146,7 +155,7 @@
 \newcommand{\turnv}{\mathrel{\vdash_V}}
 \newcommand{\turnc}{\mathrel{\vdash_C}}
 \newcommand{\turnstlc}{\mathrel{\vdash_{STLC}}}
-\newcommand{\evmap}[2]{\mathop{ev}_{(#1, #2)}}
+\newcommand{\evmap}[2]{\mathop{ev_{(#1, #2)}}}
 \newcommand{\currying}[1]{\mathop{\lambda}(#1)}
 \newcommand{\stepstoname}{\rightsquigarrow}
 \newcommand{\stepstov}{\stepstoname_V}
@@ -1523,14 +1532,15 @@ free algebras monad to give us our semantics for function types.
 
 \subsection{The global modality}
 
-For any category $\cat$, if $\cat$ has a terminal object $\terminal$, we
+For any category $\cat$ with a terminal object $\terminal$, we
 can define the global modality $\glob \types [\psh, \psh]$ such that:
 $\glob(P)(L) = P(\terminal)$. In the case of $\pshlawcop$ this becomes:
 \begin{equation*}
 \glob(P)(L) = P(\initial)
 \end{equation*}
 $\glob$ forms a comonad on $\pshlawcop$. $\glob$ also distributes over
-products: $\glob (P \times Q) = (\glob P) \times (\glob Q)$
+both products: $\glob (P \times Q) = (\glob P) \times (\glob Q)$, and
+sums: $\glob (P + Q) = (\glob P) + (\glob Q)$.
 
 Within the abient monad model, this amounts to restricting a type to
 only the elements which do not depend on the ambient monad. This is very
@@ -3546,7 +3556,7 @@ which follows by induction on $e_1$.
 
 Normal forms of STLC are embedded to normal forms:
 \begin{lemma}
-\label{lemma:stlc-reduces}
+\label{lemma:normal}
   \begin{equation*}
     e \stepsnotstlc
     \quad \implies \quad \embed{e} \stepsnotv
@@ -3562,150 +3572,314 @@ sufficient to show that the embedding correctly models STLC.
 
 In this section we prove that the denotatoinal semantics is sound and
 adequate with respect to the operational semantics. The full
-denotational semantcs are in Fig.~\ref{fig:denotational-types},
-Fig.~\ref{fig:denotational-values} and
-Fig.~\ref{fig:denotational-computations}.
+denotational semantcs are in Fig.~\ref{fig:denotational-standard},
+Fig.~\ref{fig:denotational-locality},
+Fig.~\ref{fig:denotational-inductive} and
+Fig.~\ref{fig:denotational-reflection}.
 
 \begin{figure}
-  \begin{subfigure}[T]{0.4\textwidth}
+\begin{subfigure}[t]{0.45\textwidth}
 \begin{align*}
-\sem{\tau} &\mathrel{:} \pshlawcop \\
-\sem{\tau_1 \times \tau_2} &= \sem{\tau_1} \times \sem{\tau_2} \\
-\sem{1} &= 1 \\
-\sem{\tau_1 + \tau_2} &= \sem{\tau_1} + \sem{\tau_2} \\
-\sem{\tau_1 \arr \tau_2} &= \arrow{\sem{\tau_1}}{\mon(\sem{\tau_2})} \\
-\sem{\glob \tau} &= \glob \sem{\tau} \\
-\sem{\ind{\Sigma}(\tau)} = \ind{\sem{\Sigma}}(\sem{\tau}) \\
-\sem{\yoneda{\Sigma}} &= \yoneda{\sem{\Sigma}}
+&\sem{\tau} \mathrel{:} \pshlawcop \\
+&\sem{\tau_1 \times \tau_2} = \sem{\tau_1} \times \sem{\tau_2} \\
+&\sem{1} = 1 \\
+&\sem{\tau_1 + \tau_2} = \sem{\tau_1} + \sem{\tau_2} \\
+&\sem{\tau_1 \arr \tau_2} = \arrow{\sem{\tau_1}}{\mon(\sem{\tau_2})}
 \end{align*}
+\caption{Types}
 \end{subfigure}
-\begin{subfigure}[T]{0.4\textwidth}
+\hfill
+\begin{subfigure}[t]{0.45\textwidth}
 \begin{align*}
-\sem{\Gamma} &\mathrel{:} \pshlawcop \\
-\sem{\cempty} &= 1 \\
-\sem{\lbind{\Gamma}{x}{\tau}} &= \sem{\Gamma} \times \sem{\tau} \\
-\sem{\gbind{\Gamma}{x}{\tau}} &= \sem{\Gamma} \times \glob \sem{\tau} \\
-\sem{\lbind{\Gamma}{\loc}{\Sigma}} &= \sem{\Gamma} \times \yoneda{\sem{\Sigma}} \\
+&\sem{\Gamma} \mathrel{:} \pshlawcop \\
+&\sem{\cempty} = 1 \\
+&\sem{\lbind{\Gamma}{x}{\tau}} = \sem{\Gamma} \times \sem{\tau}
 \end{align*}
+\caption{Contexts}
+\end{subfigure}
+
+\begin{subfigure}{\textwidth}
+\begin{align*}
+&\sem{\Gamma \turnv v \types \tau} \mathrel{:} \homset{\pshlawcop}{\sem{\Gamma}}{\sem{\tau}} \\
+&\sem{\ccons{\lbind{\Gamma_1}{x}{\tau}}{\Gamma_2} \turnv x \types \tau} = \proj{|\Gamma_1|} \\
+&\sem{\Gamma \turnv \abs{x}{c} \types \tau_1 \arr \tau_2} = \currying{\sem{\lbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2}}\\
+&\sem{\Gamma \turnv (v_1, v_2) \types \tau_1 \times \tau_2} =
+  \langle \sem{\Gamma \turnv v_1 \types \tau_1},
+          \sem{\Gamma \turnv v_2 \types \tau_2} \rangle \\
+&\sem{\Gamma \turnv \fst{v} \types \tau_1} = \fstc{\sem{\tau_1}}{\sem{\tau_2}} \circ \sem{\Gamma \turnv v \types \tau_1 \times \tau_2}\\
+&\sem{\Gamma \turnv \snd{v} \types \tau_2} = \sndc{\sem{\tau_1}}{\sem{\tau_2}} \circ \sem{\Gamma \turnv v \types \tau_1 \times \tau_2} \\
+&\sem{\Gamma \turnv () \types 1} = \bang{\sem{\Gamma}} \\
+&\sem{\Gamma \turnv \inl{v} \types \tau_1 + \tau_2} =
+  \inlc{\sem{\tau_1}}{\sem{\tau_2}} \circ \sem{\Gamma \turnv v \types \tau_1} \\
+&\sem{\Gamma \turnv \inr{v} \types \tau_1 + \tau_2} =
+  \inrc{\sem{\tau_1}}{\sem{\tau_2}} \circ \sem{\Gamma \turnv v \types \tau_2} \\
+&\sem{\Gamma \turnv \case{v_1}{x_1}{v_2}{x_2}{v_3} \types \tau_3} = {} \\
+&\quad \copair{\sem{\lbind{\Gamma}{x_1}{\tau_1} \turnv v_2 \types \tau_3}}
+         {\sem{\lbind{\Gamma}{x_2}{\tau_2} \turnv v_3 \types \tau_3}} \\
+&\quad \circ \distc{\sem{\Gamma}}{\sem{\tau_1}}{\sem{\tau_2}}
+   \circ \langle id_{\sem{\Gamma}},
+                 \sem{\Gamma \turnv v_1 \types \tau_1 + \tau_2} \rangle
+\end{align*}
+\caption{Values}
+\end{subfigure}
+
+\begin{subfigure}{\textwidth}
+\begin{align*}
+&\sem{\Gamma \turnc c \types \tau} \mathrel{:} \homset{\pshlawcop}{\sem{\Gamma}}{\mon(\sem{\tau})} \\
+&\sem{\Gamma \turnc \return{v} \types \tau} = \unit{\mon}_{\sem{\tau}} \circ \sem{\Gamma \turnv v \types \tau} \\
+&\sem{\Gamma \turnc \letv{x}{c_1}{c_2} \types \tau_2} = {} \\
+&\quad \mult{\mon}_{\sem{\tau_2}}
+    \circ \mon(\sem{\lbind{\Gamma}{x}{\tau_1} \turnc c_2 \types \tau_2})
+    \circ \strength{\mon}_{\sem{\Gamma}, \sem{\tau_1}}
+    \circ \langle id_{\sem{\Gamma}}, \sem{\Gamma \turnc c_1 \types \tau_1} \rangle \\
+&\sem{\Gamma \turnc \app{v_1}{v_2} \types \tau_2} =
+    \evmap{\sem{\tau_1}}{\sem{\tau_2}}
+    \circ \langle \sem{\Gamma \turnv v_1 \types \tau_1 \arr \tau_2},
+                  \sem{\Gamma \turnv v_2 \types \tau_1} \rangle
+\end{align*}
+\caption{Computations}
+\end{subfigure}
+
+\makebox[\linewidth][l]{\hspace{10pt}Where:}
 \begin{itemize}
-\item $\sem{\Sigma}$ is the $\kappa$-bounded Lawvere theory corresponding to the
-  signature $\Sigma$.
+\item $\fstc{A}{B}$ and $\sndc{A}{B}$ are the projections for $A \times B$
+\item $\bang{A}$ is the unique morphism from $A$ to the terminal object $1$
+\item $\inlc{A}{B}$ and $\inrc{A}{B}$ are the injections for $A + B$
+\item $\copair{m_1}{m_2}$ is the copairing of $m_1$ and $m_2$
+\item $\distc{A}{B}{C}$ is the distributivity isomorphism from
+  $A \times (B + C)$ to $(A \times B) + (A \times C)$
+\item $\currying{m}$ is the currying of $m$
+\item $\evmap{A}{B}$ is the evaluation map for $\arrow{A}{B}$
+\item $\unit{\mon}$, $\mult{\mon}$ and $\strength{\mon}$ are the unit,
+  multiplication and strength of $\mon$
 \end{itemize}
-\end{subfigure}
-\caption{Denotational semantics: Types and Contexts}
-\label{fig:denotational-types}
+\caption{Denotational semantics: Basic constructs}
+\label{fig:denotational-standard}
 \end{figure}
 
 \begin{figure}
+\begin{subfigure}[t]{0.45\textwidth}
 \begin{align*}
-\sem{\Gamma \turnv v \types \tau} &\mathrel{:} \homset{\pshlawcop}{\sem{\Gamma}}{\sem{\tau}} \\
-\sem{\ccons{\lbind{\Gamma_1}{x}{\tau}}{\Gamma_2} \turnv x \types \tau} &= \proj{|\Gamma|} \\
-\sem{\Gamma \turnv \abs{x}{c} \types \tau_1 \arr \tau_2} &= \currying{\sem{\lbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2}}\\
-\sem{\Gamma \turnv (v_1, v_2) \types \tau_1 \times \tau_2} &= \\
-\sem{\Gamma \turnv \fst{v} \types \tau_1} &= \fstc{\sem{\tau_1}}{\sem{\tau_2}} \circ \sem{\Gamma \turnv v \types \tau_1 \times \tau_2}\\
-\sem{\Gamma \turnv \snd{v} \types \tau_2} &= \sndc{\sem{\tau_1}}{\sem{\tau_2}} \circ \sem{\Gamma \turnv v \types \tau_1 \times \tau_2} \\
-\sem{\Gamma \turnv () \types 1} &= \\
-\sem{\Gamma \turnv \inl{v} \types \tau_1 + \tau_2} &= \\
-\sem{\Gamma \turnv \inr{v} \types \tau_1 + \tau_2} &= \\
-\sem{\Gamma \turnv \case{v_1}{x_1}{v_2}{x_2}{v_3} \types \tau_3} &= \\
-\sem{\ccons{\gbind{\Gamma_1}{x}{\tau}}{\Gamma_2} \turnv x \types \tau} &= \counit{\glob}_{\sem{\tau}} \circ \proj{|\Gamma|} \\
-\sem{\Gamma \turnv \gbox{v} \types \glob \tau} &=
+&\sem{\tau} \mathrel{:} \pshlawcop \\
+&\sem{\glob \tau} = \glob \sem{\tau}
+\end{align*}
+\caption{Types}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.45\textwidth}
+\begin{align*}
+&\sem{\Gamma} \mathrel{:} \pshlawcop \\
+&\sem{\gbind{\Gamma}{x}{\tau}} = \sem{\Gamma} \times \glob \sem{\tau}
+\end{align*}
+\caption{Contexts}
+\end{subfigure}
+
+\begin{subfigure}{\textwidth}
+\begin{align*}
+&\sem{\Gamma \turnv v \types \tau} \mathrel{:} \homset{\pshlawcop}{\sem{\Gamma}}{\sem{\tau}} \\
+&\sem{\ccons{\gbind{\Gamma_1}{x}{\tau}}{\Gamma_2} \turnv x \types \tau} = \counit{\glob}_{\sem{\tau}} \circ \proj{|\Gamma_1|} \\
+&\sem{\Gamma \turnv \gbox{v} \types \glob \tau} =
   \glob \sem{\cdiv{\Gamma} \turnv v \types \tau}
   \circ \comult{\glob}_{\sem{\cdiv{\Gamma}}} \circ \bdiv{\Gamma} \\
-\sem{\Gamma \turnv \gunbox{x}{v_1}{v_2} \types \tau_2} &=
+&\sem{\Gamma \turnv \gunbox{x}{v_1}{v_2} \types \tau_2} =
   \sem{\gbind{\Gamma}{x}{\tau_1} \turnv v_2 \types \tau_2}
   \circ \langle id_{\sem{\Gamma}},
                 \sem{\Gamma \turnv v_1 \types \glob \tau_1} \rangle \\
-\sem{\Gamma \turnv \casebox{v_1}{x_1}{v_2}{x_2}{v_3} \types \tau_3} &= \\
-\sem{\Gamma \turnv \grun{c} \types \glob \tau} &=
-  \ununit_{\sem{\tau}}
+&\sem{\Gamma \turnv \casebox{v_1}{x_1}{v_2}{x_2}{v_3} \types \tau_3} = {} \\
+&\quad \copair{\sem{\gbind{\Gamma}{x_1}{\tau_1} \turnv v_2 \types \tau_3}}
+         {\sem{\gbind{\Gamma}{x_2}{\tau_2} \turnv v_3 \types \tau_3}} \\
+&\quad \circ \distc{\sem{\Gamma}}{\glob \sem{\tau_1}}{\glob \sem{\tau_2}}
+   \circ \langle id_{\sem{\Gamma}},
+      \gdist{\sem{\tau_1}}{\sem{\tau_2}}
+      \circ \glob \sem{\cdiv{\Gamma} \turnv v_1 \types \tau_1 + \tau_2}
+      \circ \comult{\glob}_{\sem{\cdiv{\Gamma}}} \circ \bdiv{\Gamma} \rangle \\
+&\sem{\Gamma \turnv \grun{c} \types \glob \tau} =
+  \counit{\glob}_{\sem{\tau}} \circ \ununit_{\sem{\tau}}
   \circ \glob \sem{\cdiv{\Gamma} \turnc c \types \tau}
-  \circ \comult{\glob}_{\sem{\cdiv{\Gamma}}} \circ \bdiv{\Gamma} \\
-\sem{\Gamma \turnv \indintro{op}{v_1}{v_2} \types \ind{\Sigma}(\tau)} &= \\
-\sem{\Gamma \turnv \ret{v} \types \ind{\Sigma}(\tau)} &= \\
-\sem{\Gamma \turnv \indelim{v_s}{\indretcase{x_r}{v_e} \seq
-                                   \indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} &\seq \ldots \seq
-                                   \indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}} \types \tau_2} \\
-                                  &= \\
-\sem{\ccons{\lbind{\Gamma_1}{\loc}{\Sigma}}{\Gamma_2} \turnv \loc \types \yoneda{\Sigma}} &= \proj{|\Gamma|} \\
-\sem{\Gamma \turnv \outl{v} \types \yoneda{\Sigma_1}} &= \\
-\sem{\Gamma \turnv \outr{v} \types \yoneda{\Sigma_2}} &=
+  \circ \comult{\glob}_{\sem{\cdiv{\Gamma}}} \circ \bdiv{\Gamma}
 \end{align*}
+\caption{Values}
+\end{subfigure}
+
+\makebox[\linewidth][l]{\hspace{10pt}Where:}
 \begin{itemize}
-\item $\fstc{A}{B}$ is the first projection for $A \times B$
-\item $\sndc{A}{B}$ is the second projection for $A \times B$
-\item $\currying{m}$ is the currying of $m$
-\item $\counit{\glob}$ is the counit of $\glob$
-\item $\comult{\glob}$ is the comultiplication of $\glob$
+\item $\counit{\glob}$ and $\comult{\glob}$ are the counit and
+  comultiplication of $\glob$
+\item $\gdist{A}{B}$ is the distribution isomorphism from
+  $\glob (A + B)$ to $(\glob A) + (\glob B)$
 \item $\bdiv{\Gamma} \types \Gamma \rightarrow \cdiv{\Gamma}$ is the morphism
 that projects the global bindings from $\Gamma$
 \item $\ununit_P$ is the isomorphism from $\glob \mon(P)$ to $\glob P$
 \end{itemize}
-\caption{Denotational semantics: Values}
-\label{fig:denotational-values}
+\caption{Denotational semantics: Locality}
+\label{fig:denotational-locality}
 \end{figure}
-\todo{Fix up the variable cases to work anywhere in the context}
 
 \begin{figure}
+\begin{subfigure}{\textwidth}
 \begin{align*}
-\sem{\Gamma \turnc v \types \tau} &\mathrel{:} \homset{\pshlawcop}{\sem{\Gamma}}{\mon(\sem{\tau})} \\
-\sem{\Gamma \turnc \return{v} \types \tau} &= \unit{\mon}_{\sem{\tau}} \circ \sem{\Gamma \turnv v \types \tau} \\
-\sem{\Gamma \turnc \letv{x}{c_1}{c_2} \types \tau_2} &=
-    \mult{\mon}_{\sem{\tau_2}}
-    \circ \mon(\sem{\lbind{\Gamma}{x}{\tau_1} \turnc c_2 \types \tau_2})
-    \circ \strength{\mon}_{\sem{\Gamma}, \sem{\tau_1}}
-    \circ \langle id_{\sem{\Gamma}}, \sem{\Gamma \turnc c_1 \types \tau_1} \rangle \\
-\sem{\Gamma \turnc \app{v_1}{v_2} \types \tau_2} &=
-    \evmap{\sem{\tau_1}}{\sem{tau_2}}
-    \circ \langle \sem{\Gamma \turnv v_1 \types \tau_1 \arr \tau_2},
-                  \sem{\Gamma \turnv v_2 \types \tau_1} \rangle \\
-\sem{\Gamma \turnc \perform{v_1}{op}{v_2} \types \tau_a} &=
+&\sem{\tau} \mathrel{:} \pshlawcop \\
+&\sem{\ind{\Sigma}(\tau)} = \ind{\sem{\Sigma}}(\sem{\tau})
+\end{align*}
+\caption{Types}
+\end{subfigure}
+
+\begin{subfigure}{\textwidth}
+\begin{align*}
+&\sem{\Gamma \turnv v \types \tau} \mathrel{:} \homset{\pshlawcop}{\sem{\Gamma}}{\sem{\tau}} \\
+&\sem{\Gamma \turnv \indintro{op}{v_1}{v_2} \types \ind{\Sigma}(\tau)} = {} \\
+&\quad \opcw{op}{\sem{\Sigma}}
+  \circ \langle \glob \sem{\cdiv{\Gamma} \turnv v_1 \types \tau_p}
+                \circ \comult{\glob}_{\sem{\cdiv{\Gamma}}} \circ \bdiv{\Gamma},
+                \sem{\Gamma \turnv v_2 \types \glob \tau_a \arr \ind{\Sigma}(\tau)} \rangle \\
+&\sem{\Gamma \turnv \ret{v} \types \ind{\Sigma}(\tau)} =
+  \retcw{\sem{\Sigma}}
+  \circ \glob \sem{\cdiv{\Gamma} \turnv v \types \tau}
+  \circ \comult{\glob}_{\sem{\cdiv{\Gamma}}} \circ \bdiv{\Gamma} \\
+&\sem{\Gamma \turnv \indelim{v_s}{\indretcase{x_r}{v_e} \seq
+                                   \indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} \seq \ldots \seq
+                                   \indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}} \types \tau_2} = {} \\
+&\quad \foldc{\sem{\Sigma}}{\sem{\tau_1}}
+       {[\sem{\gbind{\Gamma}{x_r}{\tau_1} \turnv v_e \types \tau_2}, \\
+&\qquad\qquad
+       \sem{\lbind{\gbind{\Gamma}{x_{p_1}}{\tau_{p_1}}}{x_{k_1}}{\glob \tau_{a_1} \arr \tau_2} \turnv v_1 \types \tau_2} , \ldots , \\
+&\qquad\qquad
+       \sem{\lbind{\gbind{\Gamma}{x_{p_n}}{\tau_{p_n}}}{x_{k_n}}{\glob \tau_{a_n} \arr \tau_2} \turnv v_n \types \tau_2}]} \\
+&\quad \circ \langle id_{\sem{\Gamma}},
+       \sem{\Gamma \turnv v_s \types \ind{\Sigma}(\tau_1)} \rangle
+\end{align*}
+\caption{Values}
+\end{subfigure}
+
+\makebox[\linewidth][l]{\hspace{10pt}Where:}
+\begin{itemize}
+\item $\sem{\Sigma}$ is the $\kappa$-bounded Lawvere theory corresponding to the
+  signature $\Sigma$
+\item $\retcw{L}$ and $\opcw{op}{L}$ are the components of the structure
+  map of the initial algebra $\ind{L}(P)$
+\item $\foldc{L}{P}{m}$ is the parameterized recursor of $\ind{L}(P)$,
+  given by initiality of $\ind{L}(P)$, applied to $m$.
+\end{itemize}
+\caption{Denotational semantics: Inductive types}
+\label{fig:denotational-inductive}
+\end{figure}
+
+\begin{figure}
+\begin{subfigure}[t]{0.45\textwidth}
+\begin{align*}
+&\sem{\tau} \mathrel{:} \pshlawcop \\
+&\sem{\yoneda{\Sigma}} = \yoneda{\sem{\Sigma}}
+\end{align*}
+\caption{Types}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.45\textwidth}
+\begin{align*}
+&\sem{\Gamma} \mathrel{:} \pshlawcop \\
+&\sem{\lbind{\Gamma}{\loc}{\Sigma}} = \sem{\Gamma} \times \yoneda{\sem{\Sigma}}
+\end{align*}
+\caption{Contexts}
+\end{subfigure}
+
+\begin{subfigure}{\textwidth}
+\begin{align*}
+&\sem{\Gamma \turnv v \types \tau} \mathrel{:} \homset{\pshlawcop}{\sem{\Gamma}}{\sem{\tau}} \\
+&\sem{\ccons{\lbind{\Gamma_1}{\loc}{\Sigma}}{\Gamma_2} \turnv \loc \types \yoneda{\Sigma}} = \proj{|\Gamma_1|} \\
+&\sem{\Gamma \turnv \outl{v} \types \yoneda{\Sigma_1}} =
+  \yonedaname(\inlc{\sem{\Sigma_1}}{\sem{\Sigma_2}})
+  \circ \sem{\Gamma \turnv v \types \yoneda{\Sigma_1 + \Sigma_2}} \\
+&\sem{\Gamma \turnv \outr{v} \types \yoneda{\Sigma_2}} =
+  \yonedaname(\inrc{\sem{\Sigma_1}}{\sem{\Sigma_2}})
+  \circ \sem{\Gamma \turnv v \types \yoneda{\Sigma_1 + \Sigma_2}}
+\end{align*}
+\caption{Values}
+\end{subfigure}
+
+\begin{subfigure}{\textwidth}
+\begin{align*}
+&\sem{\Gamma \turnc c \types \tau} \mathrel{:} \homset{\pshlawcop}{\sem{\Gamma}}{\mon(\sem{\tau})} \\
+&\sem{\Gamma \turnc \perform{v_1}{op}{v_2} \types \tau_a} =
   op_{\mon}
        \circ \langle \sem{\Gamma \turnv v_1 \types \yoneda{\Sigma}},
                       \sem{\Gamma \turnv v_2 \types \tau_p} \rangle \\
-\sem{\Gamma \turnc \reify{\loc}{c} \types \ind{\Sigma}(\glob \tau)} &=
-  \reifyc{\Sigma}{\sem{\tau}} \circ \currying{\sem{\lbind{\Gamma}{\loc}{\Sigma} \turnc c \types \glob \tau}} \\
+&\sem{\Gamma \turnc \reify{\loc}{c} \types \ind{\Sigma}(\glob \tau)} =
+  \reifyc{\Sigma}{\sem{\tau}} \circ \currying{\sem{\lbind{\Gamma}{\loc}{\Sigma} \turnc c \types \glob \tau}}
 \end{align*}
+\caption{Computations}
+\end{subfigure}
+
+\makebox[\linewidth][l]{\hspace{10pt}Where:}
 \begin{itemize}
-\item $\unit{\mon}$ is the unit of $\mon$
-\item $\mult{\mon}$ is the multiplication of $\mon$
-\item $\strength{\mon}$ is the strength of $\mon$
-\item $\evmap{A}{B}$ is the evaluation map for $\arrow{A}{B}$
-\item $op_{\mon}$ is the reflection morphism for $op$ (Section~\ref{sec:reification})
+\item $\sem{\Sigma}$ is the $\kappa$-bounded Lawvere theory corresponding to the
+  signature $\Sigma$
+\item $\yonedaname(\inlc{L_1}{L_2})$ and $\yonedaname(\inrc{L_1}{L_2})$ are
+  the Yoneda images of the injections in $\lawc$
+\item $op_{\mon}$ is the reflection morphism for $op$ (Section~\ref{sec:reflection})
 \item $\currying{m}$ is the currying of $m$
 \item $\reifyc{\Sigma}{}$ is the reification isomorphism for $\Sigma$ and $\tau$ (Section~\ref{sec:reification})
 \end{itemize}
-\caption{Denotational semantics: Computations}
-\label{fig:denotational-computations}
+\caption{Denotational semantics: Effect reflection}
+\label{fig:denotational-reflection}
 \end{figure}
 
 \subsection{Weakening}
 
-We will need lemmas showing that weakening by local, global or effect
-bindings is equivalent to projection:
+We will need lemmas showing that weakening is equivalent to projection
+for local bindings:
 \begin{lemma}
-\label{lemma:sem-weakening}
+\label{lemma:sem-weakening-local}
 \begin{align*}
-  \sem{\Gamma \turnv v_1 \types \tau_1} \circ \fstc{\sem{\Gamma}}{\sem{\tau_2}}
-  &= \sem{\lbind{\Gamma}{x}{\tau_2} \turnv v_1 \types \tau_1} \\
-  \sem{\Gamma \turnv v_1 \types \tau_1} \circ \fstc{\sem{\Gamma}}{\sem{\tau_2}}
-  &= \sem{\lbind{\Gamma}{x}{\tau_2} \turnv v_1 \types \tau_1} \\
-  \sem{\Gamma \turnv v_1 \types \tau_1} \circ \fstc{\sem{\Gamma}}{\sem{\tau_2}}
-  &= \sem{\gbind{\Gamma}{x}{\tau_2} \turnv v_1 \types \tau_1} \\
-  \sem{\Gamma \turnv v_1 \types \tau_1} \circ \fstc{\sem{\Gamma}}{\sem{\tau_2}}
-  &= \sem{\gbind{\Gamma}{x}{\tau_2} \turnv v_1 \types \tau_1} \\
-  \sem{\Gamma \turnv v_1 \types \tau_1} \circ \fstc{\sem{\Gamma}}{\sem{\tau_2}}
-  &= \sem{\lbind{\Gamma}{\loc}{\Sigma} \turnv v_1 \types \tau_1} \\
-  \sem{\Gamma \turnv v_1 \types \tau_1} \circ \fstc{\sem{\Gamma}}{\sem{\tau_2}}
-  &= \sem{\lbind{\Gamma}{\loc}{\Sigma} \turnv v_1 \types \tau_1}
+  \sem{\Gamma \turnv v \types \tau_1} \circ \fstc{\sem{\Gamma}}{\sem{\tau_2}}
+  &= \sem{\lbind{\Gamma}{x}{\tau_2} \turnv v \types \tau_1} \\
+  \sem{\Gamma \turnc c \types \tau_1} \circ \fstc{\sem{\Gamma}}{\sem{\tau_2}}
+  &= \sem{\lbind{\Gamma}{x}{\tau_2} \turnc c \types \tau_1}
+\end{align*}
+\end{lemma}
+and global bindings:
+\begin{lemma}
+\label{lemma:sem-weakening-global}
+\begin{align*}
+  \sem{\Gamma \turnv v \types \tau_1} \circ \fstc{\sem{\Gamma}}{\glob(\sem{\tau_2})}
+  &= \sem{\gbind{\Gamma}{x}{\tau_2} \turnv v \types \tau_1} \\
+  \sem{\Gamma \turnc c \types \tau_1} \circ \fstc{\sem{\Gamma}}{\glob(\sem{\tau_2})}
+  &= \sem{\gbind{\Gamma}{x}{\tau_2} \turnc c \types \tau_1}
+\end{align*}
+\end{lemma}
+and effect capability bindings:
+\begin{lemma}
+\label{lemma:sem-weakening-yoneda}
+\begin{align*}
+  \sem{\Gamma \turnv v \types \tau_1} \circ \fstc{\sem{\Gamma}}{\sem{\tau_2}}
+  &= \sem{\lbind{\Gamma}{\loc}{\Sigma} \turnv v \types \tau_1} \\
+  \sem{\Gamma \turnc c \types \tau_1} \circ \fstc{\sem{\Gamma}}{\yoneda{\sem{\Sigma}}}
+  &= \sem{\lbind{\Gamma}{\loc}{\Sigma} \turnc c \types \tau_1}
 \end{align*}
 \end{lemma}
 \begin{proof}
-  By mutual induction on the typing derivations for $v_1$ and $c$. We
+  By mutual induction on the typing derivations for $v$ and $c$. We
   prove slightly stronger forms that allows additional bindings after
-  $x$, so that we can use them inductively under additional
+  $x$, so that we can use inductive hyptheses under additional
   bindings. The cases all follow from standards equalities about
   products and projections
+\end{proof}
+
+We also need a lemma showing that weakening from $\cdiv{\Gamma}$ to
+$\Gamma$ is equivalent to $\bdiv{\Gamma}$:
+\begin{lemma}
+\label{lemma:sem-weakening-cdiv}
+\begin{align*}
+  \sem{\cdiv{\Gamma} \turnv v \types \tau} \circ \bdiv{\Gamma}
+  &= \sem{\Gamma \turnv v \types \tau} \\
+  \sem{\cdiv{\Gamma} \turnc c \types \tau} \circ \bdiv{\Gamma}
+  &= \sem{\Gamma \turnc c \types \tau}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  By mutual induction on the typing derivations for $v$ and $c$. We
+  prove slightly stronger forms that allows additional bindings after
+  $\cdiv{\Gamma}$, so that we can use inductive hyptheses under
+  additional bindings. The cases all follow from standards equalities
+  about products and projections
 \end{proof}
 
 \subsection{Substitution}
@@ -3715,20 +3889,21 @@ We will need lemmas showing that the semantics are compatible with substitution 
 \label{lemma:sem-subst-local}
 \begin{align*}
   \sem{\lbind{\Gamma}{x}{\tau_2} \turnv v_1 \types \tau_1}
-      \circ \langle id_{\sem{\Gamma}}, \sem{\Gamma \turnc v_2 \types \tau_2} \rangle
+      \circ \langle id_{\sem{\Gamma}}, \sem{\Gamma \turnv v_2 \types \tau_2} \rangle
   &= \sem{\Gamma \turnv \sbst{v_1}{x}{v_2} \types \tau_1} \\
-  \sem{\lbind{\Gamma}{x}{\tau_2} \turnv c \types \tau_1}
-      \circ \langle id_{\sem{\Gamma}}, \sem{\Gamma \turnc v \types \tau_2} \rangle
-  &= \sem{\Gamma \turnv \sbst{c}{x}{v} \types \tau_1} \\
+  \sem{\lbind{\Gamma}{x}{\tau_2} \turnc c \types \tau_1}
+      \circ \langle id_{\sem{\Gamma}}, \sem{\Gamma \turnv v \types \tau_2} \rangle
+  &= \sem{\Gamma \turnc \sbst{c}{x}{v} \types \tau_1} \\
 \end{align*}
 \end{lemma}
 \begin{proof}
   By mutual induction on the typing derivations for $v_1$ and $c$. We
   prove slightly stronger forms that allows additional bindings after
-  $x$, so that we can use them inductively under additional bindings. The
-  cases all follow from standards equalities about products and
-  projections, along with the weakening lemma (\ref{lemma:sem-weakening}) when
-  moving under a binding.
+  $x$, so that we can use inductive hypotheses under additional
+  bindings. The cases all follow from standards equalities about
+  products and projections, along with the weakening lemmas
+  (\ref{lemma:sem-weakening-local}, \ref{lemma:sem-weakening-global},
+  \ref{lemma:sem-weakening-yoneda}) when moving under a binding.
 \end{proof}
 
 and similarly for global bindings.
@@ -3736,28 +3911,38 @@ and similarly for global bindings.
 \label{lemma:sem-subst-global}
 \begin{align*}
   \sem{\gbind{\Gamma}{x}{\tau_2} \turnv v_1 \types \tau_1}
-    \circ \langle id_{\sem{\Gamma}}, \sem{\cdiv{\Gamma} \turnc v_2 \types \tau_2} \rangle
+    \circ \langle id_{\sem{\Gamma}},
+  \glob \sem{\cdiv{\Gamma} \turnv v_2 \types \tau_2}
+  \circ \comult{\glob}_{\sem{\cdiv{\Gamma}}} \circ \bdiv{\Gamma} \rangle
   &= \sem{\Gamma \turnv \sbst{v_1}{x}{v_2} \types \tau_1} \\
-  \sem{\gbind{\Gamma}{x}{\tau_2} \turnv c \types \tau_1}
-    \circ \langle id_{\sem{\Gamma}}, \sem{\cdiv{\Gamma} \turnc v \types \tau_2} \rangle
-  &= \sem{\Gamma \turnv \sbst{c}{x}{v} \types \tau_1} \\
+  \sem{\gbind{\Gamma}{x}{\tau_2} \turnc c \types \tau_1}
+    \circ \langle id_{\sem{\Gamma}},
+  \glob \sem{\cdiv{\Gamma} \turnv v \types \tau_2}
+  \circ \comult{\glob}_{\sem{\cdiv{\Gamma}}} \circ \bdiv{\Gamma} \rangle
+  &= \sem{\Gamma \turnc \sbst{c}{x}{v} \types \tau_1} \\
 \end{align*}
 \end{lemma}
 \begin{proof}
-  Some of the details differ but the proof is essentially the same as the local binding case.
+  By mutual induction on the typing derivations for $v_1$ and $c$. We
+  prove slightly stronger forms that allows additional bindings after
+  $x$, so that we can use inductive hypotheses under additional
+  bindings. The global variable case follows from the comonad laws of
+  $\glob$ and weakening from $\cdiv{\Gamma}$ to $\Gamma$
+  (\ref{lemma:sem-weakening-cdiv}).  The other cases all follow from
+  standards equalities about products and projections, along with the
+  weakening lemmas (\ref{lemma:sem-weakening-local},
+  \ref{lemma:sem-weakening-global}, \ref{lemma:sem-weakening-yoneda})
+  when moving under a binding.
 \end{proof}
 
 \subsection{Soundness}
 
-\begin{lemma}
-\label{lemma:soundness}
 \begin{equation*}
   \Gamma \turnv v_1 \types \tau
   \wedge v_1 \stepstov v_2
   \implies \sem{\Gamma \turnv v_1 \types \tau}
     = \sem{\Gamma \turnv v_2 \types \tau}
 \end{equation*}
-\end{lemma}
 \begin{proof}
   By induction on the reduction relation. The congruence rules all
   follow immediately by the inductive hypothesis, leaving just the rules
@@ -3769,26 +3954,30 @@ and similarly for global bindings.
       \fst{(v_1, v_2)} &\stepstov v_1 \\
       \snd{(v_1, v_2)} &\stepstov v_2
     \end{align*}
-    \todo{Add proof of this case}
+    the cases follow from the universal property of products.
 
   \item[Sums] For the sum rules:
     \begin{align*}
       \casem{(\inl{v_1})}{x_1}{v_2}{x_2}{v_3} &\stepstov \sbst{v_2}{x_1}{v_1} \\
       \casem{(\inr{v_1})}{x_1}{v_2}{x_2}{v_3} &\stepstov \sbst{v_3}{x_2}{v_1}
     \end{align*}
-    \todo{Add proof of this case}
+    the cases follow from the universal property of sums, their distribution over
+    products and the substitution lemma (\ref{lemma:sem-subst-local}).
 
   \item[Global modality] For the global modality rule:
     \begin{equation*}
       \gunbox{x}{\gbox{v_1}}{v_2} \stepstov \sbst{v_2}{x}{v_1}
     \end{equation*}
-    \todo{Add proof of this case}
+    the case follows from the global substitution lemma
+    (\ref{lemma:sem-subst-global}).
 
     For the run rule:
     \begin{equation*}
       \grun{\return{v}} \stepstov v
     \end{equation*}
-    \todo{Add proof of this case}
+    the case follows from the definition of $\ununit$, the comonad laws
+    of $\glob$ and weakening from $\cdiv{\Gamma}$ to $\Gamma$
+    (\ref{lemma:sem-weakening-cdiv}).
 
   \item[Inductive types]
     For the $\indelimname$/$\retname$ rule:
@@ -3858,39 +4047,36 @@ $\ctxv{v}$ and $\ctxc{v}$ for the value and computation respecitvely
 obtained by replacing the $\_$ in the evaluation context with $v$.
 \begin{figure}
 \begin{align*}
-  \mathrm{value\ contexts}, \ctxv{\_} ::=\;& \_
-      \mid \abs{x}{\ctxc{\_}}
+  &\mathrm{value\ contexts}, \ctxv{\_} ::= \\
+      &\qquad \mid \abs{x}{\ctxc{\_}}
       \mid (\ctxv{\_}, v) \mid (v, \ctxv{\_})
       \mid \fst{\ctxv{\_}} \mid \snd{\ctxv{\_}} \\
-    \mid& \inl{\ctxv{\_}} \mid \inr{\ctxv{\_}}
-      \mid \case{\ctxv{\_}}{x}{v}{x}{v}
-      \mid \case{v}{x}{\ctxv{\_}}{x}{v}
-      \mid \case{v}{x}{v}{x}{\ctxv{\_}} \\
-    \mid& \gbox{\ctxv{\_}}
+    &\qquad \mid \inl{\ctxv{\_}} \mid \inr{\ctxv{\_}} \\
+    &\qquad \mid \casem{\ctxv{\_}}{x}{v}{x}{v} \\
+    &\qquad \mid \casem{v}{x}{\ctxv{\_}}{x}{v} \\
+    &\qquad \mid \casem{v}{x}{v}{x}{\ctxv{\_}} \\
+    &\qquad \mid \gbox{\ctxv{\_}}
       \mid \gunbox{x}{\ctxv{\_}}{v} \mid \gunbox{x}{v}{\ctxv{\_}}
       \mid \grun{\ctxc{\_}} \\
-    \mid& \casebox{\ctxv{\_}}{x}{v}{x}{v}
-      \mid \casebox{v}{x}{\ctxv{\_}}{x}{v}
-      \mid \casebox{v}{x}{v}{x}{\ctxv{\_}} \\
-    \mid& \indintro{op}{\ctxv{\_}}{v} \mid \indintro{op}{v}{\ctxv{\_}}
+    &\qquad \mid \indintro{op}{\ctxv{\_}}{v} \mid \indintro{op}{v}{\ctxv{\_}}
       \mid \ret{\ctxv{\_}}
       \mid \outl{\ctxv{\_}} \mid \outr{\ctxv{\_}} \\
-    \mid& \indelim{\ctxv{\_}}
+    &\qquad \mid \indelim{\ctxv{\_}}
              {\indretcase{x}{v} \seq
               \indcase{op}{x}{x}{v} \seq \ldots \seq
               \indcase{op}{x}{x}{v}} \\
-    \mid& \indelim{v}
+    &\qquad \mid \indelim{v}
              {\indretcase{x}{\ctxv{\_}} \seq
               \indcase{op}{x}{x}{v} \seq \ldots \seq
               \indcase{op}{x}{x}{v}} \\
-    \mid& \indelim{v}
+    &\qquad \mid \indelim{v}
              {\indretcase{x}{v} \seq \ldots \seq
               \indcase{op}{x}{x}{\ctxv{\_}} \seq \ldots \seq
-              \indcase{op}{x}{x}{v}} \\
-  \mathrm{computation\ contexts}, \ctxc{\_} ::=\;& \_
-      \mid \return{\ctxv{\_}}
+              \indcase{op}{x}{x}{v}} \\[1em]
+  &\mathrm{computation\ contexts}, \ctxc{\_} ::= \\
+    &\qquad \mid \return{\ctxv{\_}}
       \mid \letv{x}{\ctxc{\_}}{c} \mid \letv{x}{c}{\ctxc{\_}} \\
-    \mid& \app{\ctxv{\_}}{v} \mid \app{v}{\ctxv{\_}}
+    &\qquad \mid \app{\ctxv{\_}}{v} \mid \app{v}{\ctxv{\_}}
       \mid \perform{\ctxv{\_}}{op}{v} \mid \perform{v}{op}{\ctxv{\_}}
       \mid \reify{\loc}{\ctxc{\_}}
 \end{align*}
@@ -3899,9 +4085,9 @@ obtained by replacing the $\_$ in the evaluation context with $v$.
 \end{figure}
 
 We write
-$\ctxv{_} \types \Gamma_1 \turnv \tau_1 \trans \Gamma_2 \turnv \tau_2$
+$\ctxv{\_} \types \Gamma_1 \turnv \tau_1 \trans \Gamma_2 \turnv \tau_2$
 and
-$\ctxc{_} \types \Gamma_1 \turnv \tau_1 \trans \Gamma_2 \turnc \tau_2$
+$\ctxc{\_} \types \Gamma_1 \turnv \tau_1 \trans \Gamma_2 \turnc \tau_2$
 for the mutually inductive context typing relations that indicate that
 if $\Gamma_1 \turnv v \types \tau_1$ then
 $\Gamma_2 \turnv \ctxv{v} \tau_2$ and $\Gamma_2 \turnc \ctxc{v} \tau_2$
@@ -3911,8 +4097,8 @@ Two values are contextually equivalent if they reduce to the same normal
 forms in closed boolean evaluation contexts.
 \begin{align*}
 \Gamma \turnv v_1 \ctxeq v_2 \tau \quad = \quad
-\forall \ctxv{_}.
-  \ctxv{_} \types \Gamma \turnv \tau \trans \turnv 1 + 1
+\forall \ctxv{\_}.
+  \ctxv{\_} \types \Gamma \turnv \tau \trans \turnv 1 + 1
   \quad \implies \quad
   \forall \omega.
   \ctxv{v_1} \reducestov \omega \iff \ctxv{v_2} \reducestov \omega
@@ -3955,8 +4141,8 @@ The denotational semantics is adequate with respect to the operational semantics
     \implies \turnv v_1 \ctxeq v_2  \tau
 \end{equation*}
 \begin{proof}
-  Given a context $\ctxv{_}$ such that
-  $\ctxv{_} \types \turnv \tau \trans \turnv 1 + 1$, we know by
+  Given a context $\ctxv{\_}$ such that
+  $\ctxv{\_} \types \turnv \tau \trans \turnv 1 + 1$, we know by
   confluence (\ref{lemma:church-rosser}) and strong normalization
   (\ref{lemma:strong-normalization}) that there is a unique normal form
   $\omega_1$ such that $\ctxv{v_1} \reducestov \omega_1$ and a unique
