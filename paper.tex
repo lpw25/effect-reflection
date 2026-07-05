@@ -97,10 +97,6 @@
 \newcommand{\ret}[1]{\mathop{\retname}(#1)}
 \newcommand{\indelimname}{\mathtt{rec}}
 \newcommand{\indelim}[2]{\mathop{\indelimname} #1 \,\{#2\}}
-\newcommand{\indelimboxname}{\indelimname^{\Box}}
-\newcommand{\indelimbox}[3]{\mathop{\indelimboxname_{#1}} #2 \,\{#3\}}
-\newcommand{\indelimmname}{\indelimname^{m}}
-\newcommand{\indelimm}[2]{\mathop{\indelimmname} #1 \,\{#2\}}
 \newcommand{\indretcase}[2]{\retname(#1) \Rightarrow #2}
 \newcommand{\indcase}[4]{#1(#2, #3) \Rightarrow #4}
 \newcommand{\seq}{\,;\,}
@@ -960,11 +956,6 @@ Fig.\ref{fig:typing-inductive}.
 As with $\casename$, $\indelimname$ is defined as a value and we can
 define a computation version in terms of it.
 
-The global comonad distributes over inductive types, which we realize
-via $\indelimboxname$, a global form of the $\indelimname$ construct,
-which allows you to match on a global inductive type and get out global
-components.
-
 \begin{figure}
 \begin{align*}
   \mathrm{types}, \tau ::=\;& \ldots \mid \ind{\Sigma}(\tau) \mid \ldots \\
@@ -973,7 +964,7 @@ components.
                                      \mid \Sigma + \Sigma \\
   \mathrm{values}, v :=\;& \ldots \mid \indintro{op}{v}{v}
                            \mid \ret{v} \mid \\
-                         & \indelimm{v}
+                         & \indelim{v}
                            {\indretcase{x}{v} \seq
                            \indcase{op}{x}{x}{v} \seq \ldots
                            \seq \indcase{op}{x}{x}{v}} \ldots
@@ -987,14 +978,14 @@ components.
 \inferrule{\cdiv{\Gamma} \turnv v \types \tau}
 {\Gamma \turnv \ret{v} \types \ind{\Sigma}(\tau)}
 \and
-\inferrule{\cmdiv{\Gamma} \turnv v_s \types \ind{\Sigma}(\tau_1) \\
+\inferrule{\Gamma \turnv v_s \types \ind{\Sigma}(\tau_1) \\
            \Sigma = \{ op_1 \types \tau_{p_1} \rightarrowtail \tau_{a_1};
              \ldots; op_n\types \tau_{p_n} \rightarrowtail \tau_{a_n} \} \\
            \gbind{\Gamma}{x_r}{\tau_1} \turnv v_e \types \tau_2 \\
-           \mbind{\gbind{\Gamma}{x_{p_1}}{\tau_{p_1}}}{x_{k_1}}{\glob \tau_{a_1} \arr \tau_2} \turnv v_1 \types \tau_2 \\
+           \lbind{\gbind{\Gamma}{x_{p_1}}{\tau_{p_1}}}{x_{k_1}}{\glob \tau_{a_1} \arr \tau_2} \turnv v_1 \types \tau_2 \\
            \ldots \\
-           \mbind{\gbind{\Gamma}{x_{p_n}}{\tau_{p_n}}}{x_{k_n}}{\glob \tau_{a_n} \arr \tau_2} \turnv v_n \types \tau_2}
-{\Gamma \turnv \indelimm{v_s}{\indretcase{x_r}{v_e} \seq
+           \lbind{\gbind{\Gamma}{x_{p_n}}{\tau_{p_n}}}{x_{k_n}}{\glob \tau_{a_n} \arr \tau_2} \turnv v_n \types \tau_2}
+{\Gamma \turnv \indelim{v_s}{\indretcase{x_r}{v_e} \seq
                                    \indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} \seq \ldots \seq
                                    \indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}} \types \tau_2}
 \end{mathpar}
@@ -1124,9 +1115,9 @@ Fig.\ref{fig:normal}.
 \casem{(\inr{v_1})}{x_1}{v_2}{x_2}{v_3} &\stepstov \sbst{v_3}{x_2}{v_1} \\
 \gunbox{x}{\gbox{v_1}}{v_2} &\stepstov \sbst{v_2}{x}{v_1} \\
 \grun{\return{v}} &\stepstov v \\
-\indelimm{(\ret{v_r})}{\indretcase{x}{v_e} \seq \ldots} &\stepstov \sbst{v_e}{x}{v_r} \\
-\indelimm{(\indintro{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} &\stepstov \\
-  \sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{\abs{x_a}{\letv{x_w}{\app{v_2}{x_a}&}{\return{(\indelimm{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}} \\
+\indelim{(\ret{v_r})}{\indretcase{x}{v_e} \seq \ldots} &\stepstov \sbst{v_e}{x}{v_r} \\
+\indelim{(\indintro{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} &\stepstov \\
+  \sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{\abs{x_a}{\letv{x_w}{\app{v_2}{x_a}&}{\return{(\indelim{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}} \\
 \app{(\abs{x}{c})}{v} &\stepstoc \sbst{c}{x}{v} \\
 \letv{x}{\return{v}}{c} &\stepstoc \sbst{c}{x}{v} \\
 \letv{x_2}{\letv{x_1}{\perform{\loc}{op}{v}}{c_1}}{c_2} &\stepstoc \letv{x_1}{\perform{\loc}{op}{v}}{\letv{x_2}{c_1}{c_2}} \\
@@ -1146,7 +1137,7 @@ Fig.\ref{fig:normal}.
   \mathrm{neutral\ normal\ values}, \eta :=\;& x \mid \fst{\eta} \mid \snd{\eta} \mid \\
                                    &\casem{\eta}{x}{\omega}{x}{\omega} \mid \\
                                    &\gunbox{x}{\eta}{\omega} \mid \grun{\mu} \mid \\
-                                   &\indelimm{\eta}
+                                   &\indelim{\eta}
                                      {\indretcase{x}{\omega} \seq
                                      \indcase{op}{x}{x}{\omega} \seq \ldots \seq
                                      \indcase{op}{x}{x}{\omega}} \\
@@ -2424,15 +2415,15 @@ via Lemma \ref{lemma:cdiv-weakening}.
 \item[Inductive types]
 For the $\indelimname$/$\retname$ rule:
 \begin{equation*}
-\indelimm{(\ret{v_s})}{\indretcase{x}{v_e} \seq \ldots} \stepstov \sbst{v_e}{x}{v_s}
+\indelim{(\ret{v_s})}{\indretcase{x}{v_e} \seq \ldots} \stepstov \sbst{v_e}{x}{v_s}
 \end{equation*}
 the case follows by inversion on the typing rules followed by the global
 substitution lemma (\ref{lemma:global-substitution}).
 
 For the $\indelimname$/$op$ rule:
 \begin{align*}
-\indelimm{(\indintro{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} &\stepstov \\
-  \sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{\abs{x_a}{\letv{x_w}{\app{v_2}{x_a}&}{\return{(\indelimm{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}}
+\indelim{(\indintro{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} &\stepstov \\
+  \sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{\abs{x_a}{\letv{x_w}{\app{v_2}{x_a}&}{\return{(\indelim{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}}
 \end{align*}
 the case follows by inversion on the typing rules followed by the global
 substitution lemma (\ref{lemma:global-substitution}) for $x_1$ and the
@@ -2527,13 +2518,13 @@ respectively.
 {\grun{\return{v}} \stepstov v^{\prime}}
 \and
 \inferrule{v_1 \parastepstov v_1^{\prime} \\ v_2 \parastepstov v_2^{\prime}}
-{\indelimm{(\ret{v_1})}{\indretcase{x}{v_2} \seq \ldots} \stepstov \sbst{v_2^{\prime}}{x}{v_1^{\prime}}}
+{\indelim{(\ret{v_1})}{\indretcase{x}{v_2} \seq \ldots} \stepstov \sbst{v_2^{\prime}}{x}{v_1^{\prime}}}
 \and
 \inferrule{v_p \parastepstov v_p^{\prime} \\ v_k \parastepstov v_k^{\prime} \\ v_e \parastepstov v_e^{\prime} \\ \overline{v_j \parastepstov v_j^{\prime}}}
-{\indelimm{\indintro{op_i}{v_p}{v_k}}{\indretcase{x_r}{v_e} \seq
+{\indelim{\indintro{op_i}{v_p}{v_k}}{\indretcase{x_r}{v_e} \seq
                                    \overline{\indcase{op_j}{x_{p_j}}{x_{k_j}}{v_j}}} \\\\ \parastepstov \\\\
   \sbst{\sbst{v_i^{\prime}}{x_{p_i}}{v_p^{\prime}}}{x_{k_i}}{\abs{x_a}{\letv{x_w}{\app{v_k^{\prime}}{x_a}}{
-     \return{(\indelimm{x_w}{\indretcase{x_r}{v_e^{\prime}} \seq
+     \return{(\indelim{x_w}{\indretcase{x_r}{v_e^{\prime}} \seq
                 \overline{\indcase{op_j}{x_{p_j}}{x_{k_j}}{v_j^{\prime}}}})}}}}}
 \end{mathpar}
 \caption{Parallel reduction relations (values)}
@@ -3437,7 +3428,7 @@ Recursion terms are reducible when built from reducible subterms.
       v_{k_n} \in \redva{\Delta_1}{\glob \tau_{a_n} \arr \tau_2}{\alpha}. \\
     &\qquad \sbst{\sbst{v_n}{x_{p_n}}{v_{p_n}}}{x_{k_n}}{v_{k_n}} \in \redva{\Delta_2}{\tau_2}{\alpha}) \\
   &\implies \\
-  &\indelimm{v_s}{\indretcase{x_r}{v_e} \seq
+  &\indelim{v_s}{\indretcase{x_r}{v_e} \seq
             \indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} \seq \ldots \seq
             \indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}}
     \in \redva{\Delta_2}{\tau_2}{\alpha}
@@ -3636,10 +3627,6 @@ Fig.~\ref{fig:denotational-computations}.
                                    \indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} &\seq \ldots \seq
                                    \indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}} \types \tau_2} \\
                                   &= \\
-\sem{\Gamma \turnv \indelimbox{v_s}{\indretcase{x_r}{v_e} \seq
-                                   \indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} &\seq \ldots \seq
-                                   \indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}} \types \tau_2} \\
-                                  &= \\
 \sem{\ccons{\lbind{\Gamma_1}{\loc}{\Sigma}}{\Gamma_2} \turnv \loc \types \yoneda{\Sigma}} &= \proj{|\Gamma|} \\
 \sem{\Gamma \turnv \outl{v} \types \yoneda{\Sigma_1}} &= \\
 \sem{\Gamma \turnv \outr{v} \types \yoneda{\Sigma_2}} &=
@@ -3806,15 +3793,15 @@ and similarly for global bindings.
   \item[Inductive types]
     For the $\indelimname$/$\retname$ rule:
     \begin{equation*}
-      \indelimm{(\ret{v_s})}{\indretcase{x}{v_e} \seq \ldots} \stepstov \sbst{v_e}{x}{v_s}
+      \indelim{(\ret{v_s})}{\indretcase{x}{v_e} \seq \ldots} \stepstov \sbst{v_e}{x}{v_s}
     \end{equation*}
     \todo{Add proof of this case}
 
     For the $\indelimname$/$op$ rule:
     \begin{align*}
-      \indelimm{(\indintro{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} &\stepstov \\
+      \indelim{(\indintro{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} &\stepstov \\
       \sbst{\sbst{v_3}{x_1}{v_1}}
-      {x_2}{\abs{x_a}{\letv{x_w}{\app{v_2}{x_a}&}{\return{(\indelimm{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}}
+      {x_2}{\abs{x_a}{\letv{x_w}{\app{v_2}{x_a}&}{\return{(\indelim{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}}
     \end{align*}
     \todo{Add proof of this case}
 
@@ -3888,15 +3875,15 @@ obtained by replacing the $\_$ in the evaluation context with $v$.
     \mid& \indintro{op}{\ctxv{\_}}{v} \mid \indintro{op}{v}{\ctxv{\_}}
       \mid \ret{\ctxv{\_}}
       \mid \outl{\ctxv{\_}} \mid \outr{\ctxv{\_}} \\
-    \mid& \indelimm{\ctxv{\_}}
+    \mid& \indelim{\ctxv{\_}}
              {\indretcase{x}{v} \seq
               \indcase{op}{x}{x}{v} \seq \ldots \seq
               \indcase{op}{x}{x}{v}} \\
-    \mid& \indelimm{v}
+    \mid& \indelim{v}
              {\indretcase{x}{\ctxv{\_}} \seq
               \indcase{op}{x}{x}{v} \seq \ldots \seq
               \indcase{op}{x}{x}{v}} \\
-    \mid& \indelimm{v}
+    \mid& \indelim{v}
              {\indretcase{x}{v} \seq \ldots \seq
               \indcase{op}{x}{x}{\ctxv{\_}} \seq \ldots \seq
               \indcase{op}{x}{x}{v}} \\
