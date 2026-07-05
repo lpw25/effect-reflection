@@ -179,6 +179,7 @@
 \newcommand{\snv}{SN_V}
 \newcommand{\snc}{SN_C}
 \newcommand{\clocs}[1]{\mathrm{locs}(#1)}
+\newcommand{\fv}[1]{\mathrm{FV}(#1)}
 \newcommand{\bound}[1]{\nu(#1)}
 \newcommand{\redname}{RED}
 \newcommand{\redvname}{\redname_{V}}
@@ -189,7 +190,6 @@
 \newcommand{\redca}[3]{\redcname{({#1},{#2},{#3})}}
 \newcommand{\redsname}{\redname_{S}}
 \newcommand{\reds}[1]{\redsname{({#1})}}
-\newcommand{\redsc}[2]{\redsname{({#1},{#2})}}
 \newcommand{\mif}{\mathop{\mathrm{if}}}
 \newcommand{\mthen}{\mathop{\mathrm{then}}}
 \newcommand{\melse}{\mathop{\mathrm{else}}}
@@ -2784,7 +2784,10 @@ well-defined because the predicates are monotonic in $\alpha$.
     \redva{\Delta}{\glob \tau}{\alpha} \quad &= \quad
       \{ \, v_1 \in \snv \; | \; \forall v_2. \; v_1 \reducestov \gbox{v_2} \; \implies \; v_2 \in \redv{\cempty}{\tau} \, \} \\
     \redva{\Delta}{\yoneda{\Sigma_1}}{\alpha} \quad &= \quad
-      \{ \, v_1 \in \snv \; | \; \forall v_2. \; v_1 \reducestov \outl{v_2} \\
+      \{ \, v_1 \in \snv \; | \;
+        \forall \loc. \; v_1 \reducestov \loc \; \implies \;
+          \loc \types \Sigma_1 \in \Delta \\
+        &\qquad \qquad \wedge \; \forall v_2. \; v_1 \reducestov \outl{v_2} \\
         &\qquad \qquad \qquad \implies \;
           \exists \Sigma_2. \; \exists \beta < \alpha. \quad
           v_2 \in \redva{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}{\beta} \\
@@ -2821,7 +2824,7 @@ well-defined because the predicates are monotonic in $\alpha$.
                             \; \wedge \; op \types \tau_4 \rightarrowtail \tau_5 \in \Sigma
                             \; \wedge \; v_3 \in \redv{\cempty}{\tau_4} \\
                             &\qquad \quad \wedge \; (\forall v_4 \in \snv. \;
-                              (\forall v_5. \; v_4 \reducestov \gbox{v_5} \; \implies \; v_5 \in \redv{\cempty}{\tau_4}) \\
+                              (\forall v_5. \; v_4 \reducestov \gbox{v_5} \; \implies \; v_5 \in \redv{\cempty}{\tau_5}) \\
                               &\qquad \qquad \implies \; \exists \beta < \alpha.
                                  \quad \sbst{c_2}{x}{v_4} \in \redca{\Delta}{\tau}{\beta})) \, \}
 \end{align*}
@@ -2891,9 +2894,10 @@ Reduciblity predicates are compatible with reductions (CR2):
   hypothesis.
 \item[$\glob \tau$:] Given $v_2 \reducestov \gbox{v_3}$ we have
   $v_1 \reducestov \gbox{v_3}$ and thus $v_3 \in \redv{\cempty}{\tau}$.
-\item[$\yoneda{\Sigma}$:] Given $v_2 \reducestov \outl{v_3}$ or
-  $v_2 \reducestov \outr{v_3}$ then $v_1$ also reduces to those values
-  and thus they have the required properties.
+\item[$\yoneda{\Sigma}$:] Given $v_2 \reducestov \loc$,
+  $v_2 \reducestov \outl{v_3}$ or $v_2 \reducestov \outr{v_3}$ then
+  $v_1$ also reduces to those values and thus they have the required
+  properties.
 \item[$\ind{\Sigma}(\tau)$:] Given $v_2 \reducestov \ret{v_3}$
   or $v_2 \reducestov \indintro{op}{v_4}{v_5}$ then $v_1$ also reduces to those
   values and thus they have the required properties.
@@ -2960,12 +2964,12 @@ For all neutral values $v_n$ and neutral computations $c_n$:
   go through one of the $v_r$ because $v_n$ cannot equal $\gbox{v_b}$ as
   it is neutral. From $v_r \reducestov \gbox{v_b}$ we have
   $v_b \in \redv{\Delta}{\tau}$.
-\item[$\yoneda{\Sigma}$:] Any reduction $v_n \reducestov \outl{v_i}$ or
-  $v_n \reducestov \outr{v_i}$ must go through one of the $v_r$ because
-  $v_n$ cannot equal $\outl{v_i}$ or $\outr{v_i}$ as it is
-  neutral. Since they reduce from $v_r$ and
-  $v_r \in \redva{\Delta}{\yoneda{\Sigma}}{\alpha}$ they must have the
-  required properties.
+\item[$\yoneda{\Sigma}$:] Any reduction $v_n \reducestov \loc$,
+  $v_n \reducestov \outl{v_i}$ or $v_n \reducestov \outr{v_i}$ must go
+  through one of the $v_r$ because $v_n$ cannot equal $\loc$,
+  $\outl{v_i}$ or $\outr{v_i}$ as it is neutral. Since they reduce from
+  $v_r$ and $v_r \in \redva{\Delta}{\yoneda{\Sigma}}{\alpha}$ they must
+  have the required properties.
 \item[$\ind{\Sigma}(\tau)$:] Any reduction $v_n \reducestov \ret{v_t}$
   or $v_n \reducestov \indintro{op}{v_p}{v_a}$ must go through one of
   the $v_r$ because $v_n$ cannot equal $\ret{v_t}$ or
@@ -2996,11 +3000,11 @@ Reducibility can have its effect context weakened:
 \end{align*}
 \end{lemma}
 \begin{proof}
-  We prove this by induction on $\tau$ and $\alpha$. All the value cases
-  follow immediately by the induction hypotheses as they do not mention
-  $\Delta$ otherwise. The computation case follows by the induction
-  hypothesis and the fact that context membership is preserved by
-  weakening.
+  We prove this by induction on $\tau$ and $\alpha$. Most of the value
+  cases follow immediately by the induction hypotheses as they do not
+  mention $\Delta$ otherwise. The effect capability and computation
+  cases follow by the induction hypotheses and the fact that context
+  membership is preserved by weakening.
 \end{proof}
 
 \subsection{Products}
@@ -3185,10 +3189,10 @@ Unboxing terms are reducible when built from reducible subterms.
 \begin{lemma}
 \label{lemma:red-unbox}
 \begin{align*}
-  &v_1 \in \redv{\Delta_1}{\glob \tau_1} \\
+  &v_1 \in \redv{\Delta}{\glob \tau_1} \\
   &\wedge \; (\forall v_3 \in \redv{\cempty}{\tau_1}.
-    \; \sbst{v_2}{x}{v_3} \in \redv{\Delta_2}{\tau_2}) \\
-  &\implies \; \gunbox{x}{v_1}{v_2} \in \redv{\Delta_2}{\tau_2}
+    \; \sbst{v_2}{x}{v_3} \in \redv{\Delta}{\tau_2}) \\
+  &\implies \; \gunbox{x}{v_1}{v_2} \in \redv{\Delta}{\tau_2}
 \end{align*}
 \end{lemma}
 \begin{proof}
@@ -3202,7 +3206,7 @@ Unboxing terms are reducible when built from reducible subterms.
   \item It can reduce by congruence to $\gunbox{x}{v_1}{v_5}$ where $v_2 \stepstov v_5$.
   \end{itemize}
   In the first case we have $v_3 \in \redv{\cempty}{\tau_1}$ from
-  $v_1 \in \redv{\Delta_1}{\glob \tau_1}$ and so the reduct is reducible
+  $v_1 \in \redv{\Delta}{\glob \tau_1}$ and so the reduct is reducible
   by hypothesis. The second and third cases are reducible by the
   inductive hypothesis using CR2(\ref{lemma:red-reduces}).
 \end{proof}
@@ -3295,8 +3299,8 @@ Non-neutral bind terms are reducible when built from reducible subterms.
 \begin{align*}
   &\loc_e \types \Sigma \in \Delta
    \; \wedge \; op \types \tau_p \rightarrowtail \tau_a \in \Sigma
-   \; \wedge \; v_p \in \redv{\Delta}{\tau_p} \\
-  &\wedge \; (\forall v_a \in \redva{\Delta}{\glob \tau_a}. \; \sbst{c_k}{x}{v_a} \in \redc{\Delta}{\tau_k}) \\
+   \; \wedge \; v_p \in \redv{\cempty}{\tau_p} \\
+  &\wedge \; (\forall v_a \in \redv{\Delta}{\glob \tau_a}. \; \sbst{c_k}{x}{v_a} \in \redc{\Delta}{\tau_k}) \\
   &\implies \; \letv{x}{\perform{\loc_e}{op}{v_p}}{c_k} \in \redc{\Delta}{\tau_k}
 \end{align*}
 \end{lemma}
@@ -3315,7 +3319,7 @@ Non-neutral bind terms are reducible when built from reducible subterms.
     strongly normalizing then so is
     $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k}$.
   \item We must show that $v_q \in \redv{\cempty}{\tau_p}$ and
-    $\forall v_a \in \redva{\Delta}{\glob \tau_a}. \; \sbst{c_j}{x}{v_a}
+    $\forall v_a \in \redv{\Delta}{\glob \tau_a}. \; \sbst{c_j}{x}{v_a}
     \in \redc{\Delta}{\tau_k}$ for any $v_q$ and $c_j$ such that
     $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k} \reducestov
     \letv{x}{\perform{\loc_e}{op}{v_q}}{c_j}$. The reduction is either
@@ -3347,13 +3351,60 @@ Bind terms are reducible when built from reducible subterms.
 \label{lemma:red-bind}
 \begin{align*}
   &c_1 \in \redca{\Delta}{\tau_1}{\alpha} \\
-  &\wedge \; (\forall v \in \redva{\cempty}{\tau_1}{\alpha}. \; \sbst{c_2}{x}{v} \in \redc{\Delta}{\tau_2}) \\
+  &\wedge \; (\forall v \in \redva{\Delta}{\tau_1}{\alpha}. \; \sbst{c_2}{x}{v} \in \redc{\Delta}{\tau_2}) \\
   &\implies \; \letv{x}{c_1}{c_2} \in \redc{\Delta}{\tau_2}
 \end{align*}
 \end{lemma}
 \begin{proof}
   By induction on $\alpha$ and $\bound{c_1} + \bound{c_2}$.
-  \todo{Write out proof}
+
+  We first consider the case where $c_1$ is of the form
+  $\perform{\loc_e}{op}{v_p}$. Then
+  $c_1 \in \redca{\Delta}{\tau_1}{\alpha}$ gives us, via reflexivity,
+  that $\loc_e \types \Sigma \in \Delta$,
+  $op \types \tau_p \rightarrowtail \tau_a \in \Sigma$ and
+  $v_p \in \redv{\cempty}{\tau_p}$, with $\tau_1 = \glob
+  \tau_a$. Reducibility at $\glob$ types does not depend on the ordinal,
+  so the hypothesis on $c_2$ gives us
+  $\forall v_a \in \redv{\Delta}{\glob \tau_a}. \; \sbst{c_2}{x}{v_a}
+  \in \redc{\Delta}{\tau_2}$, and the case follows by
+  Lemma~\ref{lemma:red-bind-intro}.
+
+  Otherwise $\letv{x}{c_1}{c_2}$ is neutral, so we can use
+  CR3(\ref{lemma:red-neutral}). There are four possibilities for a
+  reduct of $\letv{x}{c_1}{c_2}$:
+  \begin{itemize}
+  \item It can reduce by congruence to $\letv{x}{c_3}{c_2}$ where
+    $c_1 \stepstoc c_3$. By CR2(\ref{lemma:red-reduces}) we have
+    $c_3 \in \redca{\Delta}{\tau_1}{\alpha}$, so the reduct is reducible
+    by the inductive hypothesis.
+  \item It can reduce by congruence to $\letv{x}{c_1}{c_4}$ where
+    $c_2 \stepstoc c_4$. For any $v \in \redva{\Delta}{\tau_1}{\alpha}$
+    we have that $\sbst{c_4}{x}{v}$ is a reduct of $\sbst{c_2}{x}{v}$
+    and so is reducible by CR2(\ref{lemma:red-reduces}). Thus the reduct
+    is reducible by the inductive hypothesis.
+  \item If $c_1$ is of the form $\return{v_1}$ then it can reduce to
+    $\sbst{c_2}{x}{v_1}$. From $c_1 \in \redca{\Delta}{\tau_1}{\alpha}$
+    we have, via reflexivity, that
+    $v_1 \in \redva{\Delta}{\tau_1}{\alpha}$, so the reduct is reducible
+    by hypothesis.
+  \item If $c_1$ is of the form
+    $\letv{y}{\perform{\loc_e}{op}{v_p}}{c_3}$ then it can reduce by the
+    commuting rule to
+    $\letv{y}{\perform{\loc_e}{op}{v_p}}{(\letv{x}{c_3}{c_2})}$. From
+    $c_1 \in \redca{\Delta}{\tau_1}{\alpha}$ we have, via reflexivity,
+    that $\loc_e \types \Sigma \in \Delta$,
+    $op \types \tau_p \rightarrowtail \tau_a \in \Sigma$ and
+    $v_p \in \redv{\cempty}{\tau_p}$, and that for any
+    $v_a \in \redv{\Delta}{\glob \tau_a}$ there is some $\beta < \alpha$
+    with $\sbst{c_3}{y}{v_a} \in \redca{\Delta}{\tau_1}{\beta}$. For any
+    such $v_a$ we have
+    $\sbst{(\letv{x}{c_3}{c_2})}{y}{v_a} =
+    \letv{x}{\sbst{c_3}{y}{v_a}}{c_2}$, which is reducible by the
+    inductive hypothesis on $\beta$, using the monotonicity of the
+    predicates in $\alpha$ for the hypothesis on $c_2$. The reduct is
+    then reducible by Lemma~\ref{lemma:red-bind-intro}.
+  \end{itemize}
 \end{proof}
 
 Run terms are reducible when built from reducible subterms.
@@ -3365,10 +3416,38 @@ Run terms are reducible when built from reducible subterms.
 \end{align*}
 \end{lemma}
 \begin{proof}
-\todo{Write out proof}
+  By induction on $\bound{c_r}$. $\grun{c_r}$ is neutral so we can use
+  CR3(\ref{lemma:red-neutral}). There are two possibilities for a reduct
+  of $\grun{c_r}$:
+  \begin{itemize}
+  \item It can reduce by congruence to $\grun{c_s}$ where
+    $c_r \stepstoc c_s$. By CR2(\ref{lemma:red-reduces}) we have
+    $c_s \in \redc{\cempty}{\tau}$, so the reduct is reducible by the
+    inductive hypothesis.
+  \item If $c_r$ is of the form $\return{v}$ then it can reduce to
+    $v$. From $c_r \in \redc{\cempty}{\tau}$ we have, via reflexivity,
+    that $v \in \redv{\cempty}{\tau}$, and thus that
+    $v \in \redv{\Delta}{\tau}$ by effect weakening
+    (\ref{lemma:red-weaken}).
+  \end{itemize}
 \end{proof}
 
 \subsection{Effect capability types}
+
+Location terms are reducible when they are bound in the effect context.
+\begin{lemma}
+\label{lemma:red-loc}
+\begin{align*}
+  \loc \types \Sigma \in \Delta
+  \; \implies \; \loc \in \redv{\Delta}{\yoneda{\Sigma}}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  No reduction rules apply to $\loc$, so it is strongly normalizing and
+  its only reduct, via reflexivity, is $\loc$ itself, for which we have
+  $\loc \types \Sigma \in \Delta$ by hypothesis. The conditions for
+  reducts of the forms $\outl{v}$ and $\outr{v}$ hold vacuously.
+\end{proof}
 
 Selection terms are reducible when built from reducible subterms.
 \begin{lemma}
@@ -3401,9 +3480,9 @@ Selection terms are reducible when built from reducible subterms.
     $v_r \in \redva{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}{\beta}$ for
     some $\beta$.
   \item We must show that various properties hold for any term of the
-    form $\outr{v_r}$ that $\outl{v_s}$ reduces to. Only the congruence
-    reduction rule applies to $\outl{v_s}$, so every reduct is of the
-    form $\outl{v_r}$ and the condition holds vacuously.
+    form $\loc$ or $\outr{v_r}$ that $\outl{v_s}$ reduces to. Only the
+    congruence reduction rule applies to $\outl{v_s}$, so every reduct
+    is of the form $\outl{v_r}$ and the conditions hold vacuously.
   \end{itemize}
   The case for right selection follows by the same reasoning.
 \end{proof}
@@ -3412,15 +3491,44 @@ Perform terms are reducible when built from reducible subterms.
 \begin{lemma}
 \label{lemma:red-perform}
 \begin{align*}
-  &\loc_e \types \Sigma \in \Delta
-   \; \wedge \; op \types \tau_p \rightarrowtail \tau_a \in \Sigma \\
-  &v_l \in \redv{\Delta}{\yoneda{\Sigma}}
-  \; \wedge \; v_a \in \redv{\Delta}{\tau_p} \\
+  &op \types \tau_p \rightarrowtail \tau_a \in \Sigma
+  \; \wedge \; v_l \in \redva{\Delta}{\yoneda{\Sigma}}{\alpha}
+  \; \wedge \; v_a \in \redv{\cempty}{\tau_p} \\
   &\implies \; \perform{v_l}{op}{v_a} \in \redc{\Delta}{\glob \tau_a}
 \end{align*}
 \end{lemma}
 \begin{proof}
-\todo{Write out proof}
+  By induction on $\alpha$ and $\bound{v_l} + \bound{v_a}$.
+
+  We first consider the case where $v_l$ is a location $\loc$. Then
+  $v_l \in \redva{\Delta}{\yoneda{\Sigma}}{\alpha}$ gives us, via
+  reflexivity, that $\loc \types \Sigma \in \Delta$, and the case
+  follows by Lemma~\ref{lemma:red-perform-intro}.
+
+  Otherwise $\perform{v_l}{op}{v_a}$ is neutral, so we can use
+  CR3(\ref{lemma:red-neutral}). There are four possibilities for a
+  reduct of $\perform{v_l}{op}{v_a}$:
+  \begin{itemize}
+  \item It can reduce by congruence to $\perform{v_m}{op}{v_a}$ where
+    $v_l \stepstov v_m$. By CR2(\ref{lemma:red-reduces}) we have
+    $v_m \in \redva{\Delta}{\yoneda{\Sigma}}{\alpha}$, so the reduct is
+    reducible by the inductive hypothesis.
+  \item It can reduce by congruence to $\perform{v_l}{op}{v_b}$ where
+    $v_a \stepstov v_b$. By CR2(\ref{lemma:red-reduces}) we have
+    $v_b \in \redv{\cempty}{\tau_p}$, so the reduct is reducible by the
+    inductive hypothesis.
+  \item If $v_l$ is of the form $\outl{v_m}$ then it can reduce to
+    $\perform{v_m}{\mathrm{left}(op)}{v_a}$. From
+    $v_l \in \redva{\Delta}{\yoneda{\Sigma}}{\alpha}$ we have, via
+    reflexivity, some $\Sigma_2$ and $\beta < \alpha$ with
+    $v_m \in \redva{\Delta}{\yoneda{\Sigma + \Sigma_2}}{\beta}$. Since
+    $\mathrm{left}(op) \types \tau_p \rightarrowtail \tau_a \in \Sigma +
+    \Sigma_2$, the reduct is reducible by the inductive hypothesis on
+    $\beta$.
+  \item If $v_l$ is of the form $\outr{v_m}$ then it can reduce to
+    $\perform{v_m}{\mathrm{right}(op)}{v_a}$, which is reducible by the
+    same reasoning as the previous case.
+  \end{itemize}
 \end{proof}
 
 \subsection{Inductive types}
@@ -3515,43 +3623,256 @@ Reification terms are reducible when built from reducible subterms.
 \end{align*}
 \end{lemma}
 \begin{proof}
-\todo{Write out proof}
+  By induction on $\alpha$ and $\bound{c}$, assuming without loss of
+  generality that $\loc$ is not bound in $\Delta$. $\reify{\loc}{c}$ is
+  neutral so we can use CR3(\ref{lemma:red-neutral}). There are six
+  possibilities for a reduct of $\reify{\loc}{c}$:
+  \begin{itemize}
+  \item It can reduce by congruence to $\reify{\loc}{c^{\prime}}$ where
+    $c \stepstoc c^{\prime}$. By CR2(\ref{lemma:red-reduces}) we have
+    $c^{\prime} \in
+    \redca{\lbind{\Delta}{\loc}{\Sigma}}{\glob \tau}{\alpha}$, so the
+    reduct is reducible by the inductive hypothesis.
+  \item If $c$ is of the form $\return{(\gbox{v})}$ then it can reduce
+    to $\return{\ret{v}}$. From the reducibility of $c$ we have, via
+    reflexivity, that
+    $\gbox{v} \in \redv{\lbind{\Delta}{\loc}{\Sigma}}{\glob \tau}$ and
+    thus that $v \in \redv{\cempty}{\tau}$. The reduct is then reducible
+    by Lemmas~\ref{lemma:red-ret} and \ref{lemma:red-return}.
+  \item If $c$ is of the form $\perform{\loc}{op}{v}$ then it can reduce
+    to
+    $\return{\indintro{op}{v}{\abs{(\gbox{x})}{\return{\ret{x}}}}}$.
+    From the reducibility of $c$ we have, via reflexivity, that
+    $op \types \tau_p \rightarrowtail \tau_a \in \Sigma$ and
+    $v \in \redv{\cempty}{\tau_p}$. For any
+    $v_b \in \redv{\Delta}{\glob \tau_a}$, the body of the continuation
+    with $v_b$ substituted for $x$ is reducible by
+    Lemmas~\ref{lemma:red-unbox}, \ref{lemma:red-ret} and
+    \ref{lemma:red-return}, so the continuation is reducible by
+    Lemma~\ref{lemma:red-abs}. The reduct is then reducible by
+    Lemmas~\ref{lemma:red-indintro} and \ref{lemma:red-return}.
+  \item If $c$ is of the form $\letv{x}{\perform{\loc}{op}{v}}{c_2}$
+    then it can reduce to
+    $\return{\indintro{op}{v}{\abs{x}{\reify{\loc}{c_2}}}}$. From the
+    reducibility of $c$ we have, via reflexivity, that
+    $op \types \tau_p \rightarrowtail \tau_a \in \Sigma$ and
+    $v \in \redv{\cempty}{\tau_p}$, and that for any
+    $v_b \in \redv{\Delta}{\glob \tau_a}$ there is some $\beta < \alpha$
+    with $\sbst{c_2}{x}{v_b} \in
+    \redca{\lbind{\Delta}{\loc}{\Sigma}}{\glob \tau}{\beta}$. By the
+    inductive hypothesis on $\beta$ we then have
+    $\reify{\loc}{\sbst{c_2}{x}{v_b}} =
+    \sbst{(\reify{\loc}{c_2})}{x}{v_b} \in
+    \redca{\Delta}{\ind{\Sigma}{\tau}}{\beta}$, so the continuation is
+    reducible by Lemma~\ref{lemma:red-abs}. The reduct is then reducible
+    by Lemmas~\ref{lemma:red-indintro} and \ref{lemma:red-return}.
+  \item If $c$ is of the form $\perform{\loc_2}{op}{v}$ with
+    $\loc_2 \neq \loc$ then it can reduce to
+    \begin{equation*}
+      \letv{(\gbox{x})}{\perform{\loc_2}{op}{v}}{\return{\ret{x}}}
+    \end{equation*}
+    From
+    the reducibility of $c$ we have, via reflexivity, that
+    $\loc_2 \types \Sigma_2 \in \lbind{\Delta}{\loc}{\Sigma}$, and since
+    $\loc_2 \neq \loc$ that $\loc_2 \types \Sigma_2 \in \Delta$, along
+    with $op \types \tau_p \rightarrowtail \tau_a \in \Sigma_2$ and
+    $v \in \redv{\cempty}{\tau_p}$. For any
+    $v_b \in \redv{\Delta}{\glob \tau_a}$, the body of the binding with
+    $v_b$ substituted for $x$ is reducible by
+    Lemmas~\ref{lemma:red-unbox}, \ref{lemma:red-ret} and
+    \ref{lemma:red-return}, so the reduct is reducible by
+    Lemma~\ref{lemma:red-bind-intro}.
+  \item If $c$ is of the form $\letv{x}{\perform{\loc_2}{op}{v}}{c_2}$
+    with $\loc_2 \neq \loc$ then it can reduce to
+    $\letv{x}{\perform{\loc_2}{op}{v}}{\reify{\loc}{c_2}}$. From the
+    reducibility of $c$ we have, via reflexivity, that
+    $\loc_2 \types \Sigma_2 \in \Delta$,
+    $op \types \tau_p \rightarrowtail \tau_a \in \Sigma_2$ and
+    $v \in \redv{\cempty}{\tau_p}$, and that for any
+    $v_b \in \redv{\Delta}{\glob \tau_a}$ there is some $\beta < \alpha$
+    with $\sbst{c_2}{x}{v_b} \in
+    \redca{\lbind{\Delta}{\loc}{\Sigma}}{\glob \tau}{\beta}$. By the
+    inductive hypothesis on $\beta$ we then have
+    $\sbst{(\reify{\loc}{c_2})}{x}{v_b} \in
+    \redca{\Delta}{\ind{\Sigma}{\tau}}{\beta}$, so the reduct is
+    reducible by Lemma~\ref{lemma:red-bind-intro}.
+  \end{itemize}
 \end{proof}
 
 Recursion terms are reducible when built from reducible subterms.
 \begin{lemma}
 \label{lemma:red-rec}
 \begin{align*}
-  &v_s \in \redva{\Delta_1}{\ind{\{ op_1 \types \tau_{p_1} \rightarrowtail \tau_{a_1};
+  &v_s \in \redva{\Delta}{\ind{\{ op_1 \types \tau_{p_1} \rightarrowtail \tau_{a_1};
       \ldots; op_n\types \tau_{p_n} \rightarrowtail \tau_{a_n} \}}(\tau_1)}{\alpha} \\
   &\wedge \; (\forall v_r \in \redva{\cempty}{\tau_1}{\alpha}. \\
-    &\qquad \sbst{v_e}{x_r}{v_r} \in \redva{\Delta_2}{\tau_2}{\alpha}) \\
+    &\qquad \sbst{v_e}{x_r}{v_r} \in \redva{\Delta}{\tau_2}{\alpha}) \\
   &\wedge \; (\forall v_{p_1} \in \redva{\cempty}{\tau_{p_1}}{\alpha}, \;
-      v_{k_1} \in \redva{\Delta_1}{\glob \tau_{a_1} \arr \tau_2}{\alpha}. \\
-    &\qquad \sbst{\sbst{v_1}{x_{p_1}}{v_{p_1}}}{x_{k_1}}{v_{k_1}} \in \redva{\Delta_2}{\tau_2}{\alpha}) \\
+      v_{k_1} \in \redva{\Delta}{\glob \tau_{a_1} \arr \tau_2}{\alpha}. \\
+    &\qquad \sbst{\sbst{v_1}{x_{p_1}}{v_{p_1}}}{x_{k_1}}{v_{k_1}} \in \redva{\Delta}{\tau_2}{\alpha}) \\
   &\ldots \\
   &\wedge \; (\forall v_{p_n} \in \redva{\cempty}{\tau_{p_n}}{\alpha}, \;
-      v_{k_n} \in \redva{\Delta_1}{\glob \tau_{a_n} \arr \tau_2}{\alpha}. \\
-    &\qquad \sbst{\sbst{v_n}{x_{p_n}}{v_{p_n}}}{x_{k_n}}{v_{k_n}} \in \redva{\Delta_2}{\tau_2}{\alpha}) \\
+      v_{k_n} \in \redva{\Delta}{\glob \tau_{a_n} \arr \tau_2}{\alpha}. \\
+    &\qquad \sbst{\sbst{v_n}{x_{p_n}}{v_{p_n}}}{x_{k_n}}{v_{k_n}} \in \redva{\Delta}{\tau_2}{\alpha}) \\
   &\implies \\
   &\indelim{v_s}{\indretcase{x_r}{v_e} \seq
             \indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} \seq \ldots \seq
             \indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}}
-    \in \redva{\Delta_2}{\tau_2}{\alpha}
+    \in \redva{\Delta}{\tau_2}{\alpha}
 \end{align*}
 \end{lemma}
 \begin{proof}
-\todo{Write out proof}
+  Write $H$ for the handler
+  $\indretcase{x_r}{v_e} \seq
+   \indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} \seq \ldots \seq
+   \indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}$. By induction on $\alpha$ and
+  $\bound{v_s} + \bound{v_e} + \bound{v_1} + \ldots +
+  \bound{v_n}$. $\indelim{v_s}{H}$ is neutral so we can use
+  CR3(\ref{lemma:red-neutral}). There are three kinds of reduct of
+  $\indelim{v_s}{H}$:
+  \begin{itemize}
+  \item It can reduce by congruence in $v_s$, $v_e$ or one of the
+    $v_i$. The subterms of the reduct remain reducible by
+    CR2(\ref{lemma:red-reduces}) -- for the branches this is because
+    each substitution instance of the reduced branch is a reduct of the
+    corresponding substitution instance of the original branch -- so the
+    reduct is reducible by the inductive hypothesis.
+  \item If $v_s$ is of the form $\ret{v_r}$ then it can reduce to
+    $\sbst{v_e}{x_r}{v_r}$. From
+    $v_s \in \redva{\Delta}{\ind{\Sigma}(\tau_1)}{\alpha}$ we have,
+    via reflexivity, that $v_r \in \redva{\cempty}{\tau_1}{\alpha}$, so
+    the reduct is reducible by hypothesis.
+  \item If $v_s$ is of the form $\indintro{op_i}{v_p}{v_k}$ then it can
+    reduce to $\sbst{\sbst{v_i}{x_{p_i}}{v_p}}{x_{k_i}}{v_c}$ where
+    \begin{equation*}
+      v_c =
+      \abs{x_a}{\letv{x_w}{\app{v_k}{x_a}}{\return{(\indelim{x_w}{H})}}}
+    \end{equation*}
+    From $v_s \in \redva{\Delta}{\ind{\Sigma}(\tau_1)}{\alpha}$ we
+    have, via reflexivity, that
+    $v_p \in \redva{\cempty}{\tau_{p_i}}{\alpha}$ and that for any
+    $v_a \in \redv{\Delta}{\glob \tau_{a_i}}$ there is some
+    $\beta < \alpha$ with
+    $\app{v_k}{v_a} \in
+    \redca{\Delta}{\ind{\Sigma}(\tau_1)}{\beta}$. We show that
+    $v_c \in \redva{\Delta}{\glob \tau_{a_i} \arr \tau_2}{\alpha}$,
+    for which, by Lemma~\ref{lemma:red-abs}, it is sufficient to show
+    that $\letv{x_w}{\app{v_k}{v_a}}{\return{(\indelim{x_w}{H})}}$ is
+    reducible for any $v_a \in \redv{\Delta}{\glob \tau_{a_i}}$. For
+    any $v_w \in \redva{\Delta}{\ind{\Sigma}(\tau_1)}{\beta}$ we have
+    that $\indelim{v_w}{H}$ is reducible by the inductive hypothesis on
+    $\beta$, using the monotonicity of the predicates in $\alpha$ for
+    the hypotheses on the branches, and thus
+    $\return{(\indelim{v_w}{H})}$ is reducible by
+    Lemma~\ref{lemma:red-return}. Thus
+    $\letv{x_w}{\app{v_k}{v_a}}{\return{(\indelim{x_w}{H})}}$ is
+    reducible by Lemma~\ref{lemma:red-bind}, and so $v_c$ is
+    reducible. The reduct is then reducible by the hypothesis for the
+    $op_i$ branch.
+  \end{itemize}
 \end{proof}
 
 \subsection{Reducible substitutions}
 
-We define a notion of reducibility for substitutions as a reducibility
-predicate $\redsc{\Delta}{\Gamma}$ indexed by an effect context $\Delta$
-and a typing context $\Gamma$. We write $\reds{\Gamma}$ for
-$\redsc{\cempty}{\Gamma}$.
+A substitution $\sigma$ is a sequence of single variable substitutions
+$\sub{x_1}{v_1} \cdots \sub{x_n}{v_n}$, applied to a term one at a time
+from left to right. We write $\fv{\sigma}$ for the free variables of
+the values of $\sigma$.
 
-\todo{Write out definition}
+We define a notion of reducibility for substitutions as a reducibility
+predicate $\reds{\Gamma}$ indexed by a typing context $\Gamma$. A
+reducible substitution has one entry for each variable binding of the
+context, with the values for local bindings reducible in the effect
+context containing the locations bound earlier in the context, and the
+values for global bindings reducible in the empty effect context. The
+freshness conditions ensure that the entries of a reducible
+substitution do not interact with one another, so that it behaves as a
+simultaneous substitution.
+\begin{align*}
+  &\reds{\cempty} =
+    \{ \, \cempty \, \} \\
+  &\reds{\lbind{\Gamma}{x}{\tau}} =
+    \{ \, \sigma \cdot \sub{x}{v} \; | \;
+       x \notin \fv{\sigma}
+       \; \wedge \; \sigma \in \reds{\Gamma}
+       \; \wedge \; v \in \redv{\clocs{\Gamma}}{\tau} \, \} \\
+  &\reds{\gbind{\Gamma}{x}{\tau}} =
+    \{ \, \sigma \cdot \sub{x}{v} \; | \;
+       x \notin \fv{\sigma}
+       \; \wedge \; \sigma \in \reds{\Gamma}
+       \; \wedge \; v \in \redv{\cempty}{\tau} \, \} \\
+  &\reds{\lbind{\Gamma}{\loc}{\Sigma}} =
+    \reds{\Gamma}
+\end{align*}
+where $\cempty$ is the empty sequence.
+
+Reducible substitutions can be extended with reducible values and with
+location bindings:
+\begin{lemma}
+\label{lemma:red-subst-extend}
+Providing that $x$ does not occur free in the values of $\sigma$:
+\begin{align*}
+  &\sigma \in \reds{\Gamma}
+   \; \wedge \; v \in \redv{\clocs{\Gamma}}{\tau} \\
+  &\quad \implies \;
+   \sigma \cdot \sub{x}{v} \in \reds{\lbind{\Gamma}{x}{\tau}} \\
+  &\sigma \in \reds{\Gamma}
+   \; \wedge \; v \in \redv{\cempty}{\tau} \\
+  &\quad \implies \;
+   \sigma \cdot \sub{x}{v} \in \reds{\gbind{\Gamma}{x}{\tau}} \\
+  &\sigma \in \reds{\Gamma}
+   \; \implies \;
+   \sigma \in \reds{\lbind{\Gamma}{\loc}{\Sigma}}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  Immediate from the definition of $\redsname$.
+\end{proof}
+
+Reducible substitutions substitute reducible values for variables:
+\begin{lemma}
+\label{lemma:red-subst-var}
+\begin{align*}
+  &\sigma \in \reds{\ccons{\lbind{\Gamma_1}{x}{\tau}}{\Gamma_2}}
+    \; \implies \;
+    x[\sigma] \in \redv{\clocs{\ccons{\Gamma_1}{\Gamma_2}}}{\tau} \\
+  &\sigma \in \reds{\ccons{\gbind{\Gamma_1}{x}{\tau}}{\Gamma_2}}
+    \; \implies \;
+    x[\sigma] \in \redv{\cempty}{\tau}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  By induction on $\Gamma_2$. The entries for the bindings before $x$
+  bind other variables, so they leave the term $x$ unchanged, and the
+  freshness conditions for the entries for the bindings after $x$
+  ensure that they do not affect the value $v$ substituted for $x$, so
+  $x[\sigma] = v$. For a local binding the definition gives
+  $v \in \redv{\clocs{\Gamma_1}}{\tau}$ and the result
+  follows by effect weakening (\ref{lemma:red-weaken}). For a global
+  binding the definition gives $v \in \redv{\cempty}{\tau}$ directly.
+\end{proof}
+
+Finally, reducible substitutions can be divided. We write
+$\cdiv{\sigma}$ for the subsequence of $\sigma$ consisting of the
+entries for the global bindings of the context.
+\begin{lemma}
+\label{lemma:red-subst-cdiv}
+\begin{align*}
+  \sigma \in \reds{\Gamma}
+  \; \implies \;
+  \cdiv{\sigma} \in \reds{\cdiv{\Gamma}}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  By induction on $\Gamma$. The entries for local bindings are dropped
+  along with their bindings, the freshness conditions for the remaining
+  entries are implied by those for $\sigma$, and the conditions on the
+  entries for global bindings are unchanged.
+\end{proof}
+Note that a term typed in $\cdiv{\Gamma}$ contains no free occurrences
+of the local variables or locations of $\Gamma$, so, using the
+freshness conditions, for such a term $v$ we have
+$v[\sigma] = v[\cdiv{\sigma}]$.
 
 \subsection{Reducibility theorem}
 Well-typed terms are reducible under any reducible substitution
@@ -3564,7 +3885,23 @@ Well-typed terms are reducible under any reducible substitution
       \quad \implies \quad c[\sigma] \in \redc{\clocs{\Gamma}}{\tau} \\
 \end{align*}
 \begin{proof}
-\todo{Write out proof}
+  By mutual induction on the typing derivations for $v$ and $c$.  The
+  variable cases follow from Lemma~\ref{lemma:red-subst-var}. Every
+  other case consists of applying the corresponding lemma from the
+  preceding subsections (\ref{lemma:red-pair}--\ref{lemma:red-rec}). The
+  premises of those lemmas are met as follows.
+  \begin{itemize}
+  \item Premises typed in $\Gamma$ itself use the inductive hypothesis with
+  $\sigma$ directly.
+  \item Premises typed under additional bindings use the
+  inductive hypothesis with $\sigma$ extended by the extension lemma
+  (\ref{lemma:red-subst-extend}): the reducible values quantified over
+  by the lemmas for the binding forms are exactly those required by the
+  extension lemma.
+  \item Premises typed in the divided context $\cdiv{\Gamma}$
+  use the inductive hypothesis with $\cdiv{\sigma}$ via the division
+  lemma (\ref{lemma:red-subst-cdiv}).
+  \end{itemize}
 \end{proof}
 
 As a corollary, since the substitution that replaces every variable with itself is reducible,
