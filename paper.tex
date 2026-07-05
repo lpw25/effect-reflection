@@ -2783,8 +2783,15 @@ well-defined because the predicates are monotonic in $\alpha$.
       \{ \, v_1 \; | \; \forall v_2 \in \redv{\Delta}{\tau_1}. \; \app{v_1}{v_2} \in \redc{\Delta}{\tau_2} \, \} \\
     \redva{\Delta}{\glob \tau}{\alpha} \quad &= \quad
       \{ \, v_1 \in \snv \; | \; \forall v_2. \; v_1 \reducestov \gbox{v_2} \; \implies \; v_2 \in \redv{\cempty}{\tau} \, \} \\
-    \redva{\Delta}{\yoneda{\Sigma}}{\alpha} \quad &= \quad
-      \snv \\
+    \redva{\Delta}{\yoneda{\Sigma_1}}{\alpha} \quad &= \quad
+      \{ \, v_1 \in \snv \; | \; \forall v_2. \; v_1 \reducestov \outl{v_2} \\
+        &\qquad \qquad \qquad \implies \;
+          \exists \Sigma_2. \; \exists \beta < \alpha. \quad
+          v_2 \in \redva{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}{\beta} \\
+        &\qquad \qquad \wedge \; \forall v_2. \; v_1 \reducestov \outr{v_2} \\
+        &\qquad \qquad \qquad \implies \;
+          \exists \Sigma_2. \; \exists \beta < \alpha. \quad
+          v_2 \in \redva{\Delta}{\yoneda{\Sigma_2 + \Sigma_1}}{\beta} \, \} \\
     \redva{\Delta}{\ind{\Sigma}(\tau_1)}{\alpha} \quad &= \\
       \{ \, v_1 \in \snv \; &| \;
         (\forall v_2. \; v_1 \reducestov \ret{v_2}
@@ -2884,8 +2891,9 @@ Reduciblity predicates are compatible with reductions (CR2):
   hypothesis.
 \item[$\glob \tau$:] Given $v_2 \reducestov \gbox{v_3}$ we have
   $v_1 \reducestov \gbox{v_3}$ and thus $v_3 \in \redv{\cempty}{\tau}$.
-\item[$\yoneda{\tau}$:] If $v_1 \in \snv$ then $v_2 \in \snv$ because an infinite
-  chain in $v_2$ would produce an infinite chain in $v_1$.
+\item[$\yoneda{\Sigma}$:] Given $v_2 \reducestov \outl{v_3}$ or
+  $v_2 \reducestov \outr{v_3}$ then $v_1$ also reduces to those values
+  and thus they have the required properties.
 \item[$\ind{\Sigma}(\tau)$:] Given $v_2 \reducestov \ret{v_3}$
   or $v_2 \reducestov \indintro{op}{v_4}{v_5}$ then $v_1$ also reduces to those
   values and thus they have the required properties.
@@ -2952,8 +2960,12 @@ For all neutral values $v_n$ and neutral computations $c_n$:
   go through one of the $v_r$ because $v_n$ cannot equal $\gbox{v_b}$ as
   it is neutral. From $v_r \reducestov \gbox{v_b}$ we have
   $v_b \in \redv{\Delta}{\tau}$.
-\item[$\yoneda{\tau}$:] Any chain from $v_n$ must pass through one of
-  the $v_r$ and so must be finite.
+\item[$\yoneda{\Sigma}$:] Any reduction $v_n \reducestov \outl{v_i}$ or
+  $v_n \reducestov \outr{v_i}$ must go through one of the $v_r$ because
+  $v_n$ cannot equal $\outl{v_i}$ or $\outr{v_i}$ as it is
+  neutral. Since they reduce from $v_r$ and
+  $v_r \in \redva{\Delta}{\yoneda{\Sigma}}{\alpha}$ they must have the
+  required properties.
 \item[$\ind{\Sigma}(\tau)$:] Any reduction $v_n \reducestov \ret{v_t}$
   or $v_n \reducestov \indintro{op}{v_p}{v_a}$ must go through one of
   the $v_r$ because $v_n$ cannot equal $\ret{v_t}$ or
@@ -3363,19 +3375,36 @@ Selection terms are reducible when built from reducible subterms.
 \label{lemma:red-out}
 \begin{align*}
   &v_s \in \redv{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}
-    \; \implies \; \outl{v_s} \in \redv{\Delta}{\yoneda{\Sigma_1}}
+    \; \implies \; \outl{v_s} \in \redv{\Delta}{\yoneda{\Sigma_1}} \\
   &v_s \in \redv{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}
     \; \implies \; \outr{v_s} \in \redv{\Delta}{\yoneda{\Sigma_2}}
 \end{align*}
 \end{lemma}
 \begin{proof}
-  By induction on $\bound{v_s}$. The only reduction rule that can apply
-  to $\outl{v_s}$ is the congruence rule. Thus any reduct would be of
-  the form $\outl{v_r}$ with $v_s \stepstov v_r$ and so, by the
-  inductive hypothesis via CR2(\ref{lemma:red-reduces}), would be
-  strongly normalizing. Since every reduct is strongly normalizing then
-  so is $\outl{v_s}$.
-
+  By induction on $\bound{v_s}$. For left selection, we must show three
+  things:
+  \begin{itemize}
+  \item We must show that $\outl{v_s} \in \snv$. The only reduction rule
+    that can apply to $\outl{v_s}$ is the congruence rule. Thus any
+    reduct would be of the form $\outl{v_r}$ with $v_s \stepstov v_r$
+    and so, by the inductive hypothesis via
+    CR2(\ref{lemma:red-reduces}), would be strongly normalizing. Since
+    every reduct is strongly normalizing then so is $\outl{v_s}$.
+  \item We must show, for any $v_r$ such that
+    $\outl{v_s} \reducestov \outl{v_r}$, that there are some $\Sigma$
+    and $\beta$ with
+    $v_r \in \redva{\Delta}{\yoneda{\Sigma_1 + \Sigma}}{\beta}$. Only
+    the congruence reduction rule applies to $\outl{v_s}$, so
+    $v_s \reducestov v_r$ and thus
+    $v_r \in \redv{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}$ by
+    CR2(\ref{lemma:red-reduces}), giving
+    $v_r \in \redva{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}{\beta}$ for
+    some $\beta$.
+  \item We must show that various properties hold for any term of the
+    form $\outr{v_r}$ that $\outl{v_s}$ reduces to. Only the congruence
+    reduction rule applies to $\outl{v_s}$, so every reduct is of the
+    form $\outl{v_r}$ and the condition holds vacuously.
+  \end{itemize}
   The case for right selection follows by the same reasoning.
 \end{proof}
 
