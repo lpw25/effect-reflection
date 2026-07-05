@@ -2355,17 +2355,6 @@ inductive hypothesis. The variable case that actually substitutes $v_2$
 uses Lemma \ref{lemma:cdiv-weakening} to weaken $v_2$ to the right
 context.
 
-When reasoning about reductions we will need a lemma stating that
-substitutions commute:
-\begin{lemma}
-\label{lemma:substitutions-commute}
-  \begin{align*}
-    &\sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{v_2} = \sbst{\sbst{v_3}{x_2}{v_2}}{x_1}{\sbst{v_1}{x_2}{v_2}} \\
-    &\sbst{\sbst{c}{x_1}{v_1}}{x_2}{v_2} = \sbst{\sbst{c}{x_2}{v_2}}{x_1}{\sbst{v_1}{x_2}{v_2}}
-  \end{align*}
-\end{lemma}
-which follows directly by mutual induction on $v_3$ and $c$.
-
 \subsection{Subject reduction}
 \label{apdx:subject-reduction}
 
@@ -2433,7 +2422,8 @@ substitution lemma (\ref{lemma:global-substitution}).
 For the $\indelimname$/$op$ rule:
 \begin{align*}
 \indelim{(\indintro{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} &\stepstov \\
-  \sbst{\sbst{v_3}{x_1}{v_1}}{x_2}{\abs{x_a}{\letv{x_w}{\app{v_2}{x_a}&}{\return{(\indelim{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}}
+  \sbst{\sbst{v_3}{x_1}{v_1}}{x_2}
+  {\abs{x_a}{\letv{x_w}{\app{v_2}{x_a}}{&\return{(\indelim{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}}
 \end{align*}
 the case follows by inversion on the typing rules followed by the global
 substitution lemma (\ref{lemma:global-substitution}) for $x_1$ and the
@@ -2647,8 +2637,8 @@ $v_1$ and $c_1$.
   hypothesis for any subcomponents.
 \item[Reduction rules] For reduction rules we apply the same reduction
   rule, commute any substitutions produced by the reduction with the
-  substitution of $x$ using \ref{lemma:substitutions-commute}, and then
-  use the inductive hypothesis for any subcomponents.
+  substitution of $x$, and then use the inductive hypothesis for any
+  subcomponents.
 \end{description}
 \end{proof}
 
@@ -3984,56 +3974,81 @@ and similarly for global bindings.
     \begin{equation*}
       \indelim{(\ret{v_s})}{\indretcase{x}{v_e} \seq \ldots} \stepstov \sbst{v_e}{x}{v_s}
     \end{equation*}
-    \todo{Add proof of this case}
+    the case follows from the computation rule of the recursor
+    for the $\retcw{L}$ component and the global
+    substitution lemma (\ref{lemma:sem-subst-global}).
 
     For the $\indelimname$/$op$ rule:
     \begin{align*}
       \indelim{(\indintro{op}{v_1}{v_2})}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2} &\stepstov \\
       \sbst{\sbst{v_3}{x_1}{v_1}}
-      {x_2}{\abs{x_a}{\letv{x_w}{\app{v_2}{x_a}&}{\return{(\indelim{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}}
+      {x_2}{\abs{x_a}{\letv{x_w}{\app{v_2}{x_a}}{&\return{(\indelim{x_w}{H_1 \seq \indcase{op}{x_1}{x_2}{v_3} \seq H_2})}}}}
     \end{align*}
-    \todo{Add proof of this case}
+    the case follows from the computation rule of the recursor
+    for the $\opcw{op}{L}$ component, using the global
+    substitution lemma (\ref{lemma:sem-subst-global}) for $x_1$ and the
+    local substitution lemma (\ref{lemma:sem-subst-local}) for
+    $x_2$. Unfolding the semantics of abstraction, let, application and
+    return, the value substituted for $x_2$ denotes the recursive
+    application of the recursor to the continuation, up to the monad
+    laws of $\mon$, standard equalities about products, exponentials and
+    the strength, and weakening by the bindings of $x_a$ and $x_w$
+    (\ref{lemma:sem-weakening-local}, \ref{lemma:sem-weakening-global}).
 
   \item[Functions]
     The case for the function beta rule:
     \begin{equation*}
       \app{(\abs{x}{c})}{v} \stepstoc \sbst{c}{x}{v}
     \end{equation*}
-    \todo{Add proof of this case}
+    follows from the universal property of exponentials and the local
+    substitution lemma (\ref{lemma:sem-subst-local}).
 
   \item[Bind]
     The case for the bind/return rule:
     \begin{equation*}
       \letv{x}{\return{v}}{c} \stepstoc \sbst{c}{x}{v}
     \end{equation*}
-    \todo{Add proof of this case}
+    follows from the unit laws of the monad $\mon$, the unit axiom of
+    its strength and the local substitution lemma
+    (\ref{lemma:sem-subst-local}).
 
     The case for the bind commuting rule: 
     \begin{equation*}
       \letv{x_2}{\letv{x_1}{\perform{\loc}{op}{v}}{c_1}}{c_2} \stepstoc \letv{x_1}{\perform{\loc}{op}{v}}{\letv{x_2}{c_1}{c_2}}
     \end{equation*}
-    \todo{Add proof of this case}
+    follows from the associativity law of the monad $\mon$, the axioms
+    of its strength and the local weakening lemma
+    (\ref{lemma:sem-weakening-local}) applied to $c_2$.
 
   \item[Reflection]
 
-    The cases for the $\outlname$ and $\outrname$ rules
+    The cases for the $\outlname$ and $\outrname$ rules:
     \begin{align*}
       \perform{(\outl{v_1})}{op}{v_2} &\stepstoc \perform{v_1}{\mathrm{left}(op)}{v_2} \\
       \perform{(\outr{v_1})}{op}{v_2} &\stepstoc \perform{v_1}{\mathrm{right}(op)}{v_2}
     \end{align*}
-    \todo{Add proof of this case}
+    follow from the definition of the reflection morphisms
+    (Section~\ref{sec:reflection}): precomposition with the Yoneda image
+    of an injection maps the reflection of $op$ to the reflection of
+    $\mathrm{left}(op)$ (respectively $\mathrm{right}(op)$).
 
   \item[Reification]
 
     The cases for the $\reifyname$ rules:
     \begin{align*}
-      \reify{\loc}{\return{(\gbox{v})}} &\stepstoc \return{\ret{v}} \\
-      \reify{\loc_1}{\perform{\loc_1}{op}{v}} &\stepstoc \return{\indintro{op}{v}{\abs{(\gbox{x})}{\return{\ret{x}}}}} \\
-      \reify{\loc_1}{\letv{x}{\perform{\loc_1}{op}{v}}{c}} &\stepstoc \return{\indintro{op}{v}{\abs{x}{\reify{\loc_1}{c}}}} \\
-      \reify{\loc_1}{\perform{\loc_2}{op}{v}} &\stepstoc \letv{(\gbox{x})}{\perform{\loc_2}{op}{v}}{\return{\ret{x}}} \qquad (\loc_1 \neq \loc_2) \\
-      \reify{\loc_1}{\letv{x}{\perform{\loc_2}{op}{v}}{c}} &\stepstoc \letv{x}{\perform{\loc_2}{op}{v}}{\reify{\loc_1}{c}} \qquad (\loc_1 \neq \loc_2)
+      &\reify{\loc}{\return{(\gbox{v})}} \stepstoc \return{\ret{v}} \\
+      &\reify{\loc_1}{\perform{\loc_1}{op}{v}} \stepstoc \return{\indintro{op}{v}{\abs{(\gbox{x})}{\return{\ret{x}}}}} \\
+      &\reify{\loc_1}{\letv{x}{\perform{\loc_1}{op}{v}}{c}} \stepstoc \return{\indintro{op}{v}{\abs{x}{\reify{\loc_1}{c}}}} \\
+      &\reify{\loc_1}{\perform{\loc_2}{op}{v}} \stepstoc \letv{(\gbox{x})}{\perform{\loc_2}{op}{v}}{\return{\ret{x}}} \qquad (\loc_1 \neq \loc_2) \\
+      &\reify{\loc_1}{\letv{x}{\perform{\loc_2}{op}{v}}{c}} \stepstoc \letv{x}{\perform{\loc_2}{op}{v}}{\reify{\loc_1}{c}} \qquad (\loc_1 \neq \loc_2)
     \end{align*}
-    \todo{Add proof of this case}
+    follow from the definition of the reification isomorphism
+    $\reifyc{\Sigma}{}$ (Section~\ref{sec:reification}). The first rule
+    corresponds to the $\retcw{\sem{\Sigma}}$ component of the
+    isomorphism in Lemma~\ref{lemma:sums2}, the second and third rules
+    to its $\opcw{op}{\sem{\Sigma}}$ components, and the final two rules
+    to the operations of the ambient theory, which the isomorphism
+    leaves in place.
 
 \end{description}
 \end{proof}
