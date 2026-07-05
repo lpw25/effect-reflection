@@ -2199,13 +2199,14 @@ references.
 \bibliographystyle{plain}
 
 \appendix
-\section{Operational semantics}
+\section{Subject reduction}
+\label{apdx:subject-reduction}
 
-In this section we prove subject reduction, confluence and strong
-normalizatoin for our operational semantics. We start by proving some
-general lemmas that we'll need in the various proofs. Note that we will
-refer to a property that applies to both value and computation terms,
-and which must be shown by mutual induction, as a single lemma.
+In this section we prove subject reduction for our operational
+semantics. We start by proving some general lemmas that we'll need in
+the proof. Note that we will refer to a property that applies to both
+value and computation terms, and which must be shown by mutual
+induction, as a single lemma.
 
 \subsection{Context division lemmas}
 
@@ -2356,7 +2357,6 @@ uses Lemma \ref{lemma:cdiv-weakening} to weaken $v_2$ to the right
 context.
 
 \subsection{Subject reduction}
-\label{apdx:subject-reduction}
 
 We prove subject reduction (Lemma~\ref{lemma:subject-reduction}):
 \begin{align*}
@@ -2475,7 +2475,7 @@ follow by inversion on the typing rules followed by \ref{lemma:yoneda-cdiv}.
 \end{description}
 \end{proof}
 
-\subsection{Confluence}
+\section{Confluence}
 \label{apdx:church-rosser}
 
 We prove that the reduction relations are confluent:
@@ -2609,7 +2609,7 @@ reduction relation. We use transitivity of $\reducestoname$ to first
 apply confluence rules to reduce subterms before applying the actual
 corresponding rule.
 
-\subsubsection{Substitution}
+\subsection{Substitution}
 
 The above lemmas mean that showing confluence of $\parareducestoname$ is
 sufficient to show confluence of $\reducestoname$. To do that we first
@@ -2642,7 +2642,7 @@ $v_1$ and $c_1$.
 \end{description}
 \end{proof}
 
-\subsubsection{The diamond property}
+\subsection{The diamond property}
 
 We can now show confluence of $\parareducestoname$ by proving the
 stronger property that $\parastepstoname$ satisfies the diamond
@@ -2717,7 +2717,7 @@ property:
 \end{description}
 \end{proof}
 
-\subsection{Strong normalization}
+\section{Strong normalization}
 \label{apdx:strong-normalization}
 
 \begin{align*}
@@ -2991,23 +2991,7 @@ Reducibility can have its effect context weakened:
   weakening.
 \end{proof}
 
-\subsection{Compositionality of reducibility}
-
-Next we show that the various term formers produce reducible terms from reducible subterms.
-
-\subsubsection{Products}
-
-Projection terms are reducible when built from reducible subterms.
-\begin{lemma}
-\label{lemma:red-proj}
-\begin{align*}
-  &v \in \redv{\Delta}{\tau_1 \times \tau_2} \; \implies \; \fst{v} \in \redv{\Delta}{\tau_1} \\
-  &v \in \redv{\Delta}{\tau_1 \times \tau_2} \; \implies \; \snd{v} \in \redv{\Delta}{\tau_2}
-\end{align*}
-\end{lemma}
-\begin{proof}
-  Follows directly from the definition of $\redv{\Delta}{\tau_1 \times \tau_2}$
-\end{proof}
+\subsection{Products}
 
 Pair terms are reducible when built from reducible subterms.
 \begin{lemma}
@@ -3032,19 +3016,19 @@ Pair terms are reducible when built from reducible subterms.
   $\snd{(v_1, v_2}$.
 \end{proof}
 
-\subsubsection{Functions}
-
-Application terms are reducible when built from reducible subterms.
+Projection terms are reducible when built from reducible subterms.
 \begin{lemma}
-\label{lemma:red-app}
+\label{lemma:red-proj}
 \begin{align*}
-  v_1 \in \redv{\Delta}{\tau_1 \arr \tau_2} \; \wedge \; v_2 \in \redv{\Delta}{\tau_1}
-  \; \implies \; \app{v_1}{v_2} \in \redc{\Delta}{\tau_2}
+  &v \in \redv{\Delta}{\tau_1 \times \tau_2} \; \implies \; \fst{v} \in \redv{\Delta}{\tau_1} \\
+  &v \in \redv{\Delta}{\tau_1 \times \tau_2} \; \implies \; \snd{v} \in \redv{\Delta}{\tau_2}
 \end{align*}
 \end{lemma}
 \begin{proof}
-  Follows directly from the definition of $\redv{\Delta}{\tau_1 \arr \tau_2}$
+  Follows directly from the definition of $\redv{\Delta}{\tau_1 \times \tau_2}$
 \end{proof}
+
+\subsection{Functions}
 
 Abstraction terms are reducible when built from a reducible subterm.
 \begin{lemma}
@@ -3071,7 +3055,19 @@ Abstraction terms are reducible when built from a reducible subterm.
   CR2(\ref{lemma:red-reduces}).
 \end{proof}
 
-\subsubsection{Sums}
+Application terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-app}
+\begin{align*}
+  v_1 \in \redv{\Delta}{\tau_1 \arr \tau_2} \; \wedge \; v_2 \in \redv{\Delta}{\tau_1}
+  \; \implies \; \app{v_1}{v_2} \in \redc{\Delta}{\tau_2}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  Follows directly from the definition of $\redv{\Delta}{\tau_1 \arr \tau_2}$
+\end{proof}
+
+\subsection{Sums}
 
 Injection terms are reducible when built from reducible subterms.
 \begin{lemma}
@@ -3110,19 +3106,19 @@ Case terms are reducible when built from reducible subterms.
   &v_1 \in \redv{\Delta_1}{\tau_1 + \tau_2} \\
   &\wedge \; (\forall v_4 \in \redv{\Delta_1}{\tau_1}. \; \sbst{v_2}{x_1}{v_4} \in \redv{\Delta_2}{\tau_3}) \\
   &\wedge \; (\forall v_5 \in \redv{\Delta_1}{\tau_2}. \; \sbst{v_3}{x_2}{v_5} \in \redv{\Delta_2}{\tau_3}) \\
-  &\implies \; \case{v_1}{x_1}{v_2}{x_2}{v_3} \in \redv{\Delta_2}{\tau_3}
+  &\implies \; \casem{v_1}{x_1}{v_2}{x_2}{v_3} \in \redv{\Delta_2}{\tau_3}
 \end{align*}
 \end{lemma}
 \begin{proof}
   By induction on $\bound{v_1} + \bound{v_2} + \bound{v_3}$.
-  $\case{v_1}{x_1}{v_2}{x_2}{v_3}$ is neutral so we can use CR3(\ref{lemma:red-neutral}). There are five
-  possibilities for a reduct of $\case{v_1}{x_1}{v_2}{x_2}{v_3}$.
+  $\casem{v_1}{x_1}{v_2}{x_2}{v_3}$ is neutral so we can use CR3(\ref{lemma:red-neutral}). There are five
+  possibilities for a reduct of $\casem{v_1}{x_1}{v_2}{x_2}{v_3}$.
   \begin{itemize}
   \item It can reduce to $\sbst{v_2}{x_1}{v_4}$ if $v_1$ is of the form $\inl{v_4}$.
   \item It can reduce to $\sbst{v_3}{x_2}{v_5}$ if $v_1$ is of the form $\inr{v_5}$.
-  \item It can reduce by congruence to $\case{v_6}{x_1}{v_2}{x_2}{v_3}$ where $v_1 \stepstov v_6$.
-  \item It can reduce by congruence to $\case{v_1}{x_1}{v_7}{x_2}{v_3}$ where $v_2 \stepstov v_7$.
-  \item It can reduce by congruence to $\case{v_1}{x_1}{v_2}{x_2}{v_8}$ where $v_3 \stepstov v_8$.
+  \item It can reduce by congruence to $\casem{v_6}{x_1}{v_2}{x_2}{v_3}$ where $v_1 \stepstov v_6$.
+  \item It can reduce by congruence to $\casem{v_1}{x_1}{v_7}{x_2}{v_3}$ where $v_2 \stepstov v_7$.
+  \item It can reduce by congruence to $\casem{v_1}{x_1}{v_2}{x_2}{v_8}$ where $v_3 \stepstov v_8$.
   \end{itemize}
   In the first case we have $v_4 \in \redv{\Delta_1}{\tau_1}$ from $v_1 \in \redv{\Delta_1}{\tau_1 + \tau_2}$ 
   and so the reduct is reducible by hypothesis. Similarly, in the second case we have $v_5 \in \redv{\Delta_1}{\tau_2}$
@@ -3131,7 +3127,7 @@ Case terms are reducible when built from reducible subterms.
   CR2(\ref{lemma:red-reduces}).
 \end{proof}
 
-\subsubsection{Unit}
+\subsection{Unit}
 
 Unit terms are reducible.
 \begin{lemma}
@@ -3144,7 +3140,7 @@ Unit terms are reducible.
   No reduction rules apply to $()$ so it is strongly normalizable.
 \end{proof}
 
-\subsubsection{Global modality}
+\subsection{Global modality}
 
 Boxing terms are reducible when built from reducible subterms.
 \begin{lemma}
@@ -3199,30 +3195,7 @@ Unboxing terms are reducible when built from reducible subterms.
   inductive hypothesis using CR2(\ref{lemma:red-reduces}).
 \end{proof}
 
-\subsubsection{$\yonedaname$ types}
-
-Selection terms are reducible when built from reducible subterms.
-\begin{lemma}
-\label{lemma:red-out}
-\begin{align*}
-  &v_s \in \redv{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}
-    \; \implies \; \outl{v_s} \in \redv{\Delta}{\yoneda{\Sigma_1}}
-  &v_s \in \redv{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}
-    \; \implies \; \outr{v_s} \in \redv{\Delta}{\yoneda{\Sigma_2}}
-\end{align*}
-\end{lemma}
-\begin{proof}
-  By induction on $\bound{v_s}$. The only reduction rule that can apply
-  to $\outl{v_s}$ is the congruence rule. Thus any reduct would be of
-  the form $\outl{v_r}$ with $v_s \stepstov v_r$ and so, by the
-  inductive hypothesis via CR2(\ref{lemma:red-reduces}), would be
-  strongly normalizing. Since every reduct is strongly normalizing then
-  so is $\outl{v_s}$.
-
-  The case for right selection follows by the same reasoning.
-\end{proof}
-
-\subsubsection{Computations}
+\subsection{Computations}
 
 Return terms are reducible when built from reducible subterms.
 \begin{lemma}
@@ -3357,21 +3330,6 @@ Non-neutral bind terms are reducible when built from reducible subterms.
   \end{itemize}
 \end{proof}
 
-Perform terms are reducible when built from reducible subterms.
-\begin{lemma}
-\label{lemma:red-perform}
-\begin{align*}
-  &\loc_e \types \Sigma \in \Delta
-   \; \wedge \; op \types \tau_p \rightarrowtail \tau_a \in \Sigma \\
-  &v_l \in \redv{\Delta}{\yoneda{\Sigma}}
-  \; \wedge \; v_a \in \redv{\Delta}{\tau_p} \\
-  &\implies \; \perform{v_l}{op}{v_a} \in \redc{\Delta}{\glob \tau_a}
-\end{align*}
-\end{lemma}
-\begin{proof}
-\todo{Write out proof}
-\end{proof}
-
 Bind terms are reducible when built from reducible subterms.
 \begin{lemma}
 \label{lemma:red-bind}
@@ -3398,6 +3356,127 @@ Run terms are reducible when built from reducible subterms.
 \todo{Write out proof}
 \end{proof}
 
+\subsection{Effect capability types}
+
+Selection terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-out}
+\begin{align*}
+  &v_s \in \redv{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}
+    \; \implies \; \outl{v_s} \in \redv{\Delta}{\yoneda{\Sigma_1}}
+  &v_s \in \redv{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}
+    \; \implies \; \outr{v_s} \in \redv{\Delta}{\yoneda{\Sigma_2}}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  By induction on $\bound{v_s}$. The only reduction rule that can apply
+  to $\outl{v_s}$ is the congruence rule. Thus any reduct would be of
+  the form $\outl{v_r}$ with $v_s \stepstov v_r$ and so, by the
+  inductive hypothesis via CR2(\ref{lemma:red-reduces}), would be
+  strongly normalizing. Since every reduct is strongly normalizing then
+  so is $\outl{v_s}$.
+
+  The case for right selection follows by the same reasoning.
+\end{proof}
+
+Perform terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-perform}
+\begin{align*}
+  &\loc_e \types \Sigma \in \Delta
+   \; \wedge \; op \types \tau_p \rightarrowtail \tau_a \in \Sigma \\
+  &v_l \in \redv{\Delta}{\yoneda{\Sigma}}
+  \; \wedge \; v_a \in \redv{\Delta}{\tau_p} \\
+  &\implies \; \perform{v_l}{op}{v_a} \in \redc{\Delta}{\glob \tau_a}
+\end{align*}
+\end{lemma}
+\begin{proof}
+\todo{Write out proof}
+\end{proof}
+
+\subsection{Inductive types}
+
+Ret terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-ret}
+\begin{align*}
+  &v_r \in \redv{\cempty}{\tau_1} \\
+  &\implies \; \ret{v_r} \in \redv{\Delta}{\ind{\Sigma}(\tau_1)}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  By induction on $\bound{v_r}$. We must show three things:
+  \begin{itemize}
+  \item We must show that $\ret{v_r} \in \snv$. The only reduction rule
+    that can apply to $\ret{v_r}$ is the congruence rule. Thus any
+    reduct would be of the form $\ret{v_t}$ with $v_r \stepstov v_t$ and
+    so, by the inductive hypothesis via CR2(\ref{lemma:red-reduces}),
+    would be strongly normalizing. Since every reduct is strongly
+    normalizing then so is $\ret{v_r}$.
+  \item We must show that $v_t \in \redv{\cempty}{\tau_1}$ for any $v_t$
+    such that $\ret{v_r} \reducestov \ret{v_t}$. The reduction is either
+    from reflexivity or by stepping to some intermediate term. If it is
+    by reflexivity then $v_t$ is reducible by hypothesis. Only the
+    congruence reduction rule applies to $\ret{v_r}$, so the
+    intermediate term must be of the form $\ret{v_s}$, which means we
+    can use the inductive hypothesis on $v_s$ via
+    CR2(\ref{lemma:red-reduces}) to show that $v_t$ is reducible.
+  \item We must show that various properties hold for any term of the
+    form $\indintro{op}{v_3}{v_4}$ that $\ret{v_r}$ reduces to. Only the
+    congruence reduction rule applies to $\ret{v_r}$, so every reduct is
+    of the form $\ret{v_t}$ and the condition holds vacuously.
+  \end{itemize}
+\end{proof}
+
+Operation terms are reducible when built from reducible subterms.
+\begin{lemma}
+\label{lemma:red-indintro}
+\begin{align*}
+  &op \types \tau_p \rightarrowtail \tau_a \in \Sigma
+   \; \wedge \; v_p \in \redv{\cempty}{\tau_p} \\
+  &\wedge \; v_k \in \redv{\Delta}{\glob \tau_a \arr \ind{\Sigma}(\tau_1)} \\
+  &\implies \; \indintro{op}{v_p}{v_k} \in \redv{\Delta}{\ind{\Sigma}(\tau_1)}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  By induction on $\bound{v_p} + \bound{v_k}$. We must show three
+  things:
+  \begin{itemize}
+  \item We must show that $\indintro{op}{v_p}{v_k} \in \snv$. The only
+    reduction rule that can apply to $\indintro{op}{v_p}{v_k}$ is the
+    congruence rule. Thus any reduct would be of the form
+    $\indintro{op}{v_q}{v_k}$ with $v_p \stepstov v_q$ or
+    $\indintro{op}{v_p}{v_l}$ with $v_k \stepstov v_l$ and so, by the
+    inductive hypothesis via CR2(\ref{lemma:red-reduces}), would be
+    strongly normalizing. Since every reduct is strongly normalizing
+    then so is $\indintro{op}{v_p}{v_k}$.
+  \item We must show that various properties hold for any term of the
+    form $\ret{v_2}$ that $\indintro{op}{v_p}{v_k}$ reduces to. Only the
+    congruence reduction rule applies to $\indintro{op}{v_p}{v_k}$, so
+    every reduct is of the form $\indintro{op}{v_q}{v_l}$ and the
+    condition holds vacuously.
+  \item We must show, for any $v_q$ and $v_l$ such that
+    $\indintro{op}{v_p}{v_k} \reducestov \indintro{op}{v_q}{v_l}$, that
+    $v_q \in \redv{\cempty}{\tau_p}$ and that for any $v_b \in \snv$
+    whose reducts of the form $\gbox{v_c}$ all have
+    $v_c \in \redv{\cempty}{\tau_a}$ there is some $\beta$ with
+    $\app{v_l}{v_b} \in \redca{\Delta}{\ind{\Sigma}(\tau_1)}{\beta}$.
+    Only the congruence reduction rule applies to
+    $\indintro{op}{v_p}{v_k}$, so $v_p \reducestov v_q$ and
+    $v_k \reducestov v_l$, and thus $v_q$ and $v_l$ are reducible by
+    hypothesis and CR2(\ref{lemma:red-reduces}). The condition on $v_b$
+    states precisely that $v_b \in \redv{\Delta}{\glob \tau_a}$, so from
+    $v_l \in \redv{\Delta}{\glob \tau_a \arr \ind{\Sigma}(\tau_1)}$ we
+    have $\app{v_l}{v_b} \in \redc{\Delta}{\ind{\Sigma}(\tau_1)}$, and
+    hence
+    $\app{v_l}{v_b} \in \redca{\Delta}{\ind{\Sigma}(\tau_1)}{\beta}$ for
+    some $\beta$. Taking $\alpha$ to be a strict upper bound of these
+    $\beta$ gives
+    $\indintro{op}{v_p}{v_k} \in
+    \redva{\Delta}{\ind{\Sigma}(\tau_1)}{\alpha}$.
+  \end{itemize}
+\end{proof}
+
 Reification terms are reducible when built from reducible subterms.
 \begin{lemma}
 \label{lemma:red-reify}
@@ -3409,8 +3488,6 @@ Reification terms are reducible when built from reducible subterms.
 \begin{proof}
 \todo{Write out proof}
 \end{proof}
-
-\subsubsection{Inductive types}
 
 Recursion terms are reducible when built from reducible subterms.
 \begin{lemma}
