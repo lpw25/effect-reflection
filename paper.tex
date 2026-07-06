@@ -655,8 +655,8 @@ OCaml one in the opening section:
 
     module State_eff = Reflection(State)
 
-    let handle_state (f : Handler(State).t @ local -> 'a) (i : int) : 'a =
-      let rec loop (s : int) : 'a Term(State).t -> 'a  = function
+    let handle_state (i : int) (f : Handler(State).t @ local -> 'a) : 'a =
+      let rec loop s : 'a Term(State).t -> 'a  = function
         | Return x -> x
         | Perform(Get, k) -> loop s (State_eff.continue k s)
         | Perform(Set s', k) -> loop s' (State_eff.continue k ())
@@ -1924,7 +1924,7 @@ integers, shown in Fig.~\ref{fig:gen}.
   type ints = Finished | More of int * (unit -> ints)
 
   let handle_gen f =
-    let rec loop = function
+    let rec loop : unit Term(Gen).t -> ints = function
       | Return () -> Finished
       | Perform(Gen i, k) ->
           More(i, fun () -> loop (Gen_eff.continue_global k ()))
@@ -1955,7 +1955,7 @@ completed.
 \begin{figure}
 \begin{lstlisting}[style=oxcaml]
   let handle_await f =
-    let rec loop = function
+    let rec loop : 'a Term(Await).t -> 'a Deferred.t = function
       | Return x -> Deferred.return x
       | Perform(Await d, k) ->
           Deferred.bind d (fun x -> loop (Await_eff.continue_global k x))
@@ -2014,13 +2014,13 @@ these we can write our desired handler for the
   type aints = Finished | More of int * (Handler(Await).t @ local -> aints)
 
   let handle_gen_in_await f ah =
-    let rec loop ah = function
+    let rec loop ah : unit Term(Sum(Await)(Gen))).t -> aints = function
       | Return () -> Finished
-      | Perform(Left op, k) -> loop ah (Eff.continue_global k (perform ah op))
+      | Perform(Left op, k) -> loop ah (Eff.continue_global k (Await_eff.perform op ah))
       | Perform(Right(Gen i), k) ->
           More(i, fun ah -> loop ah (Eff.continue_global k ()))
     in
-    loop ah (Eff.reify_global (fun h -> f (Sel.outl h) (Sel.outr h))
+    loop ah (Eff.reify_global (fun h -> f (Sel.outl h) (Sel.outr h)))
 \end{lstlisting}
 \caption{Handler for generators that can use asynchronous I/O}
 \label{fig:gen-aio}

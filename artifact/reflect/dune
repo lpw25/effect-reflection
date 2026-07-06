@@ -1,0 +1,3 @@
+(library
+ (name reflect)
+ (flags (:standard -warn-error -a)))
