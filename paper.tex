@@ -240,7 +240,7 @@
   theories.
 
   Effect reflection provides all the expressiveness of typed algebraic
-  effects without requiring language-level support for effect systems. We
+  effects without requiring language-level support for an effect system. We
   demonstrate this by implementing effect reflection as a library in
   OxCaml~\cite{lorenzen2024oxidizing}.
 \end{abstract}
@@ -252,16 +252,16 @@ Algebraic effects and effect handlers have emerged as a powerful
 approach to structured programming with effects. However, integrating
 effects into type systems typically requires adding specialized effect
 systems. Unfortunately, such effect systems require extensive effect
-annotations even for functions that do no use algebraic effects. This
+annotations even for functions that do not use algebraic effects. This
 limits the wider adoption of algebraic effects into mainstream
 languages.
 
-Recent work, in particular Brachthauser et
+Recent work, in particular Brachth{\"a}user et
 al.\cite{brachthauser2022effects} and Tang et al.\cite{tang2025modal},
 improves the situation by lowering the annotation burden for functions
 not using effects. However, these systems still require specialized type
 system support. Can we get the benefits of algebraic effects and
-handlers without the need to specialized type system support?
+handlers without the need for specialized type system support?
 
 One of the attractive properties of algebraic effects is their elegant
 mathematical model. However, these more recent approaches do not come
@@ -374,8 +374,8 @@ monad before they can be used. The type of their handler would be:
 indicating that it extends the ambient monad with an additional effect.
 
 Brachth{\"a}user et al.~\cite{brachthauser2020effects} describe this
-approach as ``lightweight effect polymorphism'' because it brings much
-of the benefits of effect polymorphisms without requiring effect
+approach as ``lightweight effect polymorphism'' because it brings many
+of the benefits of effect polymorphism without requiring effect
 annotations on all higher-order functions.
 
 However, allowing functions to use any effects available at their
@@ -385,18 +385,17 @@ implicitly relying on that effect handler.
 
 Existing systems accomplish this by making functions second-class, or
 via sophisticated modal effect or capability types that can be used to
-track which effect handlers a value may depend on. In this paper we will
-show that all that is required is some type-level way to track locality
-such as Rust's lifetimes or OxCaml's \lstinline[style=oxcaml]{local}
-mode.
+track which effect handlers a value may depend on. In this paper we show
+all that is required is some type-level way to track locality such as
+Rust's lifetimes or OxCaml's \lstinline[style=oxcaml]{local} mode.
 
 \subsection{The Ambient Monad model}
 
 If we are going to make changing the ambient monad the basis of our
 algebraic effects then we should build a changeable ambient monad right
-into our semantic model. \emph{we should index the meaning of types and
+into our semantic model. \emph{We should index the meaning of types and
   terms by the ambient monad}. Rather than have the semantics of our
-types be sets:
+simple types be sets:
 \begin{equation*}
 \sem{\tau} \types \setc
 \end{equation*}
@@ -404,13 +403,16 @@ we should have them be functors from $\lawc$ to $\setc$:
 \begin{equation*}
 \sem{\tau} \types \lawc \arr \setc
 \end{equation*}
-where $\lawc$ a suitable category of algebraic theories. For each
-object $L \types \lawc$ we write $T_L$ for its corresponding monad.
+where $\lawc$ is a suitable category of algebraic theories. For each
+object $L \types \lawc$ we write $T_L$ for its corresponding monad. This
+restriction to monads corresponding to algebraic theories is the essence
+of algebraic effects, it ensures that every pair of monads has a
+well-defined sum, allowing them to be handled by effect handlers.
 
-These functors are presheaves and so they support all the standard
-constructions (products, coproducts, exponentials, etc.) needed to
-support all the usual type formers (products, sums, arrows, etc.) in the
-standard way.
+These functors from $\lawc$ to $\setc$ are presheaves and so they
+support all the standard constructions (products, coproducts,
+exponentials, etc.) needed to support all the usual type formers
+(products, sums, arrows, etc.) in the standard way.
 
 The semantics for function types includes the ambient monad:
 \begin{equation*}
@@ -517,9 +519,9 @@ types, giving the same expressive power as effect handlers. Note that it
 can be expressed with only effect capabilities, inductive types and a
 global modality.
 
-The forwards direction of the isomorphism is actually already provided
+The forwards direction of the isomorphism is already provided
 by reflection of operations. We can provide the backwards direction as a
-reification construct: for any signature $\Sigma$, we provide the
+reification construct: for any signature $\Sigma$, we provide a
 computation $\reify{\loc}{c}$ that binds $\loc$ to an effect capability
 of type $\yoneda{\Sigma}$ in the computation $c \types \glob \tau$ and
 reifies the uses of $\loc$ in $c$ as a $\ind{\Sigma}(\tau)$.
@@ -552,8 +554,9 @@ returns, so local values cannot be returned from functions.
          (*@ \textcolor{red}{\textasciicircum} @*)
   (*@ \textcolor{red}{This value escapes its region.} @*)
 \end{lstlisting}
-The \lstinline[style=oxcaml]{exclave} construct allows functions to
-return local values.
+This tight alignment between regions and function bodies can be
+inconvenient, so there is an \lstinline[style=oxcaml]{exclave} construct
+that allows functions to return local values:
 \begin{lstlisting}[style=oxcaml]
   let return_local x =
     exclave
@@ -614,7 +617,7 @@ Using OxCaml's support for locality and the untracked algebraic effects
 it inherits from OCaml, we can implement effect reflection as a simple
 library with no specific compiler support.
 
-Given an algebraic signatures represented as a module with a single type
+Given an algebraic signature represented as a module with a single type
 constructor:
 \begin{lstlisting}[style=oxcaml]
     module E : sig type 'a t end
@@ -701,15 +704,11 @@ us to pass in a closure that closes over the
 \lstinline[style=oxcaml]{local} handler \lstinline[style=oxcaml]{h} and
 use it to perform some effects.
 
-This ability for higher-order functions like
-\lstinline[style=oxcaml]{List.iter} to be reused with different ambient
-monads achieves ``lightweight effect polymorphism''.
-
 \subsection{Contributions}
 
 We make the following contributions:
 \begin{itemize}
-\item We propose \emph{effect reflecton}, a new presentation of effect
+\item We propose \emph{effect reflection}, a new presentation of effect
   handlers that ensures all effectful operations are properly handled
   without requiring an effect system.
 \item We present a simply-typed lambda calculus with effect
@@ -724,7 +723,7 @@ We make the following contributions:
 \item We give a simple implementation of effect reflection in OxCaml
   using its support for tracking locality in the type system and the
   untracked algebraic effects it inherits from OCaml. We demonstrate its
-  usability with some classic examples algebraic effects. (Section
+  usability with some classic examples of algebraic effects. (Section
   \ref{sec:practice}).
 \end{itemize}
 
@@ -818,21 +817,21 @@ rather than a computation. We can define a computation version as:
 \subsection{Locality}
 
 We track locality via a global comonadic modality $\glob$. In our
-setting being global means not depending on the ambient monad. For
+setting, being global means not depending on the ambient monad. For
 example, $1 \arr 1$ represents computations that may use operations from
 the ambient monad, while $\glob (1 \arr 1)$ contains only pure
 computations that ignore the ambient monad.
 
 When using $\gbox{v}$ to build a value with a global type, we can only
 use existing values that also have a global type. We achieve this using
-a fairly standard approach for modal types: we extend contexts with a
-binding form that requires a global type and then we restrict the
-context in which we type $v$ to only include such bindings. The new
-global binding form is written $\gbind{\Gamma}{x}{\tau}$ and represents
-a value in the context of type $\glob \tau$. We create global bindings
-in the context using the elimination form: $\gunbox{x}{v_1}{v_2}$. As
-with $\casename$, this elimination form is a value, but we can define a
-computation version directly in terms of it.
+a standard approach for modal types: we extend contexts with a binding
+form that requires a global type and then we restrict the context in
+which we type $v$ to only include such bindings. The new global binding
+form is written $\gbind{\Gamma}{x}{\tau}$ and represents a value in the
+context of type $\glob \tau$. We create global bindings in the context
+using the elimination form: $\gunbox{x}{v_1}{v_2}$. As with $\casename$,
+this elimination form is a value, but we can define a computation
+version directly in terms of it.
 
 Restricting the context is implemented via an operation on contexts
 $\cdiv{\Gamma}$ that removes all local bindings, leaving only the global
@@ -909,7 +908,7 @@ algebras of $\Sigma$. $\ind{\Sigma}$ is sometimes called the \emph{freer
 W-type, and in a dependently-typed setting we would probably use W-types
 directly.
 
-As is standard for algebraic effects systems, we only support handlers
+As is standard for algebraic effect systems, we only support handlers
 for algebraic theories without any equations, even though our semantics
 is defined in terms of arbitrary theories. We define algebraic
 signatures $\Sigma$ as finite sets of operations:
@@ -1019,11 +1018,12 @@ define a computation version in terms of it.
 
 We provides a type $\yoneda{\Sigma}$ for each algebraic signature
 $\Sigma$ to represent mappings from the operations of $\Sigma$ into the
-current ambient monad. Effect reflection appears as two constructs:
-reflection and reification. Reflection $\performraw{v}{op}$ uses a value
+current ambient monad. We call such mappings \emph{effect
+  capabilities}. Effect reflection appears as two constructs: reflection
+and reification. Reflection $\performraw{v}{op}$ uses a value
 $v \types \yoneda{\Sigma}$ to map the operation $op$ from $\Sigma$ into
 the ambient monad.  Reification $\reifyname$ extends the ambient monad
-with the operations from some $\Sigma$, providing a value of type
+with the operations from some $\Sigma$, and provides a value of type
 $\yoneda{\Sigma}$ for constructing those operations via reflection.
 These constructs implement the core isomorphism of effect reflection:
 reification can convert functions $\yoneda{\Sigma} \arr \glob \tau$ into
@@ -1065,7 +1065,7 @@ We introduce a separate set of variables $\loc$ for the bindings
 introduced by reification. This makes it easier to define the desired
 reduction rules and normal forms. We give them their own binding form
 $\loc \types \Sigma$ in the context, which are also removed by the
-$\cdiv{}$ operation
+$\cdiv{}$ operation.
 
 Note that we treat reflection of individual operations
 $\performraw{v}{op}$ as primitive. We can define reflection of
@@ -1098,22 +1098,22 @@ which has this admissible typing rule:
   where $\mathit{negate}$ is the function that negates a boolean.
 \end{example}
 
-We also provide projections $\outl$ and $\outr$ that decompose a mapping
-for $\Sigma_1 + \Sigma_2$ into mappings for $\Sigma_1$ and $\Sigma_2$
-respectively. This is actually crucial to obtain the full expressivity
-of effect handlers. Without it the language would be equivalent to the
-more restrictive ``scoped resumptions'' form of effect handlers proposed
-by Xie et al.\cite{xie2020effect}.
+We also provide projections $\outl$ and $\outr$ that decompose an effect
+capability for $\Sigma_1 + \Sigma_2$ into effect capabilities for
+$\Sigma_1$ and $\Sigma_2$ respectively. This is actually crucial to
+obtain the full expressivity of effect handlers. Without it the language
+would be equivalent to the more restrictive ``scoped resumptions'' form
+of effect handlers proposed by Xie et al.\cite{xie2020effect}.
 
 \subsection{Operational semantics}
 \label{sec:operational}
 
 We define the operational semantics as a pair of mutually defined
 reduction relations $\stepstov$ and $\stepstoc$ for values and
-computations respectively shown in Fig.\ref{fig:reduction}, omitting the
-obvious congruence rules. We write $\reducestov$ and $\reducestoc$ for
-the reflexive transitive closures of these relations. The definitions of
-normal forms for values and computations are given in
+computations respectively. These are shown in Fig.\ref{fig:reduction},
+omitting the congruence rules. We write $\reducestov$ and $\reducestoc$
+for the reflexive transitive closures of these relations. The
+definitions of normal forms for values and computations are given in
 Fig.\ref{fig:normal}.
 
 \begin{figure}
@@ -1201,7 +1201,7 @@ These reduction relations are confluent:
   \end{align*}
 \end{lemma}
 which we prove using the standard approach via an equivalent notion of
-parallel reduction Appendix~\ref{apdx:church-rosser}.
+parallel reduction in Appendix~\ref{apdx:church-rosser}.
 
 They are also strongly normalizing. We call the sets of values and
 computations for which there exist no infinite chains
@@ -1241,8 +1241,8 @@ Section~\ref{sec:language} using this model.
 We need the monads we use for the ambient monad to have a well-defined
 notion of sum. This is a requirement for composable effect handlers:
 within the effect handler the ambient monad will be the sum of the
-handled effect and the ambient monad outside of the hander. That rules
-out allowing all monads as the ambient monad, since the sum of two
+handled effect and the ambient monad from outside of the handler. That
+rules out allowing all monads as the ambient monad, since the sum of two
 arbitrary monads may not exist.
 
 Algebraic effects ensure that such a sum always exists by only
@@ -1308,10 +1308,10 @@ algebraic theory and models of a theory.
 \end{example}
 
 Arities in algebraic signatures are often considered as natural numbers,
-but they can equivalently be sets, with families of terms indexed by
-that set used as the arguments of that operator in a term. It is also
-convenient to allow families of operations parameterized by some
-set. This gives us signatures of the form:
+but they can equivalently be sets. The arguments of an operator are then
+a family of terms indexed by that set. It is also convenient to allow
+families of operations parameterized by some set. This gives us
+signatures of the form:
 \begin{equation*}
 \{ op_1 \types P_1 \rightarrowtail A_1; \ldots; op_n
 \types P_n \rightarrowtail A_n \}
@@ -1330,8 +1330,7 @@ parameterized by $P$ and with arity $A$.
 Given an algebraic theory $L$ and a set $A$ we can construct
 the free model, or \emph{free algebra}, $T_L(A)$. The values $T_L(A)$
 are terms built using the elements of $A$ and the operations of $L$
-quotiented by the equations in $L$. $T_L$ is a monad and $T$ is one half
-of an equivalence between algebraic theories and algebraic monads.
+quotiented by the equations in $L$. $T_L$ is a monad.
 
 \begin{example}
   The free algebras of the signature of boolean state $T_{\Sigma_{bs}}$
@@ -1379,8 +1378,8 @@ $L \rightarrow \setc$.
 
 We will mostly describe Lawvere theories and constructions on them in
 terms of their presentations as algebraic theories, so an understanding
-the details of Lawvere theories is not required for understanding the
-bulk of this paper
+of the details of Lawvere theories is not required for understanding the
+bulk of this paper.
 
 Lawvere theories form a category $\lawfc$ whose morphisms are
 equivalent to maps from the operations of one theory to the operations
@@ -1393,13 +1392,13 @@ the equations of the second.
 Traditional algebraic signatures are restricted to the case of a finite
 set of operations each with a finite arity, but programming languages
 require more generality. In terms of effect reflection, this would
-amonut to demanding, for any operation
+amount to demanding, for any operation
 $op \types \tau_p \rightarrowtail \tau_a$, that $\tau_p$ and $\tau_a$ be
 finite types. This would allow for boolean state, but would not support
 $\nat$ state.
 
 In the algebraic effects literature the most common choice is to use
-countable algebraic signatures. However, this is still too restritive,
+countable algebraic signatures. However, this is still too restrictive,
 supporting $\nat$ state but not supporting $\nat \rightarrow \nat$
 state.
 
@@ -1414,7 +1413,7 @@ theories bounded by $\kappa$:
 \begin{definition}
   A \emph{$\kappa$-bounded Lawvere theory} is a small category whose set
   of objects has cardinality $\lambda < \kappa$ and whose set of
-  morphims also has cardinality strictly less than $\kappa$, which has
+  morphisms also has cardinality strictly less than $\kappa$, which has
   all products smaller than $\lambda$, and in which every object is
   isomorphic to some product $\Pi_{\alpha < \lambda} X$ of a
   distinguished object $X$.
@@ -1448,7 +1447,7 @@ convenient properties because they are \emph{presheaves}.
 
 For a category $\cat$, $\psh = \setc^{\catop}$ is the category of
 presheaves over $\cat$. Its objects are contravariant functors from
-$\cat$ to $\setc$ and it's morphisms are natural transformations between
+$\cat$ to $\setc$ and its morphisms are natural transformations between
 such functors.
 
 In these terms, we use
@@ -1542,7 +1541,7 @@ $\glob$ forms a comonad on $\pshlawcop$. $\glob$ also distributes over
 both products: $\glob (P \times Q) = (\glob P) \times (\glob Q)$, and
 sums: $\glob (P + Q) = (\glob P) + (\glob Q)$.
 
-Within the abient monad model, this amounts to restricting a type to
+Within the ambient monad model, this amounts to restricting a type to
 only the elements which do not depend on the ambient monad. This is very
 similar to the purity comonad of Choudhury and
 Krishnaswami~\cite{choudhury2020recovering}. In particular,
@@ -1777,7 +1776,7 @@ section we describe this API and its implementation.
 \subsection{Effect reflection interface}
 \label{sec:interface}
 
-The types of our the effect reflection interface are shown in
+The types of the effect reflection interface are shown in
 Fig.~\ref{fig:ox-types}.
 \begin{figure}
 \begin{lstlisting}[style=oxcaml]
@@ -1801,7 +1800,7 @@ Fig.~\ref{fig:ox-types}.
 \label{fig:ox-types}
 \end{figure}
 
-These types are higher-kinded: they are parameterized by by type
+These types are higher-kinded: they are parameterized by type
 constructors representing the operations of an algebraic effect. In
 OxCaml, such types must be built using functors. We use a simple module
 type \lstinline[style=oxcaml]{Sig} to act as the parameter type for
@@ -1907,7 +1906,7 @@ to reason about the interaction of effects and resources.
 There is no fundamental reason that effect reflection should be
 restricted to only one-shot continuations, so for the purposes of this
 paper we ignore the restriction. However, for the same reasons as
-OCaml, our actual implementation is restricted one-shot
+OCaml, our actual implementation is restricted to one-shot
 continuations. Note that OxCaml's \lstinline[style=oxcaml]{once}
 mode~\cite{lorenzen2024oxidizing} allows us to enforce this restriction
 statically.
@@ -2023,7 +2022,7 @@ these we can write our desired handler for the
     in
     loop ah (Eff.reify_global (fun h -> f (Sel.outl h) (Sel.outr h))
 \end{lstlisting}
-\caption{Handler for generators what can use asynchronous I/O}
+\caption{Handler for generators that can use asynchronous I/O}
 \label{fig:gen-aio}
 \end{figure}
 
@@ -2046,7 +2045,7 @@ forwarding.
 There have been a number of efforts to avoid the complexity of effect
 polymorphism by treating effect annotations as relevant to some ambient
 effect. Frank~\cite{convent2020doo} proposed that higher-order functions
-should state the effects avilable to their arguments relative to the
+should state the effects available to their arguments relative to the
 effects that they perform. This allows functions like
 \lstinline[style=oxcaml]{List.map} to have types that do not mention
 effects. However, in Frank, this was merely syntactic sugar: under the
@@ -2067,7 +2066,7 @@ values though, so any code which places its functions inside of data
 structures must fall back to ordinary effect polymorphism. This approach
 also requires native support for these effect capability modalities.
 
-Modal effect types~\cite{tang2025modal} also makes effect annotations
+Modal effect types~\cite{tang2025modal} also make effect annotations
 relative to the current set of available effects. It uses modal effect
 types to track the difference between the current available effects and
 the effects required by a value. This avoids needing to treat functions
@@ -2100,7 +2099,7 @@ Effect reflection's presentation as reification and reflection
 operations is very similar to monadic
 reflection~\cite{filinski1999representing}. Monadic reflection allows
 arbitrary monads to be reified and reflected. As arbitrary monads do not
-always have well-defined sums, the user must also define define
+always have well-defined sums, the user must also define
 \emph{glue} functions that describe the interaction between the monad
 being reified and the current computation monad.
 
@@ -2122,7 +2121,7 @@ Ambient Monad model naturally accommodates changing ambient monad.
 
 Bauer and Pretnar\cite{bauer2015programming} give a denotational
 semantics for Eff but it is untyped. The same
-authors\cite{bauer2015programming} also give a second denotational
+authors\cite{bauer2014effect} also give a second denotational
 semantics for Eff that is typed, but where effects are treated as
 extrinsic to the semantics.
 
@@ -2449,7 +2448,7 @@ The case for the bind commuting rule:
 \begin{equation*}
 \letv{x_2}{\letv{x_1}{\perform{\loc}{op}{v}}{c_1}}{c_2} \stepstoc \letv{x_1}{\perform{\loc}{op}{v}}{\letv{x_2}{c_1}{c_2}}
 \end{equation*}
-follows by inversion on the typing rules followed by weakening $c_3$ by
+follows by inversion on the typing rules followed by weakening $c_2$ by
 the local binding of $x_1$.
 
 \item[Reflection]
@@ -2834,7 +2833,7 @@ well-defined because the predicates are monotonic in $\alpha$.
 
 \subsection{Properties of reducibility}
 
-We prove the three properties of reducibility refered to as CR1, CR2 and
+We prove the three properties of reducibility referred to as CR1, CR2 and
 CR3 in Girard~\cite{girard1989proofs}.
 
 Reducible values and computations are strongly normalizing (CR1):
@@ -2853,7 +2852,7 @@ pair and function types.
 \item[$\tau_1 \times \tau_2$:] We have $\fst{v} \in \snv$ and
   $\snd{v} \in \snv$ and must show that $v \in \snv$. This holds because
   if there was an infinite chain of reductions for $v$ then there would
-  be an infinite chain of reductions for $\fst{v}$ by congurence.
+  be an infinite chain of reductions for $\fst{v}$ by congruence.
 \item[$\tau_1 \arr \tau_2$:] We have
   $\forall v_2 \in \redv{\Delta}{\tau_1}. \; \app{v_1}{v_2} \in \snc$
   and must show that $v_1 \in \snv$. This holds because if there was an
@@ -2862,7 +2861,7 @@ pair and function types.
 \end{description}
 \end{proof}
 
-Reduciblity predicates are compatible with reductions (CR2):
+Reducibility predicates are compatible with reductions (CR2):
 \begin{lemma}
 \label{lemma:red-reduces}
 \begin{align*}
@@ -2912,8 +2911,8 @@ Reduciblity predicates are compatible with reductions (CR2):
 A term is neutral if it is not an introduction form. We consider
 $\return{v}$, $\perform{\loc}{op}{v}$ and
 $\letv{x}{\perform{\loc}{op}{v}}{c}$ to be the introduction forms for
-computations. If a term is neutral, and whenever we reduce t we obtain a
-term that is reducible, then the original term is reduceable (CR3).
+computations. If a term is neutral, and whenever we reduce it we obtain a
+term that is reducible, then the original term is reducible (CR3).
 \begin{lemma}
 \label{lemma:red-neutral}
 For all neutral values $v_n$ and neutral computations $c_n$:
@@ -3029,7 +3028,7 @@ Pair terms are reducible when built from reducible subterms.
   The first case is reducible by hypothesis. The second and third cases
   hold by the inductive hypothesis using
   CR2(\ref{lemma:red-reduces}). The same reasoning applies to
-  $\snd{(v_1, v_2}$.
+  $\snd{(v_1, v_2)}$.
 \end{proof}
 
 Projection terms are reducible when built from reducible subterms.
@@ -3238,7 +3237,7 @@ Return terms are reducible when built from reducible subterms.
     intermediate term must be of the form $\return{v_s}$, which means we
     can use the inductive hypothesis on $v_s$ via
     CR2(\ref{lemma:red-reduces}) to show that $v_t$ is reducible.
-  \item We must show that various propertes hold for any term of the
+  \item We must show that various properties hold for any term of the
     form $\perform{\loc}{\Sigma}{v_a}$ or
     $\letv{x}{\perform{\loc}{op}{v_a}}{c_k}$ that $\return{v_r}$ reduces
     to. The reduction would have to be by stepping to some intermediate
@@ -3280,7 +3279,7 @@ Non-neutral perform terms are reducible when built from reducible subterms.
     $\perform{\loc_e}{op}{v_r}$, which means we can use the inductive hypothesis on
     $v_r$ via CR2(\ref{lemma:red-reduces}) to show that $v_q$ is
     reducible.
-  \item We must show that various propertes hold for any term of the
+  \item We must show that various properties hold for any term of the
     form $\return{v_r}$, $\perform{\loc_f}{\Sigma}{v_q}$ (where
     $\loc_f \neq \loc_e$) or $\letv{x}{\perform{\loc}{op}{v_p}}{c_k}$
     that $\perform{\loc_e}{op}{v_p}$ reduces to. The reduction would
@@ -3311,7 +3310,7 @@ Non-neutral bind terms are reducible when built from reducible subterms.
     reduction rule that can apply to $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k}$ is the
     congruence rule. Thus any reducts would be one of two forms:
     \begin{itemize}
-    \item $\letv{x}{\perform{\loc_e}{op}{v_q}}{c_k}$ with $v_q \stepstov v_q$
+    \item $\letv{x}{\perform{\loc_e}{op}{v_q}}{c_k}$ with $v_p \stepstov v_q$
     \item $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_j}$ with $c_k \stepstoc c_j$
     \end{itemize}
     in both cases the reduct is strongly normalizing by the inductive
@@ -3331,7 +3330,7 @@ Non-neutral bind terms are reducible when built from reducible subterms.
     which means we can use the inductive hypothesis on $v_r$ and $c_l$
     via CR2(\ref{lemma:red-reduces}) to show that $v_q$ and $c_j$ are
     reducible.
-  \item We must show that various propertes hold for any term of the
+  \item We must show that various properties hold for any term of the
     form $\return{v_r}$, $\perform{\loc_g}{\Sigma}{v_p}$ or
     $\letv{x}{\perform{\loc_f}{op}{v_q}}{c_j}$ (where
     $\loc_f \neq \loc_e$) that
@@ -3996,16 +3995,16 @@ Normal forms of STLC are embedded to normal forms:
   \end{equation*}
 \end{lemma}
 This follows from observing that the neutral forms and normal forms of
-STLC embed to neutral and normal forms respectively. Since our langauge
+STLC embed to neutral and normal forms respectively. Since our language
 is strongly normalizing (\ref{lemma:strong-normalization}) this is
 sufficient to show that the embedding correctly models STLC.
 
 \section{Denotational semantics}
 \label{apdx:denotational}
 
-In this section we prove that the denotatoinal semantics is sound and
+In this section we prove that the denotational semantics is sound and
 adequate with respect to the operational semantics. The full
-denotational semantcs are in Fig.~\ref{fig:denotational-standard},
+denotational semantics are in Fig.~\ref{fig:denotational-standard},
 Fig.~\ref{fig:denotational-locality},
 Fig.~\ref{fig:denotational-inductive} and
 Fig.~\ref{fig:denotational-reflection}.
@@ -4290,9 +4289,9 @@ and effect capability bindings:
 \end{lemma}
 \begin{proof}
   By mutual induction on the typing derivations for $v$ and $c$. We
-  prove slightly stronger forms that allows additional bindings after
-  $x$, so that we can use inductive hyptheses under additional
-  bindings. The cases all follow from standards equalities about
+  prove slightly stronger forms that allow additional bindings after
+  $x$, so that we can use inductive hypotheses under additional
+  bindings. The cases all follow from standard equalities about
   products and projections
 \end{proof}
 
@@ -4309,9 +4308,9 @@ $\Gamma$ is equivalent to $\bdiv{\Gamma}$:
 \end{lemma}
 \begin{proof}
   By mutual induction on the typing derivations for $v$ and $c$. We
-  prove slightly stronger forms that allows additional bindings after
-  $\cdiv{\Gamma}$, so that we can use inductive hyptheses under
-  additional bindings. The cases all follow from standards equalities
+  prove slightly stronger forms that allow additional bindings after
+  $\cdiv{\Gamma}$, so that we can use inductive hypotheses under
+  additional bindings. The cases all follow from standard equalities
   about products and projections
 \end{proof}
 
@@ -4331,9 +4330,9 @@ We will need lemmas showing that the semantics are compatible with substitution 
 \end{lemma}
 \begin{proof}
   By mutual induction on the typing derivations for $v_1$ and $c$. We
-  prove slightly stronger forms that allows additional bindings after
+  prove slightly stronger forms that allow additional bindings after
   $x$, so that we can use inductive hypotheses under additional
-  bindings. The cases all follow from standards equalities about
+  bindings. The cases all follow from standard equalities about
   products and projections, along with the weakening lemmas
   (\ref{lemma:sem-weakening-local}, \ref{lemma:sem-weakening-global},
   \ref{lemma:sem-weakening-yoneda}) when moving under a binding.
@@ -4357,12 +4356,12 @@ and similarly for global bindings.
 \end{lemma}
 \begin{proof}
   By mutual induction on the typing derivations for $v_1$ and $c$. We
-  prove slightly stronger forms that allows additional bindings after
+  prove slightly stronger forms that allow additional bindings after
   $x$, so that we can use inductive hypotheses under additional
   bindings. The global variable case follows from the comonad laws of
   $\glob$ and weakening from $\cdiv{\Gamma}$ to $\Gamma$
   (\ref{lemma:sem-weakening-cdiv}).  The other cases all follow from
-  standards equalities about products and projections, along with the
+  standard equalities about products and projections, along with the
   weakening lemmas (\ref{lemma:sem-weakening-local},
   \ref{lemma:sem-weakening-global}, \ref{lemma:sem-weakening-yoneda})
   when moving under a binding.
@@ -4498,10 +4497,10 @@ and similarly for global bindings.
 
 \subsection{Contextual equivalence}
 
-In order to proof adequecy we need to provide a precise definition of
-contextual equivalence. The syntax of value and computatoin evaluation
+In order to prove adequacy we need to provide a precise definition of
+contextual equivalence. The syntax of value and computation evaluation
 contexts is given in Fig.~\ref{fig:execution-context}. We write
-$\ctxv{v}$ and $\ctxc{v}$ for the value and computation respecitvely
+$\ctxv{v}$ and $\ctxc{v}$ for the value and computation respectively
 obtained by replacing the $\_$ in the evaluation context with $v$.
 \begin{figure}
 \begin{align*}
@@ -4548,8 +4547,8 @@ and
 $\ctxc{\_} \types \Gamma_1 \turnv \tau_1 \trans \Gamma_2 \turnc \tau_2$
 for the mutually inductive context typing relations that indicate that
 if $\Gamma_1 \turnv v \types \tau_1$ then
-$\Gamma_2 \turnv \ctxv{v} \tau_2$ and $\Gamma_2 \turnc \ctxc{v} \tau_2$
-respectively.
+$\Gamma_2 \turnv \ctxv{v} \types \tau_2$ and
+$\Gamma_2 \turnc \ctxc{v} \types \tau_2$ respectively.
 
 Two values are contextually equivalent if they reduce to the same normal
 forms in closed boolean evaluation contexts.
@@ -4622,7 +4621,12 @@ unchecked effects\footnote{For convenience, we use the new handler
   syntax from OCaml 5.3. However, the most recently released version of
   OxCaml is based on OCaml 5.2 so the actual implementation uses
   \lstinline[style=oxcaml]{Effect.Deep.match_with} instead} is shown in
-Fig.~\ref{fig:implementation}.
+Fig.~\ref{fig:implementation}. It assumes that handlers can close over
+local values to implement \lstinline[style=oxcaml]{reify} -- but not
+\lstinline[style=oxcaml]{reify_global}. Unfortunately, this is not yet
+permitted by OxCaml due to the runtime not supporting pointers to stack
+allocated values from different fibres. If stack allocation were
+disabled then this code would be allowed.
 \begin{figure}
 \begin{lstlisting}[style=oxcaml]
 module Handler (E : Sig) = struct
