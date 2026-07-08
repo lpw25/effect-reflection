@@ -2207,7 +2207,13 @@ usual notion of separation for references.
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
 
+\clearpage
 \appendix
+% Record the first page of the appendices in the .aux file; the
+% Makefile reads it to split the PDF into body and appendix parts.
+\makeatletter
+\write\@auxout{\string\newlabel{appendix-firstpage}{{}{\thepage}{}{}{}}}
+\makeatother
 \section{Subject reduction}
 \label{apdx:subject-reduction}
 
