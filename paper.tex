@@ -657,7 +657,7 @@ OCaml one in the opening section:
     module State_eff = Reflection(State)
 
     let handle_state (i : int) (f : Handler(State).t @ local -> 'a) : 'a =
-      let rec loop s : 'a Term(State).t -> 'a  = function
+      let rec loop s : 'a Term(State).t @ local -> 'a = function
         | Return x -> x
         | Perform(Get, k) -> loop s (State_eff.continue k s)
         | Perform(Set s', k) -> loop s' (State_eff.continue k ())
@@ -726,7 +726,7 @@ We make the following contributions:
   using its support for tracking locality in the type system and the
   untracked algebraic effects it inherits from OCaml. We demonstrate its
   usability with some classic examples of algebraic effects. (Section
-  \ref{sec:practice}).
+  \ref{sec:practice})
 \end{itemize}
 
 \section{Simply-typed lambda calculus with effect reflection}
@@ -820,8 +820,8 @@ rather than a computation. We can define a computation version as:
 
 We track locality via a global comonadic modality $\glob$. In our
 setting, being global means not depending on the ambient monad. For
-example, $1 \arr 1$ represents computations that may use operations from
-the ambient monad, while $\glob (1 \arr 1)$ contains only pure
+example, $1 \arr \tau$ represents computations that may use operations from
+the ambient monad, while $\glob (1 \arr \tau)$ contains only pure
 computations that ignore the ambient monad.
 
 When using $\gbox{v}$ to build a value with a global type, we can only
@@ -1668,7 +1668,7 @@ $\catobj \types \cat$, there is an isomorphism:
 Applying that to the composition of the free algebras monad and the
 global modality we get:
 \begin{equation*}
-  \homset{\pshlawcop}{\yoneda{L}}{\mon(\glob \tau)} \cong \mon(\glob \tau)(L) = T_L(\tau(\initial))
+  \homset{\pshlawcop}{\yoneda{L}}{\mon(\glob \sem{\tau})} \cong \mon(\glob \sem{\tau})(L) = T_L(\sem{\tau}(\initial))
 \end{equation*}
 
 In terms of our semantics, this means that computations of type
@@ -1756,12 +1756,16 @@ $\reifyc{\Sigma}{}$ gives us our semantics for reification.
 The denotational semantics is sound:
 \begin{theorem}
 \label{lemma:soundness}
-  \begin{equation*}
-    \Gamma \turnv v_1 \types \tau
+  \begin{align*}
+    &\Gamma \turnv v_1 \types \tau
     \wedge v_1 \stepstov v_2
     \implies \sem{\Gamma \turnv v_1 \types \tau}
-           = \sem{\Gamma \turnv v_2 \types \tau}
-  \end{equation*}
+           = \sem{\Gamma \turnv v_2 \types \tau} \\
+    &\Gamma \turnc c_1 \types \tau
+    \wedge c_1 \stepstoc c_2
+    \implies \sem{\Gamma \turnc c_1 \types \tau}
+           = \sem{\Gamma \turnc c_2 \types \tau}
+  \end{align*}
 \end{theorem}
 and adequate for contextual equality $\ctxeq$:
 \begin{theorem}
@@ -1874,7 +1878,7 @@ opposed to full terms, which is a more convenient primitive in practice.
 The final piece of the interface is the support for selection from
 effect capabilities for sums of signatures (i.e. $\outlname$ and
 $\outrname$). These are provided via \lstinline[style=oxcaml]{Sum}
-and \lstinline[style=oxcaml]{Select} functions shown in Fig.~\ref{fig:ox-selection}.
+and \lstinline[style=oxcaml]{Select} functors shown in Fig.~\ref{fig:ox-selection}.
 \begin{figure}
 \begin{lstlisting}[style=oxcaml]
   module Sum (L : Sig) (R : Sig) : sig
@@ -2024,7 +2028,7 @@ these we can write our desired handler for the
   type aints = Finished | More of int * (Handler(Await).t @ local -> aints)
 
   let handle_gen_in_await f ah =
-    let rec loop ah : unit Term(Sum(Await)(Gen))).t -> aints = function
+    let rec loop ah : unit Term(Sum(Await)(Gen)).t -> aints = function
       | Return () -> Finished
       | Perform(Left op, k) -> loop ah (Eff.continue_global k (Await_eff.perform op ah))
       | Perform(Right(Gen i), k) ->
@@ -2078,7 +2082,7 @@ also requires native support for these effect capability modalities.
 
 Modal effect types~\cite{tang2025modal} also make effect annotations
 relative to the current set of available effects. This system uses
-modal effect types to track the difference between the current available effects and
+modal effect types to track the difference between the currently available effects and
 the effects required by a value. This avoids needing to treat functions
 as second class, but does still require specific effect support in the
 type system.
@@ -2125,7 +2129,7 @@ Lemma \ref{lemma:sums}) on which handlers are based.
 
 The original work on algebraic effect
 handlers~\cite{plotkin2009handlers,plotkin2013handling} gives a
-semantics in terms of free algebras but the semantics work with a fixed
+semantics in terms of free algebras but the semantics works with a fixed
 algebraic theory: handlers do not actually change the ambient monad. Our
 Ambient Monad model naturally accommodates changing the ambient monad.
 
@@ -2694,20 +2698,20 @@ property:
 
   We have $c_a = \letv{x_l}{\return{v_{ar}}}{c_{as}}$,
   $c_b = \sbst{c_{bs}}{x_l}{v_{br}}$ and
-  $c_c = \letv{x_l}{v_{cl}}{c_{cs}}$, and the rules in
+  $c_c = \letv{x_l}{c_{cl}}{c_{cs}}$, and the rules in
   question are:
   \begin{mathpar}
     \inferrule{v_{ar} \parastepstov v_{br} \\ c_{as} \parastepstoc c_{bs}}
     {\letv{x_l}{\return{v_{ar}}}{c_{as}} \parastepstoc \sbst{c_{bs}}{x_l}{v_{br}}}
     \and
-    \inferrule{\return{v_{ar}} \parastepstov v_{cl} \\ c_{as} \parastepstoc c_{cs}}
-    {\letv{x_l}{\return{v_{ar}}}{c_{as}} \parastepstoc \letv{x_l}{v_{cl}}{c_{cs}}}
+    \inferrule{\return{v_{ar}} \parastepstoc c_{cl} \\ c_{as} \parastepstoc c_{cs}}
+    {\letv{x_l}{\return{v_{ar}}}{c_{as}} \parastepstoc \letv{x_l}{c_{cl}}{c_{cs}}}
   \end{mathpar}
   All our reduction rules have a single subcomponent that is not a
-  metavariable -- in this case it is $\return{v}$ -- and there are no
+  metavariable -- in this case it is $\return{v_{ar}}$ -- and there are no
   reduction rules which could apply to that subcomponent. That means
-  we know by inversion that $\return{v_{ar}} \parastepstov v_{cl}$ must be the congruence rule on $\returnname$,
-  which gives us $v_{cl} = \return{v_{cr}}$, and the combined congruence rules amount to:
+  we know by inversion that $\return{v_{ar}} \parastepstoc c_{cl}$ must be the congruence rule on $\returnname$,
+  which gives us $c_{cl} = \return{v_{cr}}$, and the combined congruence rules amount to:
   \begin{mathpar}
     \inferrule{v_{ar} \parastepstov v_{cr} \\ c_{as} \parastepstoc c_{cs}}
     {\letv{x_l}{\return{v_{ar}}}{c_{as}} \parastepstoc \letv{x_l}{\return{v_{cr}}}{c_{cs}}}
@@ -2978,7 +2982,7 @@ For all neutral values $v_n$ and neutral computations $c_n$:
 \item[$\glob \tau$:] Any reduction $v_n \reducestov \gbox{v_b}$ must
   go through one of the $v_r$ because $v_n$ cannot equal $\gbox{v_b}$ as
   it is neutral. From $v_r \reducestov \gbox{v_b}$ we have
-  $v_b \in \redv{\Delta}{\tau}$.
+  $v_b \in \redv{\cempty}{\tau}$.
 \item[$\yoneda{\Sigma}$:] Any reduction $v_n \reducestov \loc$,
   $v_n \reducestov \outl{v_i}$ or $v_n \reducestov \outr{v_i}$ must go
   through one of the $v_r$ because $v_n$ cannot equal $\loc$,
@@ -3056,7 +3060,7 @@ Projection terms are reducible when built from reducible subterms.
 \end{align*}
 \end{lemma}
 \begin{proof}
-  Follows directly from the definition of $\redv{\Delta}{\tau_1 \times \tau_2}$
+  Follows directly from the definition of $\redv{\Delta}{\tau_1 \times \tau_2}$.
 \end{proof}
 
 \subsection{Functions}
@@ -3095,7 +3099,7 @@ Application terms are reducible when built from reducible subterms.
 \end{align*}
 \end{lemma}
 \begin{proof}
-  Follows directly from the definition of $\redv{\Delta}{\tau_1 \arr \tau_2}$
+  Follows directly from the definition of $\redv{\Delta}{\tau_1 \arr \tau_2}$.
 \end{proof}
 
 \subsection{Sums}
@@ -3123,7 +3127,7 @@ Injection terms are reducible when built from reducible subterms.
     it is by reflexivity then $v_j$ is reducible by hypothesis. Only the
     congruence reduction rule applies to $\inl{v_i}$, so the intermediate
     term must be of the form $\inl{v_k}$, which means we can use the
-    inductive hypothesis on $v_k$ CR2(\ref{lemma:red-reduces}) to show
+    inductive hypothesis on $v_k$ via CR2(\ref{lemma:red-reduces}) to show
     that $v_j$ is reducible.
   \end{itemize}
 
@@ -3246,7 +3250,7 @@ Return terms are reducible when built from reducible subterms.
     strongly normalizing. Since every reduct is strongly normalizing then
     so is $\return{v_r}$.
   \item We must show that $v_t \in \redv{\Delta}{\tau}$ for any $v_t$
-    such that $\return{v_r} \reducestov \return{v_t}$. The reduction is
+    such that $\return{v_r} \reducestoc \return{v_t}$. The reduction is
     either from reflexivity or by stepping to some intermediate term. If
     it is by reflexivity then $v_t$ is reducible by hypothesis. Only the
     congruence reduction rule applies to $\return{v_r}$, so the
@@ -3254,7 +3258,7 @@ Return terms are reducible when built from reducible subterms.
     can use the inductive hypothesis on $v_s$ via
     CR2(\ref{lemma:red-reduces}) to show that $v_t$ is reducible.
   \item We must show that various properties hold for any term of the
-    form $\perform{\loc}{\Sigma}{v_a}$ or
+    form $\perform{\loc}{op}{v_a}$ or
     $\letv{x}{\perform{\loc}{op}{v_a}}{c_k}$ that $\return{v_r}$ reduces
     to. The reduction would have to be by stepping to some intermediate
     term as it can't be via reflexivity. Only the congruence reduction
@@ -3287,7 +3291,7 @@ Non-neutral perform terms are reducible when built from reducible subterms.
     then so is $\perform{\loc_e}{op}{v_p}$.
   \item We must show that $v_q \in \redv{\cempty}{\tau_p}$ for any $v_q$
     such that
-    $\perform{\loc_e}{op}{v_p} \reducestov \perform{\loc_e}{op}{v_q}$. The
+    $\perform{\loc_e}{op}{v_p} \reducestoc \perform{\loc_e}{op}{v_q}$. The
     reduction is either from reflexivity or by stepping to some
     intermediate term. If it is by reflexivity then $v_q$ is reducible
     by hypothesis. Only the congruence reduction rule applies to
@@ -3296,7 +3300,7 @@ Non-neutral perform terms are reducible when built from reducible subterms.
     $v_r$ via CR2(\ref{lemma:red-reduces}) to show that $v_q$ is
     reducible.
   \item We must show that various properties hold for any term of the
-    form $\return{v_r}$, $\perform{\loc_f}{\Sigma}{v_q}$ (where
+    form $\return{v_r}$, $\perform{\loc_f}{op}{v_q}$ (where
     $\loc_f \neq \loc_e$) or $\letv{x}{\perform{\loc}{op}{v_p}}{c_k}$
     that $\perform{\loc_e}{op}{v_p}$ reduces to. The reduction would
     have to be by stepping to some intermediate term as it can't be via
@@ -3336,7 +3340,7 @@ Non-neutral bind terms are reducible when built from reducible subterms.
   \item We must show that $v_q \in \redv{\cempty}{\tau_p}$ and
     $\forall v_a \in \redv{\Delta}{\glob \tau_a}. \; \sbst{c_j}{x}{v_a}
     \in \redc{\Delta}{\tau_k}$ for any $v_q$ and $c_j$ such that
-    $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k} \reducestov
+    $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k} \reducestoc
     \letv{x}{\perform{\loc_e}{op}{v_q}}{c_j}$. The reduction is either
     from reflexivity or by stepping to some intermediate term. If it is
     by reflexivity then $v_q$ and $c_j$ are reducible by
@@ -3347,14 +3351,14 @@ Non-neutral bind terms are reducible when built from reducible subterms.
     via CR2(\ref{lemma:red-reduces}) to show that $v_q$ and $c_j$ are
     reducible.
   \item We must show that various properties hold for any term of the
-    form $\return{v_r}$, $\perform{\loc_g}{\Sigma}{v_p}$ or
+    form $\return{v_r}$, $\perform{\loc_g}{op}{v_p}$ or
     $\letv{x}{\perform{\loc_f}{op}{v_q}}{c_j}$ (where
     $\loc_f \neq \loc_e$) that
-    $\letv{x}{\perform{\loc_f}{op}{v_p}}{c_k}$ reduces to. The reduction
+    $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k}$ reduces to. The reduction
     would have to be by stepping to some intermediate term as it can't
     be via reflexivity. Only the congruence reduction rule applies to
-    $\letv{x}{\perform{\loc_f}{op}{v_p}}{c_k}$, so the intermediate term
-    must be of the form $\letv{x}{\perform{\loc_f}{op}{v_r}}{c_l}$,
+    $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k}$, so the intermediate term
+    must be of the form $\letv{x}{\perform{\loc_e}{op}{v_r}}{c_l}$,
     which means we can use the inductive hypothesis on $v_r$ and $c_l$
     via CR2(\ref{lemma:red-reduces}) to show that the properties would
     hold.
@@ -4082,7 +4086,7 @@ Fig.~\ref{fig:denotational-reflection}.
     \circ \strength{\mon}_{\sem{\Gamma}, \sem{\tau_1}}
     \circ \langle id_{\sem{\Gamma}}, \sem{\Gamma \turnc c_1 \types \tau_1} \rangle \\
 &\sem{\Gamma \turnc \app{v_1}{v_2} \types \tau_2} =
-    \evmap{\sem{\tau_1}}{\sem{\tau_2}}
+    \evmap{\sem{\tau_1}}{\mon(\sem{\tau_2})}
     \circ \langle \sem{\Gamma \turnv v_1 \types \tau_1 \arr \tau_2},
                   \sem{\Gamma \turnv v_2 \types \tau_1} \rangle
 \end{align*}
@@ -4389,12 +4393,16 @@ and similarly for global bindings.
 
 \subsection{Soundness}
 
-\begin{equation*}
-  \Gamma \turnv v_1 \types \tau
+\begin{align*}
+  &\Gamma \turnv v_1 \types \tau
   \wedge v_1 \stepstov v_2
   \implies \sem{\Gamma \turnv v_1 \types \tau}
-    = \sem{\Gamma \turnv v_2 \types \tau}
-\end{equation*}
+    = \sem{\Gamma \turnv v_2 \types \tau} \\
+  &\Gamma \turnc c_1 \types \tau
+  \wedge c_1 \stepstoc c_2
+  \implies \sem{\Gamma \turnc c_1 \types \tau}
+    = \sem{\Gamma \turnc c_2 \types \tau}
+\end{align*}
 \begin{proof}
   By induction on the reduction relation. The congruence rules all
   follow immediately by the inductive hypothesis, leaving just the rules
@@ -4557,7 +4565,7 @@ obtained by replacing the $\_$ in the evaluation context with $v$.
       \mid \perform{\ctxv{\_}}{op}{v} \mid \perform{v}{op}{\ctxv{\_}}
       \mid \reify{\loc}{\ctxc{\_}}
 \end{align*}
-\caption{Syntax of execution contexts}
+\caption{Syntax of evaluation contexts}
 \label{fig:execution-context}
 \end{figure}
 
