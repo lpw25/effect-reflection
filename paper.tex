@@ -75,6 +75,9 @@
 \newcommand{\counit}[1]{\epsilon^{#1}}
 \newcommand{\comult}[1]{\delta^{#1}}
 \newcommand{\ununit}{\rho}
+\newcommand{\taug}{{\tau_{\mathcal{G}}}}
+\newcommand{\taub}{{\tau_{\mathcal{B}}}}
+\newcommand{\card}[1]{\|#1\|}
 
 \newcommand{\reflectname}{\mathord{\Uparrow}}
 \newcommand{\reflectraw}[1]{\mathop{\reflectname(#1)}}
@@ -408,6 +411,11 @@ restriction to monads corresponding to algebraic theories is the essence
 of algebraic effects: it ensures that every pair of monads has a
 well-defined sum, allowing them to be handled by effect handlers.
 
+For this model to remain set-theoretic, we also need to restrict the
+types used for the parameters and arities of operations to a
+\emph{predicative} fragment, which we describe in
+Section~\ref{sec:predicative}.
+
 These functors from $\lawc$ to $\setc$ are presheaves and so they
 support all the standard constructions (products, coproducts,
 exponentials, etc.) needed to support all the usual type formers
@@ -721,7 +729,10 @@ We make the following contributions:
 \item We propose the Ambient Monad model of effectful computations. We
   use it to give a denotational semantics of our lambda calculus with
   effect reflection.  We prove that this semantics is sound,
-  compositional and adequate.  (Section \ref{sec:semantics})
+  compositional and adequate. We identify a class of \emph{predicative
+    signatures} for which the model remains entirely set-theoretic
+  whilst still supporting operations with arbitrarily large parameters
+  and arities.  (Section \ref{sec:semantics})
 \item We give a simple implementation of effect reflection in OxCaml
   using its support for tracking locality in the type system and the
   untracked algebraic effects it inherits from OCaml. We demonstrate its
@@ -902,6 +913,7 @@ Fig.\ref{fig:typing-locality}.
 \end{figure}
 
 \subsection{Signatures and inductive types}
+\label{sec:signatures}
 
 Effect reflection requires, for any signature $\Sigma$ that is being
 reflected, an inductive type $\ind{\Sigma}$ to represent the free
@@ -1415,26 +1427,28 @@ finite types. This would allow for boolean state, but would not support
 $\nat$ state.
 
 In the algebraic effects literature the most common choice is to use
-countable algebraic signatures. However, this is still too restrictive,
-supporting $\nat$ state but not supporting $\nat \rightarrow \nat$
-state.
+algebraic signatures with countable arity. However, this is still too
+restrictive, supporting $\nat$ state but not supporting
+$\nat \rightarrow \nat$ state.
 
-We want to allow arbitrary types for the parameters and arities of our
-operations. However, we also wish our category of Lawvere theories to be
-small. To achieve this we will parameterize our model and semantics by a
-regular cardinal $\kappa$, and use algebraic theories whose sets of
-operations and arities are bounded by $\kappa$. We will not worry about the
-choice of $\kappa$ as for any given program there is always a
-sufficiently large $\kappa$ available.
+We want to allow arbitrarily large types for the parameters and arities
+of our operations. However, we also wish our category of Lawvere
+theories to be small. To achieve this we will parameterize our model and
+semantics by a regular cardinal $\kappa$, and use algebraic theories
+that can be presented using at most $2^{<\kappa}$ operations whose
+arities are smaller than $\kappa$. We will not worry about the choice of
+$\kappa$ as for any given program, subject to the restriction that
+signatures be predicative (see Section \ref{sec:predicative}), there is
+always a sufficiently large $\kappa$ available, which we prove in
+Appendix \ref{apdx:bounds}.
 
 We can extend the definition of Lawvere theory to support algebraic
-theories bounded by $\kappa$:
+theories bounded by a regular cardinal $\kappa$:
 \begin{definition}
-  A \emph{$\kappa$-bounded Lawvere theory} is a small category whose set
-  of objects has cardinality $\lambda < \kappa$ and whose set of
-  morphisms also has cardinality strictly less than $\kappa$, which has
-  all products smaller than $\lambda$, and in which every object is
-  isomorphic to some product $\Pi_S X$ of a distinguished object $X$.
+  A \emph{$\kappa$-bounded Lawvere theory} is a small category with
+  $\kappa$-small products, a distinguished object $X$ such that every
+  object is isomorphic to $X^S$ for some $|S| < \kappa$, and whose set
+  of morphisms has cardinality less than or equal to $2^{<\kappa}$.
 \end{definition}
 The models of a $\kappa$-bounded Lawvere theory $L$ are the
 product-preserving functors from $L$ to $\setc$.
@@ -1450,10 +1464,12 @@ $\kappa$-bounded Lawvere theories and their morphisms form a small
 category $\lawc$. This category has coproducts $L + L^{\prime}$ which
 correspond to the algebraic theory made by unioning the operations and
 equations of $L$ and $L^{\prime}$. It also has an initial object
-$\initial$, which is the algebraic theory with no operations and
-corresponds to the identity monad. Note that $\lawfc$ is $\lawn$.
+$\initial$, which is the algebraic theory with no operations or
+equations and corresponds to the identity monad. We prove these
+properties of $\lawc$ in Appendix~\ref{apdx:lawprops}.
 
 \subsection{Presheaves}
+\label{sec:presheaves}
 
 Now that we have a concrete representation for potential ambient monads,
 we can define our semantics in terms of sets indexed by such
@@ -1502,6 +1518,7 @@ We also use products for the semantics of contexts:
 \end{equation*}
 
 \subsection{Representing computations: The free algebras monad}
+\label{sec:monad}
 
 Our aim is to have a semantics where the meaning of types is indexed by
 the ambient monad -- or more precisely by a representation of the
@@ -1538,6 +1555,7 @@ algebras monad to give us our semantics for function types.
 \end{equation*}
 
 \subsection{The global modality}
+\label{sec:global}
 
 For any category $\cat$ with a terminal object $\terminal$, we
 can define the global modality $\glob \types [\psh, \psh]$ such that:
@@ -1583,6 +1601,104 @@ comultiplication of $\glob$,
 $\bdiv{\Gamma} \types \Gamma \rightarrow \cdiv{\Gamma}$ is the morphism
 that projects the global bindings from $\Gamma$, and $\ununit_P$ is the
 isomorphism from $\glob \mon(P)$ to $\glob P$.
+
+\subsection{Predicative signatures}
+\label{sec:predicative}
+
+We want $\sem{\Sigma}$ to be the $\kappa$-bounded Lawvere theory
+corresponding to the signature $\Sigma$. However, whilst we can increase
+$\kappa$ as necessary to support arbitrarily large types in signatures,
+that is not actually sufficient to support all possible types in
+signatures.
+
+The issue is one of impredicativity. Our support for lightweight effect
+polymorphism, whilst not full polymorphism, is sufficiently
+polymorphism-like that using it within the parameter or arity of a
+signature would require an impredicative (i.e. not set-theoretic)
+model. In this paper we wish to keep the Ambient Monad model
+set-theoretic, so instead we restrict the types that can be used in
+signatures.
+
+This impredicativity shows up in the denotation of function types. In
+the general case an element of the set $\sem{\tau_1 \arr \tau_2}(L)$
+contains a component in $T_{L^\prime}(\sem{\tau_2}(L^\prime))$ for
+every $L^\prime$ in $\lawc$, and the set itself can be as large as the
+product of those components. Sets in the image of $T_{L^\prime}(\_)$
+can have cardinality $2^{<\kappa}$ -- which is not less than $\kappa$
+and so cannot be the arity of an operation. However, if $\sem{\tau_1}$
+is \emph{$\kappa$-generated} -- a coproduct of fewer than $\kappa$
+representable presheaves -- then instead of $L^\prime$ ranging over all
+Lawvere theories in $\lawc$ it only needs to range over a specific set
+of fewer than $\kappa$ Lawvere theories determined by $\sem{\tau_1}$.
+
+For example, using the fact that $1 \cong \yoneda{\initial}$ and the
+isomorphism
+$\arrow{\yoneda{L^\prime}}{Q}(L) \cong Q(L + L^\prime)$, which we will
+derive in Section~\ref{sec:reification},
+\begin{align*}
+\sem{(\yoneda{\Sigma} + 1) \arr \tau}(L)
+  &= \arrow{\yoneda{\sem{\Sigma}} + 1}{\mon(\sem{\tau})}(L) \\
+  &\cong (\arrow{\yoneda{\sem{\Sigma}}}{\mon(\sem{\tau})})(L)
+    \times (\arrow{\yoneda{\initial}}{\mon(\sem{\tau})})(L) \\
+  &\cong \mon(\sem{\tau})(L + \sem{\Sigma})
+    \times \mon(\sem{\tau})(L) \\
+  &= T_{(L + \sem{\Sigma})}(\sem{\tau}(L + \sem{\Sigma}))
+    \times T_L(\sem{\tau}(L))
+\end{align*}
+so the semantics of the type $(\yoneda{\Sigma} + 1) \arr \tau$ at $L$
+depends only on $T_{(L + \sem{\Sigma})}$ and $T_L$ rather than on
+all $T_{L^\prime}$.
+
+We can define a syntactic restriction that ensures a type's semantics
+are $\kappa$-generated. We call these \emph{generated types}. We can
+then define \emph{bounded types} as those where the domains of
+functions are generated types. In Appendix~\ref{apdx:bounds} we show
+that the cardinality of the semantics of a bounded type does not depend
+on $\kappa$.
+\begin{align*}
+  \mathrm{generated\ types}, \taug ::=\;& \taug \times \taug \mid 1 \mid \taug + \taug
+                              \mid \glob \taub
+                              \mid \yoneda{\Sigma} \\
+  \mathrm{bounded\ types}, \taub ::=\;& \taub \times \taub \mid 1 \mid \taub + \taub
+                              \mid \taug \arr \taub \mid \glob \taub
+                              \mid \ind{\Sigma}(\taub)
+                              \mid \yoneda{\Sigma}
+\end{align*}
+Function types and our inductive types are not generated, however
+$\glob \taub$ is generated for any bounded type $\taub$. This means
+that, for example, the image of the embedding of the simply-typed lambda
+calculus (Appendix~\ref{apdx:embedding}) lies entirely in the bounded
+types, since it boxes the domain of every function type. Similarly, the
+continuations of our inductive types already take their arguments boxed
+(Fig.~\ref{fig:typing-inductive}).
+
+A \emph{predicative signature} is one where the types of its parameters
+and arities are all bounded. For any predicative signature $\Sigma$:
+\begin{equation*}
+  \{ \, op_1 \types \taub_{p_1} \rightarrowtail \taub_{a_1} \seq
+  \ldots \seq
+  op_n \types \taub_{p_n} \rightarrowtail \taub_{a_n} \, \}
+\end{equation*}
+$\sem{\Sigma}$ is the $\kappa$-bounded Lawvere theory for:
+\begin{equation*}
+  \{ \, op_1 \types \sem{\taub_{p_1}}(\initial)
+                    \rightarrowtail \sem{\taub_{a_1}}(\initial) \seq
+  \ldots \seq
+  op_n \types \sem{\taub_{p_n}}(\initial)
+              \rightarrowtail \sem{\taub_{a_n}}(\initial) \, \}
+\end{equation*}
+Note that by applying the types to the initial theory $\initial$ we
+restrict them to their global elements: those that do not depend on the
+current ambient monad.
+
+In Appendix~\ref{apdx:bounds} we show that for any predicative signature
+$\Sigma$ these parameters and arities are bounded by a cardinal
+$\card{\Sigma}$ that is determined by the syntax of $\Sigma$,
+independently of $\kappa$. Thus $\sem{\Sigma}$ is an object of $\lawc$
+for any regular $\kappa$ with $\card{\Sigma} < \kappa$, and since
+successor cardinals are regular a sufficiently large $\kappa$ always
+exists; no large-cardinal assumptions are required. When working with the model we
+will assume all signatures are predicative.
 
 \subsection{Reflecting operations: The Yoneda embedding}
 \label{sec:reflection}
@@ -1630,24 +1746,6 @@ $op_{\mon}$ as the semantics for reflection.
                       \glob \sem{\cdiv{\Gamma} \turnv v_2 \types \tau_p}
                       \circ \comult{\glob}_{\sem{\cdiv{\Gamma}}} \circ \bdiv{\Gamma} \rangle
 \end{align*}
-where $\sem{\Sigma}$ is the $\kappa$-bounded Lawvere theory corresponding to the
-signature $\Sigma$. If $\Sigma$ is:
-\begin{equation*}
-  \{ \, op_1 \types \tau_{p_1} \rightarrowtail \tau_{a_1} \seq
-  \ldots \seq
-  op_n \types \tau_{p_n} \rightarrowtail \tau_{a_n} \, \}
-\end{equation*}
-then $\sem{\Sigma}$ is the $\kappa$-bounded Lawvere theory for:
-\begin{equation*}
-  \{ \, op_1 \types \sem{\tau_{p_1}}(\initial)
-                    \rightarrowtail \sem{\tau_{a_1}}(\initial) \seq
-  \ldots \seq
-  op_n \types \sem{\tau_{p_n}}(\initial)
-              \rightarrowtail \sem{\tau_{a_n}}(\initial) \, \}
-\end{equation*}
-Note that by applying the types to the initial theory $\initial$ we
-restrict them to their global elements: those that do not depend on the
-current ambient monad.
 
 The Yoneda embedding preserves finite products, which for our case
 means:
@@ -2130,8 +2228,9 @@ Lemma \ref{lemma:sums}) on which handlers are based.
 The original work on algebraic effect
 handlers~\cite{plotkin2009handlers,plotkin2013handling} gives a
 semantics in terms of free algebras but the semantics works with a fixed
-algebraic theory: handlers do not actually change the ambient monad. Our
-Ambient Monad model naturally accommodates changing the ambient monad.
+countable algebraic theory: handlers do not actually change the ambient
+monad. Our Ambient Monad model naturally accommodates changing the
+ambient monad.
 
 Bauer and Pretnar~\cite{bauer2015programming} give a denotational
 semantics for Eff but it is untyped. The same
@@ -4020,7 +4119,399 @@ STLC embed to neutral and normal forms respectively. Since our language
 is strongly normalizing (\ref{lemma:strong-normalization}) this is
 sufficient to show that the embedding correctly models STLC.
 
-\section{Denotational semantics}
+\section{Bounded Lawvere theories and predicative signatures}
+\label{apdx:bounds}
+
+In this appendix we prove the claims made in Sections~\ref{sec:small}
+and~\ref{sec:predicative}: that $\lawc$ is a small category closed under
+the constructions used by our semantics, and that for any predicative
+signature $\Sigma$ there is a cardinal $\card{\Sigma}$, determined by
+the syntax of $\Sigma$ and independent of $\kappa$, that bounds the
+parameters and arities of the operations of $\sem{\Sigma}$. Consequently
+$\sem{\Sigma}$ is an object of $\lawc$ for any regular $\kappa$ with
+$\card{\Sigma} < \kappa$, and thus a sufficiently large $\kappa$ always
+exists.
+
+Throughout this appendix, $2^{<\kappa}$ denotes the cardinal
+$\sup_{\lambda < \kappa} 2^{\lambda}$. We treat the
+semantics of types as covariant functors $\lawc \arr \setc$ as described
+in Section~\ref{sec:presheaves}. When we say that a cardinal is
+determined by some syntax ``independently of $\kappa$'' we mean that it
+takes the same value for every regular $\kappa$ at which the semantics
+is defined.
+
+\subsection{Properties of $\lawc$}
+\label{apdx:lawprops}
+
+\begin{lemma}
+\label{lemma:cardinal-arithmetic}
+  $\kappa \le 2^{<\kappa}$, and $(2^{<\kappa})^{\lambda} = 2^{<\kappa}$
+  for every $\lambda < \kappa$.
+\end{lemma}
+\begin{proof}
+  Standard cardinal arithmetic.
+\end{proof}
+
+\begin{lemma}
+\label{lemma:term-count}
+Let $L$ be an algebraic theory presented by at most $2^{<\kappa}$
+operations, each with arity smaller than $\kappa$, together with any
+set of equations. Then, the theory can be represented as a
+$\kappa$-bounded Lawvere theory.
+\end{lemma}
+\begin{proof}
+  The constraint we need to meet is that the set of morphisms is at most
+  $2^{<\kappa}$. The morphisms $X^S \arr X$ are just the terms of $L$ in
+  a set $S$ of variables with $|S| < \kappa$. Terms are well-founded, so
+  every path from the root of a term to a variable is finite, but when
+  arities are infinite the heights of terms may also be infinite. For
+  instance, with a single $\aleph_0$-ary operation $g$, the term
+  $g(t_0, t_1, \ldots)$, where each $t_n$ is built from $n$ nested
+  applications of $g$, has subterms of unbounded finite height and so
+  itself has height $\omega$. We therefore count terms by transfinite
+  iteration. Let $T^{0} = S$, let $T^{\alpha+1}$ extend $T^{\alpha}$
+  with every term $op(t_i)_{i \in A}$ whose immediate subterms $t_i$ are
+  drawn from $T^{\alpha}$, and let
+  $T^{\lambda} = \bigcup_{\alpha < \lambda} T^{\alpha}$ for limit
+  ordinals $\lambda$. Operation arities are less than $\kappa$, and
+  $\kappa$ is regular, so every term appears in $T^{\kappa}$. We show
+  that $|T^{\alpha}| \le 2^{<\kappa}$ for every $\alpha \le \kappa$, by
+  transfinite induction using Lemma~\ref{lemma:cardinal-arithmetic}:
+  \begin{align*}
+    |T^{0}| &= |S| < \kappa \le 2^{<\kappa} \\
+    |T^{\alpha+1}| &\le |T^{\alpha}| + 2^{<\kappa} \cdot |T^{\alpha}|^{<\kappa}
+      \le 2^{<\kappa} + 2^{<\kappa} \cdot 2^{<\kappa}
+      = 2^{<\kappa} \\
+    |T^{\lambda}| &\le \textstyle\sum_{\alpha < \lambda} |T^{\alpha}|
+      \le \kappa \cdot 2^{<\kappa}
+      = 2^{<\kappa}
+      && \text{for limit $\lambda$}
+  \end{align*}
+  Since $\kappa$ is itself a limit ordinal,
+  $|T^{\kappa}| \le 2^{<\kappa}$.
+
+  Quotienting by the equations of $L$ only shrinks this set, so $L$ has
+  at most $2^{<\kappa}$ terms, and there are at most $2^{<\kappa}$
+  morphisms $X^S \arr X$. The morphisms $X^S \arr X^{S^\prime}$
+  correspond to $S^\prime$-indexed families of morphisms $X^S \arr X$,
+  of which there are at most $(2^{<\kappa})^{|S^\prime|} = 2^{<\kappa}$;
+  so there are at most
+  $\kappa \cdot \kappa \cdot 2^{<\kappa} = 2^{<\kappa}$ morphisms in
+  total.
+\end{proof}
+
+\begin{lemma}
+\label{lemma:presentations}
+  An algebraic theory is in $\lawc$ if and only if its operations have
+  arities smaller than $\kappa$ and it can be presented using at most
+  $2^{<\kappa}$ operations and at most $2^{<\kappa}$ equations.
+\end{lemma}
+\begin{proof}
+  One direction is Lemma~\ref{lemma:term-count}. For the other, a
+  theory $L$ in $\lawc$ has a canonical presentation by its own
+  morphisms: one operation of arity $S$ for each morphism
+  $X^S \arr X$ -- at most $2^{<\kappa}$ of them -- together with its
+  composition table: for each morphism $f \types X^{S} \arr X$ and each
+  $S$-indexed family of morphisms $g_i \types X^{S^\prime} \arr X$, an
+  equation identifying the term $f(g_i)_{i \in S}$ with the morphism it
+  composes to. By Lemma~\ref{lemma:cardinal-arithmetic} there are at
+  most $2^{<\kappa} \cdot (2^{<\kappa})^{<\kappa} = 2^{<\kappa}$ such
+  equations.
+\end{proof}
+
+Lemma~\ref{lemma:presentations} justifies describing the objects of
+$\lawc$ as the algebraic theories that can be presented using at most
+$2^{<\kappa}$ operations whose arities are smaller than $\kappa$, as we
+did in Section~\ref{sec:small}.
+
+\begin{lemma}
+\label{lemma:smallness}
+  Up to isomorphism, there are at most $2^{2^{<\kappa}}$
+  $\kappa$-bounded Lawvere theories, and so $\lawc$ is a small
+  category.
+\end{lemma}
+\begin{proof}
+  Every $\kappa$-bounded Lawvere theory is isomorphic to one whose
+  objects are the products $X^{\lambda}$ for cardinals
+  $\lambda < \kappa$ and whose morphisms are drawn from a single fixed
+  set of cardinality $2^{<\kappa}$. Such a theory is determined by its
+  sets of objects and morphisms together with its source, target,
+  composition and product structure -- all functions between sets of
+  cardinality at most $2^{<\kappa}$ -- so there are at most
+  $2^{2^{<\kappa}}$ of them. Taking one
+  representative of each isomorphism class, and noting that the
+  morphisms of $\lawc$ between any two theories form a set, $\lawc$ is
+  a small category.
+\end{proof}
+
+\begin{lemma}
+\label{lemma:law-closure}
+  $\lawc$ contains the initial theory $\initial$ and is closed under
+  binary coproducts.
+\end{lemma}
+\begin{proof}
+  Morphisms out of a theory presented by some operations and equations
+  correspond to interpretations of those operations as terms of the
+  target theory that preserve the equations
+  (Section~\ref{sec:small}); in particular, for a theory $L$ in
+  $\lawc$, interpretations of the canonical presentation of
+  Lemma~\ref{lemma:presentations} in $M$ correspond to morphisms
+  $L \arr M$.
+
+  The theory presented by no operations and no equations has exactly
+  one interpretation in every theory -- there is nothing to interpret
+  -- and hence a unique morphism to every theory, so it is the initial
+  theory $\initial$. It is in $\lawc$ by
+  Lemma~\ref{lemma:term-count}. Its only terms are variables, so its
+  morphisms $X^S \arr X^{S^\prime}$ are the functions
+  $S^\prime \arr S$ and
+  $|\mathrm{Mor}(\initial)| = \sup_{\mu, \lambda < \kappa}
+  \mu^{\lambda} = 2^{<\kappa}$.
+
+  For coproducts, take the canonical presentations of $L$ and
+  $L^\prime$ and let $C$ be the theory presented by their union. An
+  interpretation of the union presentation in a theory $M$ is exactly
+  a pair of interpretations of the two presentations, so:
+  \begin{equation*}
+    \homset{\lawc}{C}{M} \cong
+    \homset{\lawc}{L}{M} \times \homset{\lawc}{L^\prime}{M}
+  \end{equation*}
+  naturally in $M$, with the projections given by composition with the
+  morphisms $L \arr C$ and $L^\prime \arr C$ induced by the inclusions
+  of the presentations. So $C$ is the coproduct $L + L^\prime$. The
+  union presentation uses at most $2^{<\kappa}$ operations, with
+  arities smaller than $\kappa$, so $L + L^\prime$ is in $\lawc$ by
+  Lemma~\ref{lemma:term-count}.
+\end{proof}
+
+\subsection{Generated types are coproducts of representables}
+\label{apdx:generated}
+
+The development in this appendix rests on one structural fact: every
+generated type denotes a coproduct of representable presheaves, indexed
+by a family of theories that can be read off from the syntax of the
+type. For each generated type $\taug$ we define an indexed family
+$\mathcal{G}(\taug)$ of $\kappa$-bounded Lawvere theories by recursion
+on $\taug$:
+\begin{align*}
+  \mathcal{G}(1) &= \{ \initial \} \\
+  \mathcal{G}(\yoneda{\Sigma}) &= \{ \sem{\Sigma} \} \\
+  \mathcal{G}(\glob \taub) &= \{ \initial \}_{s \in \sem{\taub}(\initial)} \\
+  \mathcal{G}({\taug}_1 + {\taug}_2) &= \mathcal{G}({\taug}_1) \uplus \mathcal{G}({\taug}_2) \\
+  \mathcal{G}({\taug}_1 \times {\taug}_2) &=
+    \{ A_1 + A_2 \}_{A_1 \in \mathcal{G}({\taug}_1),\, A_2 \in \mathcal{G}({\taug}_2)}
+\end{align*}
+where the coproducts $A_1 + A_2$ are taken in $\lawc$.
+
+\begin{lemma}
+\label{lemma:generated}
+  For every generated type $\taug$:
+  \begin{equation*}
+    \sem{\taug} \cong \coprod_{A \in \mathcal{G}(\taug)} \yoneda{A}
+  \end{equation*}
+\end{lemma}
+\begin{proof}
+  By induction on $\taug$, using that coproducts in $\pshlawcop$ are
+  computed pointwise.
+  \begin{itemize}
+  \item $\sem{1} = 1 \cong \yoneda{\initial}$: since $\initial$ is
+    initial in $\lawc$, $\homset{\lawc}{\initial}{L}$ is a singleton
+    for every $L$.
+  \item $\sem{\yoneda{\Sigma}} = \yoneda{\sem{\Sigma}}$ by definition
+    (Section~\ref{sec:reflection}).
+  \item $\sem{\glob \taub}$ is the constant presheaf at the set
+    $\sem{\taub}(\initial)$ (Section~\ref{sec:global}), and a constant
+    presheaf at a set $S$ is
+    $\coprod_{s \in S} 1 \cong \coprod_{s \in S} \yoneda{\initial}$.
+  \item For sums, a coproduct of coproducts is a coproduct: the index
+    families concatenate and the representables are unchanged. (A
+    coproduct $\yoneda{A_1} + \yoneda{A_2}$ is of course not itself
+    representable; nothing here requires it to be.)
+  \item For products, $\pshlawcop$ is a topos, so products distribute
+    over coproducts, and
+    $\yoneda{A_1} \times \yoneda{A_2} \cong \yoneda{A_1 + A_2}$ since
+    the Yoneda embedding maps coproducts in $\lawc$ to products of
+    presheaves (Section~\ref{sec:reflection}). Hence:
+    \begin{equation*}
+      \Big(\coprod_{A_1 \in \mathcal{G}({\taug}_1)} \yoneda{A_1}\Big)
+      \times
+      \Big(\coprod_{A_2 \in \mathcal{G}({\taug}_2)} \yoneda{A_2}\Big)
+      \cong
+      \coprod_{A_1,\, A_2} \yoneda{A_1 + A_2}
+    \end{equation*}
+  \end{itemize}
+\end{proof}
+The product clause is the only one that forms coproducts of theories,
+and it only forms binary ones, which remain in $\lawc$ by
+Lemma~\ref{lemma:law-closure}. Being a coproduct of representables is a
+stronger condition than the related notions of $\lambda$-generated and
+$\lambda$-presentable object~\cite{adamek1994locally}: coproducts of
+representables are presented without any relations, which is why the
+next lemma gives an isomorphism rather than a bound.
+
+\begin{lemma}
+\label{lemma:evaluation}
+  If $F \cong \coprod_{i \in I} \yoneda{A_i}$ then, for every $G$ in
+  $\pshlawcop$:
+  \begin{equation*}
+    \homset{\pshlawcop}{F}{G} \cong \prod_{i \in I} G(A_i)
+  \end{equation*}
+\end{lemma}
+\begin{proof}
+  $\homset{\pshlawcop}{\_}{G}$ maps colimits to limits, and
+  $\homset{\pshlawcop}{\yoneda{A}}{G} \cong G(A)$ by the Yoneda lemma.
+\end{proof}
+
+Since Lemma~\ref{lemma:evaluation} is an isomorphism, not merely a
+bound, the cardinality computations below are exact wherever their
+inputs are.
+
+\subsection{Inductive types are bounded}
+
+\begin{lemma}
+\label{lemma:w-size}
+  Let $\Sigma$ be a predicative signature, $\taub$ a bounded type and
+  $L$ a theory in $\lawc$. Then
+  $\ind{\sem{\Sigma}}(\sem{\taub})(L)$ is an initial algebra of the
+  $\setc$ endofunctor
+  $H_L(S) = \sem{\taub}(\initial) + F_{\sem{\Sigma}}(T_L(S))$, and so
+  its cardinality is determined by $L$, $\sem{\Sigma}$ and
+  $|\sem{\taub}(\initial)|$, independently of $\kappa$.
+\end{lemma}
+\begin{proof}
+  Write $H(P) = (\glob \sem{\taub}) + F_{\sem{\Sigma}}(\mon P)$, with
+  $F_{\sem{\Sigma}}$ applied pointwise, so that
+  $\ind{\sem{\Sigma}}(\sem{\taub}) = \mu X. H(X)$
+  (Section~\ref{sec:reification}). Writing $ev_L$ for the functor
+  evaluating a presheaf at $L$:
+  \begin{equation*}
+    H(P)(L) = \sem{\taub}(\initial) + F_{\sem{\Sigma}}(T_L(P(L)))
+            = H_L(P(L))
+  \end{equation*}
+  naturally in $P$, so $ev_L \circ H = H_L \circ ev_L$ and $ev_L$ maps
+  $H$-algebras to $H_L$-algebras. Since colimits in $\pshlawcop$ are
+  computed pointwise, $ev_L$ preserves colimits and so has a right
+  adjoint. This adjunction lifts to an adjunction between the
+  categories of $H$-algebras and of $H_L$-algebras, and left adjoints
+  preserve initial objects, so $(\mu X. H(X))(L)$ is an initial algebra
+  of $H_L$. Initial algebras are unique up to isomorphism, and $H_L$ is
+  built from the set $\sem{\taub}(\initial)$, the operations of
+  $\sem{\Sigma}$ and the monad $T_L$, none of which depend on $\kappa$.
+\end{proof}
+
+\subsection{Bounded types have $\kappa$-independent cardinality}
+
+\begin{lemma}
+\label{lemma:bounded-size}
+  By mutual induction on the syntax of types and signatures:
+  \begin{enumerate}
+  \item For every predicative signature $\Sigma$, the parameter and
+    arity sets $\sem{{\taub}_{p_i}}(\initial)$ and
+    $\sem{{\taub}_{a_i}}(\initial)$ of the operations of $\sem{\Sigma}$
+    are determined by the syntax of $\Sigma$, independently of
+    $\kappa$.
+  \item For every generated type $\taug$, the index family
+    $\mathcal{G}(\taug)$ is determined by the syntax of $\taug$,
+    independently of $\kappa$; moreover every member of
+    $\mathcal{G}(\taug)$ is either $\initial$ or $\sem{\Sigma^\prime}$
+    for a signature $\Sigma^\prime$ built as a sum of signatures
+    occurring in $\taug$.
+  \item For every bounded type $\taub$ and theory $L$ in $\lawc$, the
+    cardinality $|\sem{\taub}(L)|$ is determined by $L$ and the syntax
+    of $\taub$, independently of $\kappa$.
+  \end{enumerate}
+\end{lemma}
+\begin{proof}
+  Claim 1 is claim 3 applied at $\initial$ to the types ${\taub}_{p_i}$
+  and ${\taub}_{a_i}$ of the operations of $\Sigma$, which are
+  structurally smaller than $\Sigma$.
+
+  For claim 2, the members of $\mathcal{G}(\taug)$ are $\initial$, the
+  theories $\sem{\Sigma^\prime}$ for signatures $\Sigma^\prime$
+  occurring in $\taug$, and -- from the product clause alone -- binary
+  coproducts in $\lawc$ of such members. These coproducts stay within
+  the class: $\initial$ is initial, so $\initial + A \cong A$, and
+  $\sem{\Sigma_1} + \sem{\Sigma_2} \cong \sem{\Sigma_1 + \Sigma_2}$,
+  since coproducts of theories union their operations
+  (Section~\ref{sec:small}) and signatures are closed under sums
+  (Section~\ref{sec:signatures}). The size of the index family is $1$
+  for $1$ and $\yoneda{\Sigma}$; it is $|\sem{\taub}(\initial)|$ for
+  $\glob \taub$, which is determined by claim 3; and it adds over sums
+  and multiplies over products.
+
+  For claim 3 we consider each clause of the grammar of bounded
+  types. The unit, product and sum clauses are the pointwise
+  constructions of Section~\ref{sec:presheaves}, so their
+  cardinalities are determined by those of their subterms at $L$. The
+  $\glob$ clause has $|\sem{\glob \taub}(L)| = |\sem{\taub}(\initial)|$
+  (Section~\ref{sec:global}), determined by the induction hypothesis at
+  $\initial$. For $\yoneda{\Sigma}$, the theory $\sem{\Sigma}$ is free
+  on the operations of $\Sigma$, so a morphism $\sem{\Sigma} \arr L$ is
+  precisely an independent choice, for each operation
+  $op \types {\taub}_{p} \rightarrowtail {\taub}_{a}$ of $\Sigma$ and
+  each element of $\sem{{\taub}_{p}}(\initial)$, of a term of $L$ of
+  arity $\sem{{\taub}_{a}}(\initial)$ (Section~\ref{sec:small}). Hence:
+  \begin{equation*}
+    |\yoneda{\sem{\Sigma}}(L)|
+    = \prod_{op_i \in \Sigma}
+      |T_L(\sem{{\taub}_{a_i}}(\initial))|^{|\sem{{\taub}_{p_i}}(\initial)|}
+  \end{equation*}
+  where the parameter and arity sets are determined by claim 1, and
+  $|T_L(S)|$ is determined by $L$ and $|S|$. The clause for inductive
+  types is Lemma~\ref{lemma:w-size}.
+
+  For function types, exponentials of presheaves satisfy
+  $\arrow{P}{Q}(L) \cong \homset{\pshlawcop}{\yoneda{L} \times P}{Q}$
+  (Section~\ref{sec:reification}). By Lemma~\ref{lemma:generated} and
+  the product clause of its proof:
+  \begin{equation*}
+    \yoneda{L} \times \sem{\taug}
+    \cong \coprod_{A \in \mathcal{G}(\taug)} \yoneda{L + A}
+  \end{equation*}
+  so by Lemma~\ref{lemma:evaluation}:
+  \begin{equation*}
+    \sem{\taug \arr \taub}(L)
+    \cong \prod_{A \in \mathcal{G}(\taug)} \mon(\sem{\taub})(L + A)
+  \end{equation*}
+  The quantification over all of $\lawc$ has become a product over
+  $\mathcal{G}(\taug)$, which claim 2 determines from the syntax; each
+  factor is $T_{(L + A)}(\sem{\taub}(L + A))$, determined by the theory
+  $L + A$ and, by the induction hypothesis, by the syntax of $\taub$.
+\end{proof}
+
+\begin{corollary}
+\label{corollary:predicative-bound}
+  For a predicative signature $\Sigma$ with operations
+  $op_i \types {\taub}_{p_i} \rightarrowtail {\taub}_{a_i}$, define:
+  \begin{equation*}
+    \card{\Sigma} = \max_{op_i \in \Sigma}
+      \max\big(|\sem{{\taub}_{p_i}}(\initial)|,\,
+               |\sem{{\taub}_{a_i}}(\initial)|\big)
+  \end{equation*}
+  a cardinal determined by the syntax of $\Sigma$ and independent of
+  $\kappa$. Then $\sem{\Sigma}$ is an object of $\lawc$ for every
+  regular $\kappa$ with $\card{\Sigma} < \kappa$.
+\end{corollary}
+\begin{proof}
+  Claim 1 of Lemma~\ref{lemma:bounded-size} shows that $\card{\Sigma}$
+  is well-defined and independent of $\kappa$. For regular $\kappa$
+  with $\card{\Sigma} < \kappa$, the arities of the operations of
+  $\sem{\Sigma}$ are smaller than $\kappa$. The number of operations of
+  $\sem{\Sigma}$ is $\sum_{op_i \in \Sigma}
+  |\sem{{\taub}_{p_i}}(\initial)|$ -- a finite sum of cardinals no
+  greater than $\card{\Sigma}$, so certainly at most $2^{<\kappa}$ -- and
+  $\sem{\Sigma}$ has no equations, so $\sem{\Sigma}$ is in $\lawc$ by
+  Lemma~\ref{lemma:term-count}.
+\end{proof}
+
+Since $\card{\Sigma}$ does not mention $\kappa$ and successor cardinals
+are regular, $\kappa = \card{\Sigma}^{+}$ always suffices; no
+large-cardinal assumptions are required. A given program mentions only
+finitely many signatures, so taking $\kappa$ greater than the maximum
+of their bounds justifies deferring the choice of $\kappa$ as we did in
+Section~\ref{sec:small}.
+
+\section{Soundness and adequacy}
 \label{apdx:denotational}
 
 In this section we prove that the denotational semantics is sound and
