@@ -301,7 +301,8 @@ Effect handlers have a couple of key benefits compared to using an explicit mona
 \item They allow writing code in ``direct style'' -- i.e. using ordinary
   functions and native arrow types. In particular, higher-order
   functions can automatically support effectful functions.
-\item Multiple effect handlers compose with each other automatically in an
+\item
+  Multiple effect handlers compose with each other automatically in an
   easy-to-understand manner.
 \end{itemize}
 
@@ -559,9 +560,7 @@ returns, so local values cannot be returned from functions.
   let leak_local x =
     let (o @ local) = Some x in
     o
-  (*@ \textcolor{red}{Error: o} @*)
-         (*@ \textcolor{red}{\textasciicircum} @*)
-  (*@ \textcolor{red}{This value escapes its region.} @*)
+  (*@ \textcolor{red}{Error: This value escapes its region.} @*)
 \end{lstlisting}
 This tight alignment between regions and function bodies can be
 inconvenient, so there is an \lstinline[style=oxcaml]{exclave} construct
@@ -661,7 +660,6 @@ OCaml one in the opening section:
         | Get : int t
         | Set : int -> unit t
     end
-
     module State_eff = Reflection(State)
 
     let handle_state (i : int) (f : Handler(State).t @ local -> 'a) : 'a =
@@ -1114,9 +1112,7 @@ which has this admissible typing rule:
 
 We also provide projections $\outl$ and $\outr$ that decompose an effect
 capability for $\Sigma_1 + \Sigma_2$ into effect capabilities for
-$\Sigma_1$ and $\Sigma_2$ respectively. This is actually crucial to
-obtain the full expressivity of effect handlers (see
-Section~\ref{sec:forwarding}).
+$\Sigma_1$ and $\Sigma_2$ respectively.
 
 \subsection{Operational semantics}
 \label{sec:operational}
@@ -1631,23 +1627,13 @@ representable presheaves -- then instead of $L^\prime$ ranging over all
 Lawvere theories in $\lawc$ it only needs to range over a specific set
 of fewer than $\kappa$ Lawvere theories determined by $\sem{\tau_1}$.
 
-For example, using the fact that $1 \cong \yoneda{\initial}$ and the
-isomorphism
-$\arrow{\yoneda{L^\prime}}{Q}(L) \cong Q(L + L^\prime)$, which we will
-derive in Section~\ref{sec:reification},
-\begin{align*}
-\sem{(\yoneda{\Sigma} + 1) \arr \tau}(L)
-  &= \arrow{\yoneda{\sem{\Sigma}} + 1}{\mon(\sem{\tau})}(L) \\
-  &\cong (\arrow{\yoneda{\sem{\Sigma}}}{\mon(\sem{\tau})})(L)
-    \times (\arrow{\yoneda{\initial}}{\mon(\sem{\tau})})(L) \\
-  &\cong \mon(\sem{\tau})(L + \sem{\Sigma})
-    \times \mon(\sem{\tau})(L) \\
-  &= T_{(L + \sem{\Sigma})}(\sem{\tau}(L + \sem{\Sigma}))
-    \times T_L(\sem{\tau}(L))
-\end{align*}
-so the semantics of the type $(\yoneda{\Sigma} + 1) \arr \tau$ at $L$
-depends only on $T_{(L + \sem{\Sigma})}$ and $T_L$ rather than on
-all $T_{L^\prime}$.
+For example,
+$\sem{(\yoneda{\Sigma} + 1) \arr \tau}(L) \cong T_{(L +
+  \sem{\Sigma})}(\sem{\tau}(L + \sem{\Sigma})) \times
+T_L(\sem{\tau}(L))$ so the semantics of the type
+$(\yoneda{\Sigma} + 1) \arr \tau$ at $L$ depends only on
+$T_{(L + \sem{\Sigma})}$ and $T_L$ rather than on all possible
+$T_{L^\prime}$.
 
 We can define a syntactic restriction that ensures a type's semantics
 are $\kappa$-generated. We call these \emph{generated types}. We can
@@ -1697,8 +1683,8 @@ $\card{\Sigma}$ that is determined by the syntax of $\Sigma$,
 independently of $\kappa$. Thus $\sem{\Sigma}$ is an object of $\lawc$
 for any regular $\kappa$ with $\card{\Sigma} < \kappa$, and since
 successor cardinals are regular a sufficiently large $\kappa$ always
-exists; no large-cardinal assumptions are required. When working with the model we
-will assume all signatures are predicative.
+exists. When working with the model we will assume all signatures are
+predicative.
 
 \subsection{Reflecting operations: The Yoneda embedding}
 \label{sec:reflection}
@@ -1821,12 +1807,10 @@ We use these initial algebras as the semantics of $\ind{\Sigma}$:
 \sem{\ind{\Sigma}(\tau)} = \ind{\sem{\Sigma}}(\sem{\tau})
 \end{mathpar}
 
-Exponentials in categories of presheaves are defined such that:
-\begin{equation*}
-\arrow{P}{Q}(\catobj) \cong \homset{\psh}{\yoneda{\catobj} \times P}{Q}
-\end{equation*}
-Applying this to $\arrow{\yoneda{L}}{\mon(\glob P)}$ and then applying
-the Yoneda Lemma we get:
+Exponentials in categories of presheaves are defined such that
+$\arrow{P}{Q}(\catobj) \cong \homset{\psh}{\yoneda{\catobj} \times
+  P}{Q}$.  Applying this to $\arrow{\yoneda{L}}{\mon(\glob P)}$ and then
+applying the Yoneda Lemma we get:
 \begin{align*}
 \arrow{\yoneda{L}}{\mon(\glob P)}(L^{\prime})
   &\cong \homset{\pshlawcop}{\yoneda{L^{\prime}} \times \yoneda{L}}{\mon(\glob P)} \\
@@ -1890,20 +1874,13 @@ section we describe this API and its implementation.
 \begin{figure}
 \begin{lstlisting}[style=oxcaml]
   module type Sig = sig type 'a t end
-
-  module Continuation(E : Sig) : sig
-    type ('a, 'b) t
-  end
-
+  module Continuation(E : Sig) : sig type ('a, 'b) t end
   module Term (E : Sig) : sig
     type 'a t =
       | Return : 'a @@ global -> 'a t
       | Perform : 'r E.t @@ global * ('r, 'a) Continuation(E).t -> 'a t
   end
-
-  module Handler(E : Sig) : sig
-    type t
-  end
+  module Handler(E : Sig) : sig type t end
 \end{lstlisting}
 \caption{Effect reflection types}
 \label{fig:ox-types}
@@ -1984,10 +1961,8 @@ and \lstinline[style=oxcaml]{Select} functors shown in Fig.~\ref{fig:ox-selectio
       | Left : 'a L.t -> 'a t
       | Right : 'a R.t -> 'a t
   end
-
   module Select(L : Sig) (R : Sig) : sig
     val outl : Handler(Sum(L)(R)).t @ local -> Handler(L).t @ local
-
     val outr : Handler(Sum(L)(R)).t @ local -> Handler(R).t @ local
   end
 \end{lstlisting}
@@ -2008,16 +1983,11 @@ during reflection. Performing effects involves a single indirect call
 and then an underlying perform operation, so its performance is
 essentially the same as the performance of OCaml's algebraic effects.
 
-For various practical reasons, OCaml's algebraic effects are restricted
-to only allow continuations to be resumed a single time. This rules out
-interesting effects like backtracking search, but improves the ability
-to reason about the interaction of effects and resources.
-
-There is no fundamental reason that effect reflection should be
-restricted to only one-shot continuations, so for the purposes of this
-paper we ignore the restriction. However, for the same reasons as
-OCaml, our actual implementation is restricted to one-shot
-continuations. Note that OxCaml's \lstinline[style=oxcaml]{once}
+For various practical reasons, OCaml's algebraic effects only allow
+continuations to be resumed a single time. There is no fundamental
+reason for effect reflection to be so restricted, and we ignore the
+restriction in this paper, but our actual implementation inherits it
+from OCaml. Note that OxCaml's \lstinline[style=oxcaml]{once}
 mode~\cite{lorenzen2024oxidizing} allows us to enforce this restriction
 statically.
 
@@ -2128,7 +2098,8 @@ these we can write our desired handler for the
   let handle_gen_in_await f ah =
     let rec loop ah : unit Term(Sum(Await)(Gen)).t -> aints = function
       | Return () -> Finished
-      | Perform(Left op, k) -> loop ah (Eff.continue_global k (Await_eff.perform op ah))
+      | Perform(Left op, k) ->
+          loop ah (Eff.continue_global k (Await_eff.perform op ah))
       | Perform(Right(Gen i), k) ->
           More(i, fun ah -> loop ah (Eff.continue_global k ()))
     in
@@ -2139,21 +2110,21 @@ these we can write our desired handler for the
 \end{figure}
 
 Explicit effect forwarding is required by all systems based on effect
-capabilities. Examples like this one fundamentally require that
-performing an \lstinline[style=oxcaml]{Await} operation does work
-proportional to the number of handlers it is forwarded through. Effect
-capabilities only ever do a constant amount of work to perform
-operations and so cannot handle such examples directly. Traditional
-effect handlers, on the other hand, always do work proportional to the
-number of nested handlers, allowing them to support such examples
-directly but paying a higher cost for the cases that do not need
-forwarding.
+capabilities. This example requires that performing an
+\lstinline[style=oxcaml]{Await} operation does work proportional to the
+number of handlers it is forwarded through. Effect capabilities only
+ever do a constant amount of work to perform operations and so cannot
+handle such examples directly. Traditional effect handlers, on the other
+hand, always do work proportional to the number of nested handlers,
+allowing them to support such examples directly but paying a higher cost
+for the cases that do not need forwarding.
 
 \section{Related work}
 \label{sec:related-work}
 
 \subsection{Lightweight effect polymorphism}
 
+\looseness=-1
 There have been a number of efforts to avoid the complexity of effect
 polymorphism by treating effect annotations as relevant to some ambient
 effect. Frank~\cite{convent2020doo} proposed that higher-order functions
@@ -2201,9 +2172,7 @@ they use higher-rank polymorphism to emulate locality tracking in much
 the same way as the \lstinline[style=haskell]{ST} monad in Haskell. This
 still requires using an effect system to track which named effects are
 used by a computation. Using higher-rank polymorphism prevents global
-type inference, requiring complex inference that extends beyond classic
-Hindley-Milner, and demanding a higher annotation burden on the
-programmer.
+type inference and demands a higher annotation burden on the programmer.
 
 \subsection{Monadic reflection}
 
@@ -2225,6 +2194,7 @@ Hyland et al.~\cite{hyland2006combining} investigate combining algebraic
 effects, including the key property of sums of algebraic theories (our
 Lemma \ref{lemma:sums}) on which handlers are based.
 
+\looseness=-1
 The original work on algebraic effect
 handlers~\cite{plotkin2009handlers,plotkin2013handling} gives a
 semantics in terms of free algebras but the semantics works with a fixed
@@ -2232,11 +2202,9 @@ countable algebraic theory: handlers do not actually change the ambient
 monad. Our Ambient Monad model naturally accommodates changing the
 ambient monad.
 
-Bauer and Pretnar~\cite{bauer2015programming} give a denotational
-semantics for Eff but it is untyped. The same
-authors~\cite{bauer2014effect} also give a second denotational
-semantics for Eff that is typed, but where effects are treated as
-extrinsic to the semantics.
+Bauer and Pretnar give an untyped denotational semantics for
+Eff~\cite{bauer2015programming}, and a typed one in which effects are
+treated as extrinsic to the semantics~\cite{bauer2014effect}.
 
 Forster et al.~\cite{forster2017expressive} give a set-theoretic
 denotational semantics of a calculus with algebraic effect handlers. It
@@ -2245,7 +2213,7 @@ their calculus supports neither nesting effect handlers nor effect
 polymorphism, which means the handlers described are not modular or
 composable.
 
-\subsection{Comonadic purity}
+\subsection{Comonadic purity, locality and presheaves}
 
 Our use of a comonadic global modality to track values which do not
 depend on the ambient monad is essentially the same as the purity
@@ -2254,8 +2222,6 @@ Krishnaswami~\cite{choudhury2020recovering}. Their semantic description
 of their comonad is very different -- based on a semantics of
 capabilities -- but the typing rules, and the practical result, are the
 same.
-
-\subsection{Locality and presheaves}
 
 The Ambient Monad model is closely related to presheaf semantics for
 higher-order abstract syntax~\cite{hu2022category}. In both cases
@@ -2266,10 +2232,9 @@ this context and the global modality used to control dependence on it.
 \section{Future work}
 \label{sec:future-work}
 
-There are a number of interesting avenues for future work.
-
 \paragraph{Reification with equations}
 
+\looseness=-1
 In this paper we only support reifying effect signatures with no
 equations as W-types. It should be possible to extend this to reifying
 arbitrary effect theories as QW-types~\cite{fiore2020constructing}. This
@@ -2279,33 +2244,17 @@ e.g. Observational Type Theory~\cite{altenkirch2007observational,
 dependent types. It would also require using something more general than
 Lemma~\ref{lemma:sums} for representing the sum of two algebraic theories.
 
-\paragraph{Reference types as effect capabilities}
-
-In this paper we require that the arities of operations be global. That
-restriction could be lifted to allow local values to be returned by
-operations. That would be sufficient to represent references as an
-effect: the allocation operation would insert a new state effect handler
-and return its effect capability as the reference. Such references would
-be restricted to global values, and in particular could not hold other
-references.
-
 \paragraph{Separation and commuting effects}
 In addition to having a sum, $\kappa$-bounded Lawvere theories $L$ and
 $L^\prime$ also have a tensor product
-$L \otimes L^\prime$~\cite{hyland2006combining}. Like the sum, this has
-the operations and equations of both $L$ and $L^\prime$, but unlike the
-sum it also includes additional equations that ensure that every
-operation of $L$ commutes with every operation of $L^\prime$. This
-tensor product gives us a symmetric monoidal structure on $\lawc$.
-Presheaves over the opposite of a symmetric monoidal category are the
-standard categorical semantics of the logic of Bunched
-Implications~\cite{o1999logic}, which is the basis of the assertion
-language in Separation Logic. This means we can use the Ambient Monad
-model as a model of languages that have a notion of
+$L \otimes L^\prime$~\cite{hyland2006combining}, which gives a symmetric
+monoidal structure on $\lawc$.  Presheaves over the opposite of a
+symmetric monoidal category are the standard categorical semantics of
+the logic of Bunched Implications~\cite{o1999logic}, which is the basis
+of the assertion language in Separation Logic. We could thus use the
+Ambient Monad model as a model of languages that have a notion of
 separation. Operations on two separated effect capabilities would be
-known to commute. For the effect capabilities corresponding to reference
-types, described above, this notion of separation coincides with the
-usual notion of separation for references.
+known to commute.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
