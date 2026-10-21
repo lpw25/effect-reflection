@@ -183,7 +183,7 @@
 \newcommand{\parareducestoc}{\mathrel{\parareducestoname_{C}}}
 \newcommand{\snv}{SN_V}
 \newcommand{\snc}{SN_C}
-\newcommand{\clocs}[1]{\mathrm{locs}(#1)}
+\newcommand{\clocs}[1]{#1/{\scriptstyle \locs}}
 \newcommand{\fv}[1]{\mathrm{FV}(#1)}
 \newcommand{\bound}[1]{\nu(#1)}
 \newcommand{\redname}{RED}
@@ -194,7 +194,12 @@
 \newcommand{\redc}[2]{\redcname{({#1},{#2})}}
 \newcommand{\redca}[3]{\redcname{({#1},{#2},{#3})}}
 \newcommand{\redsname}{\redname_{S}}
-\newcommand{\reds}[1]{\redsname{({#1})}}
+\newcommand{\reds}[2]{\redsname{({#1},{#2})}}
+\newcommand{\redyname}{\redname_{\yonedaname}}
+\newcommand{\redy}[2]{\redyname{({#1},{#2})}}
+\newcommand{\redya}[3]{\redyname{({#1},{#2},{#3})}}
+\newcommand{\redsigname}{\redname_{E}}
+\newcommand{\redsig}[1]{\redsigname{(#1)}}
 \newcommand{\mif}{\mathop{\mathrm{if}}}
 \newcommand{\mthen}{\mathop{\mathrm{then}}}
 \newcommand{\melse}{\mathop{\mathrm{else}}}
@@ -2796,16 +2801,44 @@ property:
 
 We prove strong normalization in the standard way for a simply typed
 calculus via logical relations. In addition to being indexed by types
-these relations will be parameterized by an \emph{effect context}: a
-context restricted to bindings of the form $\loc \types \Sigma$.
+these relations will be parameterized by an \emph{effect context},
+which records the locations on which a term may perform operations.
 
+Rather than recording the syntactic signature of each location, an
+effect context records a \emph{semantic signature}: a function $S$
+from a finite set of operation names to pairs $(P, A)$ of sets of
+values, where each $P$ is a set of strongly normalizing values that is
+closed under reduction, each $A$ is a non-empty set of values, and
+both $P$ and $A$ are closed under permutations of locations. We write
+$op \types P \rightarrowtail A \in S$ when $op$ is in the domain of $S$
+and $S(op) = (P, A)$. The set $P$ plays the role of the parameter type
+of the operation and $A$ plays the role of its arity: $P$ contains the
+values that may be passed to the operation and $A$ contains the values
+that may be passed to its continuation. Closure under permutations
+ensures that these sets do not depend on the names of particular
+locations, which is what allows us to treat the locations bound by
+reification as fresh with respect to the effect context, in the same
+way that we treat bound variables as fresh. Operation names are closed
+under the tags $\mathrm{left}$ and $\mathrm{right}$, and the sum
+$S_1 + S_2$ of two semantic signatures is the semantic signature with
+$(S_1 + S_2)(\mathrm{left}(op)) = S_1(op)$ for $op$ in the domain of
+$S_1$ and $(S_1 + S_2)(\mathrm{right}(op)) = S_2(op)$ for $op$ in the
+domain of $S_2$.
 \begin{equation*}
-  \mathrm{effect\ contexts}, \Delta ::=\; \cempty \mid \lbind{\Delta}{\loc}{\Sigma}
+  \mathrm{effect\ contexts}, \Delta ::=\; \cempty \mid \lbind{\Delta}{\loc}{S}
 \end{equation*}
+We write $\Delta \subseteq \Delta^{\prime}$ when every binding of
+$\Delta$ is also a binding of $\Delta^{\prime}$.
 
-We write $\clocs{\Gamma}$ for the effect context obtained by removing
-all the ordinary variable bindings from $\Gamma$ and keeping only the
-location bindings.
+Reducibility at function types will quantify over all extensions of
+the effect context, in the style of a Kripke logical relation, so that
+a reducible function remains reducible when new locations are
+introduced by reification. Using semantic rather than syntactic
+signatures keeps this definition well-founded: the parameter and arity
+types of the operations available in the extended contexts are not
+mentioned by the definition, only the sets of values that interpret
+them. This is the same device as the reducibility candidates used to
+handle the polymorphism of System F~\cite{girard1989proofs}.
 
 As in Girard~\cite{girard1989proofs}, we will use the fact that strongly normalizable
 terms must have a bound on the length of their possible reduction
@@ -2824,18 +2857,26 @@ any infinite branches. Thus, by K\H{o}nig's lemma, the whole tree is finite and
 there must be a $\bound{v}$ that bounds its height.
 \end{proof}
 
-We define a pair of mutually defined logical relations
-$\redva{\Delta}{\tau}{\alpha}$ and $\redca{\Delta}{\tau}{\alpha}$
-indexed by an effect context, a type and an ordinal. The ordinal
-controls the rank of the well-founded trees corresponding to inductive
-types and computations. The definitions are given in
+We define three mutually defined families of logical relations:
+$\redva{\Delta}{\tau}{\alpha}$ on values and
+$\redca{\Delta}{\tau}{\alpha}$ on computations, indexed by an effect
+context, a type and an ordinal, and $\redya{\Delta}{S}{\alpha}$ on
+values, indexed by an effect context, a semantic signature and an
+ordinal. The definitions are given in
 Fig.~\ref{fig:reducibility-predicates}.
 
-We write $\redv{\Delta}{\tau}$ for
-$\mathrm{lim}_{\alpha} \redva{\Delta}{\tau}{\alpha}$ and
-$\redc{\Delta}{\tau}$ for
-$\mathrm{lim}_{\alpha} \redca{\Delta}{\tau}{\alpha}$. These limits are
-well-defined because the predicates are monotonic in $\alpha$.
+The ordinal $\alpha$ controls the rank of the well-founded trees
+corresponding to inductive types and computations. It appears in these
+definitions only positively so the predicates are monotonic in
+$\alpha$. We write $\redv{\Delta}{\tau}$ for
+$\mathrm{lim}_{\alpha} \redva{\Delta}{\tau}{\alpha}$, and similarly
+$\redc{\Delta}{\tau}$ and $\redy{\Delta}{S}$. These limits are
+well-defined because the predicates are monotonic in $\alpha$: they are
+increasing unions of subsets of the set of terms, so no bound on the
+range of $\alpha$ is required. Monotonicity also means that any
+\emph{set} of reducible terms is contained in
+$\redva{\Delta}{\tau}{\alpha}$ for some $\alpha$, by taking $\alpha$ to
+be the supremum of the ordinals for its elements.
 
 \begin{figure}
 \begin{align*}
@@ -2847,33 +2888,35 @@ well-defined because the predicates are monotonic in $\alpha$.
        \{ \, v_1 \in \snv \; | \; \forall v_2. \; v_1 \reducestov \inl{v_2} \; \implies \; v_2 \in \redv{\Delta}{\tau_1} \\
          &\qquad \qquad \qquad \wedge \; \forall v_2. \; v_1 \reducestov \inr{v_2} \; \implies \; v_2 \in \redv{\Delta}{\tau_2} \, \} \\
     \redva{\Delta}{\tau_1 \arr \tau_2}{\alpha} \quad &= \quad
-      \{ \, v_1 \; | \; \forall v_2 \in \redv{\Delta}{\tau_1}. \; \app{v_1}{v_2} \in \redc{\Delta}{\tau_2} \, \} \\
+      \{ \, v_1 \; | \; \forall \Delta^{\prime} \supseteq \Delta. \;
+         \forall v_2 \in \redv{\Delta^{\prime}}{\tau_1}. \;
+         \app{v_1}{v_2} \in \redc{\Delta^{\prime}}{\tau_2} \, \} \\
     \redva{\Delta}{\glob \tau}{\alpha} \quad &= \quad
       \{ \, v_1 \in \snv \; | \; \forall v_2. \; v_1 \reducestov \gbox{v_2} \; \implies \; v_2 \in \redv{\cempty}{\tau} \, \} \\
-    \redva{\Delta}{\yoneda{\Sigma_1}}{\alpha} \quad &= \quad
-      \{ \, v_1 \in \snv \; | \;
-        \forall \loc. \; v_1 \reducestov \loc \; \implies \;
-          \loc \types \Sigma_1 \in \Delta \\
-        &\qquad \qquad \wedge \; \forall v_2. \; v_1 \reducestov \outl{v_2} \\
-        &\qquad \qquad \qquad \implies \;
-          \exists \Sigma_2. \; \exists \beta < \alpha. \quad
-          v_2 \in \redva{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}{\beta} \\
-        &\qquad \qquad \wedge \; \forall v_2. \; v_1 \reducestov \outr{v_2} \\
-        &\qquad \qquad \qquad \implies \;
-          \exists \Sigma_2. \; \exists \beta < \alpha. \quad
-          v_2 \in \redva{\Delta}{\yoneda{\Sigma_2 + \Sigma_1}}{\beta} \, \} \\
+    \redva{\Delta}{\yoneda{\Sigma}}{\alpha} \quad &= \quad
+      \redya{\Delta}{\redsig{\Sigma}}{\alpha} \\
     \redva{\Delta}{\ind{\Sigma}(\tau_1)}{\alpha} \quad &= \\
       \{ \, v_1 \in \snv \; &| \;
         (\forall v_2. \; v_1 \reducestov \ret{v_2}
           \; \implies \; v_2 \in \redv{\cempty}{\tau_1}) \\
         &\wedge \; (\forall op
-          \types \tau_2 \rightarrowtail \tau_3 \in \Sigma, v_3, v_4. \quad
+          \types P \rightarrowtail A \in \redsig{\Sigma}, v_3, v_4. \quad
           v_1 \reducestov \indintro{op}{v_3}{v_4} \\
-          &\quad \implies v_3 \in \redv{\cempty}{\tau_2} \\
-          &\qquad \quad \wedge \; (\forall v_5 \in \snv. \;
-                   (\forall v_6. \; v_5 \reducestov \gbox{v_6} \; \implies \; v_6 \in \redv{\cempty}{\tau_3}) \\
-                   &\qquad \qquad \implies \; \exists \beta < \alpha.
+          &\quad \implies v_3 \in P
+           \; \wedge \; (\forall v_5 \in A. \; \exists \beta < \alpha.
                      \quad \app{v_4}{v_5} \in \redca{\Delta}{\ind{\Sigma}(\tau_1)}{\beta})) \, \} \\
+    \redya{\Delta}{S_1}{\alpha} \quad &= \quad
+      \{ \, v_1 \in \snv \; | \;
+        \forall \loc. \; v_1 \reducestov \loc \; \implies \;
+          \loc \types S_1 \in \Delta \\
+        &\qquad \qquad \wedge \; \forall v_2. \; v_1 \reducestov \outl{v_2} \\
+        &\qquad \qquad \qquad \implies \;
+          \exists S_2. \; \exists \beta < \alpha. \quad
+          v_2 \in \redya{\Delta}{S_1 + S_2}{\beta} \\
+        &\qquad \qquad \wedge \; \forall v_2. \; v_1 \reducestov \outr{v_2} \\
+        &\qquad \qquad \qquad \implies \;
+          \exists S_2. \; \exists \beta < \alpha. \quad
+          v_2 \in \redya{\Delta}{S_2 + S_1}{\beta} \, \} \\
     \redca{\Delta}{\tau}{\alpha} \quad &= \\
       \{ \, c_1 \in \snc \; &| \;
         (\forall v_1. \; c_1 \reducestoc \return{v_1}
@@ -2881,51 +2924,93 @@ well-defined because the predicates are monotonic in $\alpha$.
         &\wedge \; (\forall \loc, op, v_2. \quad
             c_1 \reducestoc \perform{\loc}{op}{v_2} \\
             &\quad \implies \;
-            \exists \Sigma, \tau_2, \tau_3. \; \loc \types \Sigma \in \Delta
-                            \; \wedge \; op \types \tau_2 \rightarrowtail \tau_3 \in \Sigma
-                            \; \wedge \; v_2 \in \redv{\cempty}{\tau_2}) \\
+            \exists S, P, A. \; \loc \types S \in \Delta
+                            \; \wedge \; op \types P \rightarrowtail A \in S
+                            \; \wedge \; v_2 \in P
+                            \; \wedge \; A \subseteq \redva{\Delta}{\tau}{\alpha}) \\
         &\wedge \; (\forall \loc, op, v_3, c_2. \quad
            c_1 \reducestoc \letv{x}{\perform{\loc}{op}{v_3}}{c_2} \\
             &\quad \implies \;
-            \exists \Sigma, \tau_4, \tau_5. \; \loc \types \Sigma \in \Delta
-                            \; \wedge \; op \types \tau_4 \rightarrowtail \tau_5 \in \Sigma
-                            \; \wedge \; v_3 \in \redv{\cempty}{\tau_4} \\
-                            &\qquad \quad \wedge \; (\forall v_4 \in \snv. \;
-                              (\forall v_5. \; v_4 \reducestov \gbox{v_5} \; \implies \; v_5 \in \redv{\cempty}{\tau_5}) \\
-                              &\qquad \qquad \implies \; \exists \beta < \alpha.
+            \exists S, P, A. \; \loc \types S \in \Delta
+                            \; \wedge \; op \types P \rightarrowtail A \in S
+                            \; \wedge \; v_3 \in P \\
+                            &\qquad \quad \wedge \; (\forall v_4 \in A. \; \exists \beta < \alpha.
                                  \quad \sbst{c_2}{x}{v_4} \in \redca{\Delta}{\tau}{\beta})) \, \}
 \end{align*}
 \caption{Reducibility predicates}
 \label{fig:reducibility-predicates}
 \end{figure}
 
+The definition make use of the interpretation $\redsig{\Sigma}$ of a
+syntactic signature as a semantic signature, which interprets the
+parameter and arity types of each operation using the reducibility
+predicates in the empty effect context. Its domain is the set of
+operations of $\Sigma$, and for each
+$op \types \tau_p \rightarrowtail \tau_a \in \Sigma$:
+\begin{equation*}
+  \redsig{\Sigma}(op) = (\redv{\cempty}{\tau_p}, \redv{\cempty}{\glob \tau_a})
+\end{equation*}
+The arities are interpreted at global types because the continuation
+of an operation receives a global value. Since the operations of a
+sum $\Sigma_1 + \Sigma_2$ of syntactic signatures are the tagged
+operations of $\Sigma_1$ and $\Sigma_2$, we have
+$\redsig{\Sigma_1 + \Sigma_2} = \redsig{\Sigma_1} + \redsig{\Sigma_2}$.
+
+These definitions are well-founded. The predicates
+$\redya{\Delta}{S}{\alpha}$ are defined for all effect contexts and
+semantic signatures simultaneously by transfinite induction on
+$\alpha$, as they only refer to themselves at smaller ordinals. The
+predicates $\redva{\Delta}{\tau}{\alpha}$ and
+$\redca{\Delta}{\tau}{\alpha}$ are defined for all effect contexts
+simultaneously by induction on the structure of $\tau$, and for a
+fixed $\tau$ by transfinite induction on $\alpha$, with
+$\redca{\Delta}{\tau}{\alpha}$ defined after
+$\redva{\Delta}{\tau}{\alpha}$. Apart from
+$\redya{\Delta}{S}{\alpha}$, the only predicates mentioned by the
+cases for $\tau$ are those at types that are strictly smaller than
+$\tau$ -- including the parameter and arity types of the operations of
+$\Sigma$ in the cases for $\yoneda{\Sigma}$ and $\ind{\Sigma}(\tau_1)$
+-- and those at $\tau$ itself at ordinals no larger than $\alpha$. In
+particular, the semantic signatures bound in the effect context
+contribute only sets of values to the definition, so quantifying over
+all extensions $\Delta^{\prime} \supseteq \Delta$ in the case for
+function types does not introduce any circularity.
+
+Note that reducibility at global types does not depend on either the
+effect context or the ordinal: $\redva{\Delta}{\glob \tau}{\alpha} =
+\redv{\cempty}{\glob \tau}$. In particular, the arity sets of
+$\redsig{\Sigma}$ are $\redv{\Delta}{\glob \tau_a}$ for any $\Delta$.
+
 \subsection{Properties of reducibility}
 
 We prove the three properties of reducibility referred to as CR1, CR2 and
-CR3 in Girard~\cite{girard1989proofs}.
+CR3 in Girard~\cite{girard1989proofs}, by a simultaneous induction on
+the structure of types.
 
 Reducible values and computations are strongly normalizing (CR1):
 \begin{lemma}
 \label{lemma:red-implies-sn}
 \begin{align*}
   &\redv{\Delta}{\tau} \subseteq \snv \\
-  &\redc{\Delta}{\tau} \subseteq \snc
+  &\redc{\Delta}{\tau} \subseteq \snc \\
+  &\redy{\Delta}{S} \subseteq \snv
 \end{align*}
 \end{lemma}
 \begin{proof}
 We prove this by induction on $\tau$. Most of the cases follow directly
-by the definitions of $\redvname$ and $\redcname$. The exceptions are
+by the definitions of $\redvname$, $\redcname$ and $\redyname$. The exceptions are
 pair and function types.
 \begin{description}
 \item[$\tau_1 \times \tau_2$:] We have $\fst{v} \in \snv$ and
   $\snd{v} \in \snv$ and must show that $v \in \snv$. This holds because
   if there was an infinite chain of reductions for $v$ then there would
   be an infinite chain of reductions for $\fst{v}$ by congruence.
-\item[$\tau_1 \arr \tau_2$:] We have
-  $\forall v_2 \in \redv{\Delta}{\tau_1}. \; \app{v_1}{v_2} \in \snc$
-  and must show that $v_1 \in \snv$. This holds because if there was an
-  infinite chain of reductions for $v_1$ then there would be an infinite
-  chain of reductions for $\app{v_1}{v_2}$ by congruence.
+\item[$\tau_1 \arr \tau_2$:] Taking $\Delta^{\prime} = \Delta$ and $v_2$
+  to be a variable, which is in $\redv{\Delta}{\tau_1}$ by CR3 at
+  $\tau_1$, we have $\app{v_1}{v_2} \in \snc$ and must show that
+  $v_1 \in \snv$. This holds because if there was an infinite chain of
+  reductions for $v_1$ then there would be an infinite chain of
+  reductions for $\app{v_1}{v_2}$ by congruence.
 \end{description}
 \end{proof}
 
@@ -2936,12 +3021,15 @@ Reducibility predicates are compatible with reductions (CR2):
   &v_1 \in \redva{\Delta}{\tau}{\alpha} \; \wedge \; v_1 \reducestov v_2 \;
     \implies \; v_2 \in \redva{\Delta}{\tau}{\alpha} \\
   &c_1 \in \redca{\Delta}{\tau}{\alpha} \; \wedge \; c_1 \reducestoc c_2 \;
-    \implies \; c_2 \in \redca{\Delta}{\tau}{\alpha}
+    \implies \; c_2 \in \redca{\Delta}{\tau}{\alpha} \\
+  &v_1 \in \redya{\Delta}{S}{\alpha} \; \wedge \; v_1 \reducestov v_2 \;
+    \implies \; v_2 \in \redya{\Delta}{S}{\alpha}
 \end{align*}
 \end{lemma}
 \begin{proof}
   We prove this by induction on $\tau$. The reasoning for computations
-  is the same for all types so we treat it as a separate case.
+  is the same for all types so we treat it as a separate case, and
+  the reasoning for $\redyname$ does not depend on the type.
 \begin{description}
 \item[$1$:] If $v_1 \in \snv$ then $v_2 \in \snv$ because an infinite
   chain in $v_2$ would produce an infinite chain in $v_1$.
@@ -2955,19 +3043,21 @@ Reducibility predicates are compatible with reductions (CR2):
   $v_1 \reducestov \inl{v_3}$ and thus $v_3 \in
   \redv{\Delta}{\tau_1}$. Similarly, given $v_2 \reducestov \inr{v_4}$
   we have $v_4 \in \redv{\Delta}{\tau_2}$.
-\item[$\tau_1 \arr \tau_2$:] Given $v_3 \in \redv{\Delta}{\tau_1}$, we
-  have that $\app{v_1}{v_3}$ reduces to $\app{v_2}{v_3}$ by congruence,
-  so $\app{v_2}{v_3} \in \redc{\Delta}{\tau_2}$ by the induction
+\item[$\tau_1 \arr \tau_2$:] Given $\Delta^{\prime} \supseteq \Delta$
+  and $v_3 \in \redv{\Delta^{\prime}}{\tau_1}$, we have that
+  $\app{v_1}{v_3}$ reduces to $\app{v_2}{v_3}$ by congruence, so
+  $\app{v_2}{v_3} \in \redc{\Delta^{\prime}}{\tau_2}$ by the induction
   hypothesis.
 \item[$\glob \tau$:] Given $v_2 \reducestov \gbox{v_3}$ we have
   $v_1 \reducestov \gbox{v_3}$ and thus $v_3 \in \redv{\cempty}{\tau}$.
-\item[$\yoneda{\Sigma}$:] Given $v_2 \reducestov \loc$,
-  $v_2 \reducestov \outl{v_3}$ or $v_2 \reducestov \outr{v_3}$ then
-  $v_1$ also reduces to those values and thus they have the required
-  properties.
+\item[$\yoneda{\Sigma}$:] Follows from the case for $\redyname$.
 \item[$\ind{\Sigma}(\tau)$:] Given $v_2 \reducestov \ret{v_3}$
   or $v_2 \reducestov \indintro{op}{v_4}{v_5}$ then $v_1$ also reduces to those
   values and thus they have the required properties.
+\item[$\redyname$:] Given $v_2 \reducestov \loc$,
+  $v_2 \reducestov \outl{v_3}$ or $v_2 \reducestov \outr{v_3}$ then
+  $v_1$ also reduces to those values and thus they have the required
+  properties.
 \item[$\redcname$:] Given $c_2 \reducestoc \return{v_3}$,
   $c_2 \reducestoc \perform{\loc}{op}{v_4}$ or
   $c_2 \reducestoc \letv{x}{\perform{\loc}{op}{v_5}}{c_3}$ then $c_1$
@@ -2986,12 +3076,14 @@ term that is reducible, then the original term is reducible (CR3).
 For all neutral values $v_n$ and neutral computations $c_n$:
 \begin{align*}
   &(\forall v_r. \; v_n \stepstov v_r \implies v_r \in \redva{\Delta}{\tau}{\alpha}) \implies v_n \in \redva{\Delta}{\tau}{\alpha} \\
-  &(\forall c_r. \; c_n \stepstoc c_r \implies c_r \in \redca{\Delta}{\tau}{\alpha}) \implies c_n \in \redca{\Delta}{\tau}{\alpha}
+  &(\forall c_r. \; c_n \stepstoc c_r \implies c_r \in \redca{\Delta}{\tau}{\alpha}) \implies c_n \in \redca{\Delta}{\tau}{\alpha} \\
+  &(\forall v_r. \; v_n \stepstov v_r \implies v_r \in \redya{\Delta}{S}{\alpha}) \implies v_n \in \redya{\Delta}{S}{\alpha}
 \end{align*}
 \end{lemma}
 \begin{proof}
   We prove this by induction on $\tau$. The reasoning for computations
-  is the same for all types so we treat it as a separate case.
+  is the same for all types so we treat it as a separate case, and
+  the reasoning for $\redyname$ does not depend on the type.
 \begin{description}
 \item[$1$:] Any chain from $v_n$ must pass through one of the $v_r$ and
   so must be finite.
@@ -3007,13 +3099,13 @@ For all neutral values $v_n$ and neutral computations $c_n$:
   it is neutral. From $v_r \reducestov \inl{v_i}$ we have
   $v_i \in \redv{\Delta}{\tau_1}$. Similarly we have that if
   $v_n \reducestov \inr{v_i}$ then $v_i \in \redv{\Delta}{\tau_2}$.
-\item[$\tau_1 \arr \tau_2$:] For any
-  $v_a \in \redv{\Delta}{\tau_1}$, we have by
+\item[$\tau_1 \arr \tau_2$:] For any $\Delta^{\prime} \supseteq \Delta$
+  and $v_a \in \redv{\Delta^{\prime}}{\tau_1}$, we have by
   CR1(\ref{lemma:red-implies-sn}) that $v_a \in \snv$.
-  We prove that $\app{v_n}{v_a} \in \redc{\Delta}{\tau_2}$ by
+  We prove that $\app{v_n}{v_a} \in \redc{\Delta^{\prime}}{\tau_2}$ by
   induction on $\bound{v_a}$.
   By the outer induction hypothesis it is sufficient to show that any reduct
-  of $\app{v_n}{v_a}$ is itself in $\redc{\Delta}{\tau_2}$.
+  of $\app{v_n}{v_a}$ is itself in $\redc{\Delta^{\prime}}{\tau_2}$.
   As $v_n$ is neutral the only reduction rules that apply to $\app{v_n}{v_a}$ are the
   congruences, so any reduction must be one of:
   \begin{itemize}
@@ -3022,27 +3114,28 @@ For all neutral values $v_n$ and neutral computations $c_n$:
   \end{itemize}
   In the first case, we have
   $v_r \in \redva{\Delta}{\tau_1 \arr \tau_2}{\alpha}$ and thus
-  $\app{v_r}{v_a} \in \redc{\Delta}{\tau_2}$. In the second case, we
-  have $v_b \in \redv{\Delta}{\tau_1}$ by CR2(\ref{lemma:red-reduces}),
+  $\app{v_r}{v_a} \in \redc{\Delta^{\prime}}{\tau_2}$. In the second case, we
+  have $v_b \in \redv{\Delta^{\prime}}{\tau_1}$ by CR2(\ref{lemma:red-reduces}),
   and $\bound{v_b} < \bound{v_a}$, so we have
-  $\app{v_n}{v_b} \in \redc{\Delta}{\tau_2}$ by the inner induction
+  $\app{v_n}{v_b} \in \redc{\Delta^{\prime}}{\tau_2}$ by the inner induction
   hypothesis.
 \item[$\glob \tau$:] Any reduction $v_n \reducestov \gbox{v_b}$ must
   go through one of the $v_r$ because $v_n$ cannot equal $\gbox{v_b}$ as
   it is neutral. From $v_r \reducestov \gbox{v_b}$ we have
   $v_b \in \redv{\cempty}{\tau}$.
-\item[$\yoneda{\Sigma}$:] Any reduction $v_n \reducestov \loc$,
-  $v_n \reducestov \outl{v_i}$ or $v_n \reducestov \outr{v_i}$ must go
-  through one of the $v_r$ because $v_n$ cannot equal $\loc$,
-  $\outl{v_i}$ or $\outr{v_i}$ as it is neutral. Since they reduce from
-  $v_r$ and $v_r \in \redva{\Delta}{\yoneda{\Sigma}}{\alpha}$ they must
-  have the required properties.
+\item[$\yoneda{\Sigma}$:] Follows from the case for $\redyname$.
 \item[$\ind{\Sigma}(\tau)$:] Any reduction $v_n \reducestov \ret{v_t}$
   or $v_n \reducestov \indintro{op}{v_p}{v_a}$ must go through one of
   the $v_r$ because $v_n$ cannot equal $\ret{v_t}$ or
   $\indintro{op}{v_p}{v_a}$ as it is neutral. Since they reduce from
   $v_r$ and $v_r \in \redva{\Delta}{\ind{\Sigma}(\tau)}{\alpha}$ they
   must have the required properties.
+\item[$\redyname$:] Any reduction $v_n \reducestov \loc$,
+  $v_n \reducestov \outl{v_i}$ or $v_n \reducestov \outr{v_i}$ must go
+  through one of the $v_r$ because $v_n$ cannot equal $\loc$,
+  $\outl{v_i}$ or $\outr{v_i}$ as it is neutral. Since they reduce from
+  $v_r$ and $v_r \in \redya{\Delta}{S}{\alpha}$ they must
+  have the required properties.
 \item[$\redcname$:] Any reduction $c_n \reducestoc \return{v_t}$,
   $c_n \reducestoc \perform{\loc}{op}{v_p}$ or
   $c_n \reducestoc \letv{x}{\perform{\loc}{op}{v_p}}{c_k}$ must go
@@ -3055,23 +3148,79 @@ For all neutral values $v_n$ and neutral computations $c_n$:
 \end{proof}
 
 As a corollary, we get that any neutral normal form is reducible. In
-particular, the variable term $x$ is reducible.
+particular, the variable term $x$ is reducible at every type, in every
+effect context and at every ordinal, so none of the reducibility
+predicates is empty.
+
+The reducibility predicates are invariant under renaming locations:
+applying a permutation of locations to a term and to the locations
+bound by the effect context preserves membership of each of the
+predicates. This is immediate from the definitions, since reduction
+and the predicates only ever compare locations for equality, and the
+sets in semantic signatures are closed under permutations of
+locations. In particular, the predicates in the empty effect context
+are closed under permutations of locations. Together with the
+identification of terms up to renaming of bound locations, this
+allows us to assume that the location bound by a reification does not
+occur in any particular value under consideration.
+
+The interpretation of a syntactic signature is a semantic signature:
+\begin{lemma}
+\label{lemma:red-sig}
+For any syntactic signature $\Sigma$, $\redsig{\Sigma}$ is a semantic
+signature. Moreover, its arity sets are also strongly normalizing and
+closed under reduction.
+\end{lemma}
+\begin{proof}
+  The parameter set $\redv{\cempty}{\tau_p}$ and the arity set
+  $\redv{\cempty}{\glob \tau_a}$ of each operation consist of strongly
+  normalizing values by CR1(\ref{lemma:red-implies-sn}) and are closed
+  under reduction by CR2(\ref{lemma:red-reduces}). The arity set
+  contains the variables by CR3(\ref{lemma:red-neutral}) and so is
+  non-empty. Both sets are closed under permutations of locations by
+  the invariance of reducibility under renaming.
+\end{proof}
+Note that the requirement that arity sets be non-empty does not
+prevent arity types from being empty, were the calculus extended
+with an empty type: the reducibility predicate at any type contains
+the variables, so the arity set of an operation with an empty arity
+type would still be non-empty.
 
 \subsection{Effect weakening}
 
-Reducibility can have its effect context weakened:
+Reducibility can have its effect context extended:
 \begin{lemma}
 \label{lemma:red-weaken}
+If $\Delta \subseteq \Delta^{\prime}$ then:
 \begin{align*}
-  \redva{\Delta}{\tau}{\alpha} \subseteq \redva{\lbind{\Delta}{\loc}{\Sigma}}{\tau}{\alpha}
+  &\redva{\Delta}{\tau}{\alpha} \subseteq \redva{\Delta^{\prime}}{\tau}{\alpha} \\
+  &\redca{\Delta}{\tau}{\alpha} \subseteq \redca{\Delta^{\prime}}{\tau}{\alpha} \\
+  &\redya{\Delta}{S}{\alpha} \subseteq \redya{\Delta^{\prime}}{S}{\alpha}
 \end{align*}
 \end{lemma}
 \begin{proof}
-  We prove this by induction on $\tau$ and $\alpha$. Most of the value
-  cases follow immediately by the induction hypotheses as they do not
-  mention $\Delta$ otherwise. The effect capability and computation
-  cases follow by the induction hypotheses and the fact that context
-  membership is preserved by weakening.
+  The case for $\redyname$ is by induction on $\alpha$: the condition
+  on reducts of the form $\loc$ holds because $\loc \types S \in \Delta$
+  implies $\loc \types S \in \Delta^{\prime}$, and the conditions on
+  reducts of the forms $\outl{v}$ and $\outr{v}$ hold by the inductive
+  hypothesis. The other cases are by induction on $\tau$ and then on
+  $\alpha$. Most of the value cases follow immediately by the
+  inductive hypotheses as they do not mention $\Delta$ otherwise. For
+  function types, given
+  $v_1 \in \redva{\Delta}{\tau_1 \arr \tau_2}{\alpha}$ and
+  $\Delta^{\prime\prime} \supseteq \Delta^{\prime}$, we have
+  $\Delta^{\prime\prime} \supseteq \Delta$ and so
+  $\app{v_1}{v_2} \in \redc{\Delta^{\prime\prime}}{\tau_2}$ for any
+  $v_2 \in \redv{\Delta^{\prime\prime}}{\tau_1}$ directly from the
+  definition. For computations, the condition on reducts of the form
+  $\return{v}$ and the condition
+  $A \subseteq \redva{\Delta}{\tau}{\alpha}$ follow from the case for
+  values at $\tau$, and the remaining conditions on reducts of the
+  forms $\perform{\loc}{op}{v}$ and
+  $\letv{x}{\perform{\loc}{op}{v}}{c}$ follow from the fact that
+  $\loc \types S \in \Delta$ implies
+  $\loc \types S \in \Delta^{\prime}$, using the inductive hypothesis
+  on $\alpha$ for the condition on continuations.
 \end{proof}
 
 \subsection{Products}
@@ -3113,28 +3262,59 @@ Projection terms are reducible when built from reducible subterms.
 
 \subsection{Functions}
 
+Applying an abstraction to an argument is reducible when the
+corresponding substitution instance of its body is reducible.
+\begin{lemma}
+\label{lemma:red-beta}
+For any set $V$ of strongly normalizing values that is closed under
+reduction:
+\begin{align*}
+  (\forall v_a \in V. \; \sbst{c_b}{x}{v_a} \in \redc{\Delta}{\tau})
+  \; \implies \;
+  \forall v_a \in V. \; \app{(\abs{x}{c_b})}{v_a} \in \redc{\Delta}{\tau}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  If $V$ is empty there is nothing to show. Otherwise $c_b$ is
+  strongly normalizing, since $\sbst{c_b}{x}{v_a}$ is strongly
+  normalizing for any $v_a \in V$ and any infinite chain of reductions
+  from $c_b$ would give one from $\sbst{c_b}{x}{v_a}$. Fix
+  $v_a \in V$. We proceed by induction on
+  $\bound{c_b} + \bound{v_a}$. As $\app{(\abs{x}{c_b})}{v_a}$ is neutral,
+  we can use CR3(\ref{lemma:red-neutral}). There are three possibilities for a
+  reduct of $\app{(\abs{x}{c_b})}{v_a}$.
+  \begin{itemize}
+  \item It can reduce by beta reduction to $\sbst{c_b}{x}{v_a}$.
+  \item It can reduce by congruence to $\app{(\abs{x}{c_d})}{v_a}$ where $c_b \stepstoc c_d$.
+  \item It can reduce by congruence to $\app{(\abs{x}{c_b})}{v_e}$ where $v_a \stepstov v_e$.
+  \end{itemize}
+  The first case is reducible by hypothesis. The second and third cases
+  are reducible by the inductive hypothesis: in the second case each
+  $\sbst{c_d}{x}{v_a}$ is a reduct of $\sbst{c_b}{x}{v_a}$ and so is
+  reducible by CR2(\ref{lemma:red-reduces}), and in the third case
+  $v_e \in V$ as $V$ is closed under reduction.
+\end{proof}
+
 Abstraction terms are reducible when built from a reducible subterm.
+Since reducibility at function types quantifies over extensions of
+the effect context, so does the hypothesis of this lemma.
 \begin{lemma}
 \label{lemma:red-abs}
 \begin{align*}
-  (\forall v_a \in \redv{\Delta}{\tau_1}. \; \sbst{c_b}{x}{v_a} \in \redc{\Delta}{\tau_2})
-  \; \implies \; \abs{x}{c_b} \in \redv{\Delta}{\tau_1 \arr \tau_2}
+  &(\forall \Delta^{\prime} \supseteq \Delta. \;
+    \forall v_a \in \redv{\Delta^{\prime}}{\tau_1}. \;
+    \sbst{c_b}{x}{v_a} \in \redc{\Delta^{\prime}}{\tau_2}) \\
+  &\implies \; \abs{x}{c_b} \in \redv{\Delta}{\tau_1 \arr \tau_2}
 \end{align*}
 \end{lemma}
 \begin{proof}
   We need to show that
-  $\app{\abs{x}{c_b}}{v_a} \in \redc{\Delta}{\tau_2}$ for any
-  $v_a \in \redv{\Delta}{\tau_1}$. We proceed by induction on
-  $\bound{c_b} + \bound{v_a}$. As $\app{\abs{x}{c_b}}{v_a}$ is neutral,
-  we can use CR3(\ref{lemma:red-neutral}). There are three possibilities for a
-  reduct of $\app{\abs{x}{c_b}}{v_a}$.
-  \begin{itemize}
-  \item It can reduce by beta reduction to $\sbst{c_b}{x}{v_a}$.
-  \item It can reduce by congruence to $\app{\abs{x}{c_d}}{v_a}$ where $c_b \stepstoc c_d$.
-  \item It can reduce by congruence to $\app{\abs{x}{c_b}}{v_e}$ where $v_a \stepstov v_e$.
-  \end{itemize}
-  The first case is reducible by hypothesis. The second and third cases
-  are reducible by the inductive hypothesis using
+  $\app{(\abs{x}{c_b})}{v_a} \in \redc{\Delta^{\prime}}{\tau_2}$ for any
+  $\Delta^{\prime} \supseteq \Delta$ and
+  $v_a \in \redv{\Delta^{\prime}}{\tau_1}$. For each such
+  $\Delta^{\prime}$ this is Lemma~\ref{lemma:red-beta} with
+  $V = \redv{\Delta^{\prime}}{\tau_1}$, which is strongly normalizing
+  by CR1(\ref{lemma:red-implies-sn}) and closed under reduction by
   CR2(\ref{lemma:red-reduces}).
 \end{proof}
 
@@ -3147,7 +3327,8 @@ Application terms are reducible when built from reducible subterms.
 \end{align*}
 \end{lemma}
 \begin{proof}
-  Follows directly from the definition of $\redv{\Delta}{\tau_1 \arr \tau_2}$.
+  Follows directly from the definition of
+  $\redv{\Delta}{\tau_1 \arr \tau_2}$, taking $\Delta^{\prime} = \Delta$.
 \end{proof}
 
 \subsection{Sums}
@@ -3321,58 +3502,74 @@ Non-neutral perform terms are reducible when built from reducible subterms.
 \begin{lemma}
 \label{lemma:red-perform-intro}
 \begin{align*}
-  &\loc_e \types \Sigma \in \Delta
-   \; \wedge \; op \types \tau_p \rightarrowtail \tau_a \in \Sigma
-   \; \wedge \; v_p \in \redv{\cempty}{\tau_p} \\
-  &\implies \; \perform{\loc_e}{op}{v_p} \in \redc{\Delta}{\glob \tau_a}
+  &\loc_e \types S \in \Delta
+   \; \wedge \; op \types P \rightarrowtail A \in S
+   \; \wedge \; v_p \in P
+   \; \wedge \; A \subseteq \redv{\Delta}{\tau} \\
+  &\implies \; \perform{\loc_e}{op}{v_p} \in \redc{\Delta}{\tau}
 \end{align*}
 \end{lemma}
 \begin{proof}
-  By induction on $\bound{v_p}$. We must show three things:
+  There is some $\alpha$ with
+  $A \subseteq \redva{\Delta}{\tau}{\alpha}$. We show that
+  $\perform{\loc_e}{op}{v_p} \in \redca{\Delta}{\tau}{\alpha}$. As
+  $P \subseteq \snv$, $v_p$ is strongly normalizing and we can proceed
+  by induction on $\bound{v_p}$. We must show three things:
   \begin{itemize}
   \item We must show that $\perform{\loc_e}{op}{v_p} \in \snc$. The only
     reduction rule that can apply to $\perform{\loc_e}{op}{v_p}$ is the
     congruence rule. Thus any reduct would be of the form
-    $\perform{\loc_e}{op}{v_q}$ with $v_p \stepstov v_q$ and so, by the
-    inductive hypothesis via CR2(\ref{lemma:red-reduces}), would be
-    strongly normalizing. Since every reduct is strongly normalizing
-    then so is $\perform{\loc_e}{op}{v_p}$.
-  \item We must show that $v_q \in \redv{\cempty}{\tau_p}$ for any $v_q$
-    such that
-    $\perform{\loc_e}{op}{v_p} \reducestoc \perform{\loc_e}{op}{v_q}$. The
-    reduction is either from reflexivity or by stepping to some
-    intermediate term. If it is by reflexivity then $v_q$ is reducible
-    by hypothesis. Only the congruence reduction rule applies to
-    $\perform{\loc_e}{op}{v_p}$, so the intermediate term must be of the form
-    $\perform{\loc_e}{op}{v_r}$, which means we can use the inductive hypothesis on
-    $v_r$ via CR2(\ref{lemma:red-reduces}) to show that $v_q$ is
-    reducible.
+    $\perform{\loc_e}{op}{v_q}$ with $v_p \stepstov v_q$. As $P$ is
+    closed under reduction $v_q \in P$, so by the inductive
+    hypothesis the reduct is reducible and hence strongly
+    normalizing. Since every reduct is strongly normalizing then so is
+    $\perform{\loc_e}{op}{v_p}$.
+  \item We must show that $v_q \in P$ for any $v_q$ such that
+    $\perform{\loc_e}{op}{v_p} \reducestoc \perform{\loc_e}{op}{v_q}$,
+    since $\loc_e \types S \in \Delta$, $op \types P \rightarrowtail A
+    \in S$ and $A \subseteq \redva{\Delta}{\tau}{\alpha}$ hold by
+    hypothesis. Only the congruence reduction rule applies to
+    $\perform{\loc_e}{op}{v_p}$, so $v_p \reducestov v_q$ and $v_q \in P$
+    as $P$ is closed under reduction.
   \item We must show that various properties hold for any term of the
     form $\return{v_r}$, $\perform{\loc_f}{op}{v_q}$ (where
     $\loc_f \neq \loc_e$) or $\letv{x}{\perform{\loc}{op}{v_p}}{c_k}$
-    that $\perform{\loc_e}{op}{v_p}$ reduces to. The reduction would
-    have to be by stepping to some intermediate term as it can't be via
-    reflexivity. Only the congruence reduction rule applies to
-    $\perform{\loc_e}{op}{v_p}$, so the intermediate term must be of the form
-    $\perform{\loc_e}{op}{v_q}$, which means we can use the inductive hypothesis on
-    $v_q$ via CR2(\ref{lemma:red-reduces}) to show that the properties
-    would hold.
+    that $\perform{\loc_e}{op}{v_p}$ reduces to. Only the congruence
+    reduction rule applies to $\perform{\loc_e}{op}{v_p}$, so every
+    reduct is of the form $\perform{\loc_e}{op}{v_q}$ and the
+    conditions hold vacuously.
   \end{itemize}
 \end{proof}
+As a corollary, if $\loc_e \types \redsig{\Sigma} \in \Delta$,
+$op \types \tau_p \rightarrowtail \tau_a \in \Sigma$ and
+$v_p \in \redv{\cempty}{\tau_p}$ then
+$\perform{\loc_e}{op}{v_p} \in \redc{\Delta}{\glob \tau_a}$, since
+$\redsig{\Sigma}$ contains
+$op \types \redv{\cempty}{\tau_p} \rightarrowtail
+\redv{\cempty}{\glob \tau_a}$ and
+$\redv{\cempty}{\glob \tau_a} = \redv{\Delta}{\glob \tau_a}$.
 
 Non-neutral bind terms are reducible when built from reducible subterms.
 \begin{lemma}
 \label{lemma:red-bind-intro}
 \begin{align*}
-  &\loc_e \types \Sigma \in \Delta
-   \; \wedge \; op \types \tau_p \rightarrowtail \tau_a \in \Sigma
-   \; \wedge \; v_p \in \redv{\cempty}{\tau_p} \\
-  &\wedge \; (\forall v_a \in \redv{\Delta}{\glob \tau_a}. \; \sbst{c_k}{x}{v_a} \in \redc{\Delta}{\tau_k}) \\
+  &\loc_e \types S \in \Delta
+   \; \wedge \; op \types P \rightarrowtail A \in S
+   \; \wedge \; v_p \in P \\
+  &\wedge \; (\forall v_a \in A. \; \sbst{c_k}{x}{v_a} \in \redc{\Delta}{\tau_k}) \\
   &\implies \; \letv{x}{\perform{\loc_e}{op}{v_p}}{c_k} \in \redc{\Delta}{\tau_k}
 \end{align*}
 \end{lemma}
 \begin{proof}
-  By induction on $\bound{v_p} + \bound{c_k}$. We must show three things:
+  As $P \subseteq \snv$, $v_p$ is strongly normalizing. As $A$ is
+  non-empty, $c_k$ is also strongly normalizing. As
+  $\{ \, \sbst{c_k}{x}{v_a} \; | \; v_a \in A \, \}$ is a set of
+  reducible computations there is some $\alpha$ with
+  $\sbst{c_k}{x}{v_a} \in \redca{\Delta}{\tau_k}{\alpha}$ for all
+  $v_a \in A$. We show that
+  $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k} \in
+  \redca{\Delta}{\tau_k}{\alpha + 1}$, by induction on
+  $\bound{v_p} + \bound{c_k}$. We must show three things:
   \begin{itemize}
   \item We must show that $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k} \in \snc$. The only
     reduction rule that can apply to $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k}$ is the
@@ -3381,35 +3578,37 @@ Non-neutral bind terms are reducible when built from reducible subterms.
     \item $\letv{x}{\perform{\loc_e}{op}{v_q}}{c_k}$ with $v_p \stepstov v_q$
     \item $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_j}$ with $c_k \stepstoc c_j$
     \end{itemize}
-    in both cases the reduct is strongly normalizing by the inductive
-    hypothesis via CR2(\ref{lemma:red-reduces}). Since every reduct is
-    strongly normalizing then so is
+    In the first case $v_q \in P$ as $P$ is closed under reduction. In
+    the second case each $\sbst{c_j}{x}{v_a}$ is a reduct of
+    $\sbst{c_k}{x}{v_a}$ and so is reducible by
+    CR2(\ref{lemma:red-reduces}). In both cases the reduct is
+    reducible by the inductive hypothesis and hence strongly
+    normalizing. Since every reduct is strongly normalizing then so is
     $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k}$.
-  \item We must show that $v_q \in \redv{\cempty}{\tau_p}$ and
-    $\forall v_a \in \redv{\Delta}{\glob \tau_a}. \; \sbst{c_j}{x}{v_a}
-    \in \redc{\Delta}{\tau_k}$ for any $v_q$ and $c_j$ such that
+  \item We must show that $v_q \in P$ and
+    $\forall v_a \in A. \; \exists \beta < \alpha + 1. \;
+    \sbst{c_j}{x}{v_a} \in \redca{\Delta}{\tau_k}{\beta}$ for any $v_q$
+    and $c_j$ such that
     $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k} \reducestoc
-    \letv{x}{\perform{\loc_e}{op}{v_q}}{c_j}$. The reduction is either
-    from reflexivity or by stepping to some intermediate term. If it is
-    by reflexivity then $v_q$ and $c_j$ are reducible by
-    hypothesis. Only the congruence reduction rule applies to
-    $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k}$, so the intermediate term
-    must be of the form $\letv{x}{\perform{\loc_e}{op}{v_r}}{c_l}$,
-    which means we can use the inductive hypothesis on $v_r$ and $c_l$
-    via CR2(\ref{lemma:red-reduces}) to show that $v_q$ and $c_j$ are
-    reducible.
+    \letv{x}{\perform{\loc_e}{op}{v_q}}{c_j}$, since
+    $\loc_e \types S \in \Delta$ and $op \types P \rightarrowtail A \in
+    S$ hold by hypothesis. Only the congruence reduction rule applies
+    to $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k}$, so
+    $v_p \reducestov v_q$ and $c_k \reducestoc c_j$. Thus $v_q \in P$ as
+    $P$ is closed under reduction, and for each $v_a \in A$ the
+    computation $\sbst{c_j}{x}{v_a}$ is a reduct of
+    $\sbst{c_k}{x}{v_a}$ and so is in $\redca{\Delta}{\tau_k}{\alpha}$
+    by CR2(\ref{lemma:red-reduces}), which gives the condition with
+    $\beta = \alpha$.
   \item We must show that various properties hold for any term of the
     form $\return{v_r}$, $\perform{\loc_g}{op}{v_p}$ or
     $\letv{x}{\perform{\loc_f}{op}{v_q}}{c_j}$ (where
     $\loc_f \neq \loc_e$) that
-    $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k}$ reduces to. The reduction
-    would have to be by stepping to some intermediate term as it can't
-    be via reflexivity. Only the congruence reduction rule applies to
-    $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k}$, so the intermediate term
-    must be of the form $\letv{x}{\perform{\loc_e}{op}{v_r}}{c_l}$,
-    which means we can use the inductive hypothesis on $v_r$ and $c_l$
-    via CR2(\ref{lemma:red-reduces}) to show that the properties would
-    hold.
+    $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k}$ reduces to. Only the
+    congruence reduction rule applies to
+    $\letv{x}{\perform{\loc_e}{op}{v_p}}{c_k}$, so every reduct is of
+    the form $\letv{x}{\perform{\loc_e}{op}{v_r}}{c_l}$ and the
+    conditions hold vacuously.
   \end{itemize}
 \end{proof}
 
@@ -3423,19 +3622,20 @@ Bind terms are reducible when built from reducible subterms.
 \end{align*}
 \end{lemma}
 \begin{proof}
-  By induction on $\alpha$ and $\bound{c_1} + \bound{c_2}$.
+  Note that $c_2$ is strongly normalizing, since
+  $\redva{\Delta}{\tau_1}{\alpha}$ contains the variables by
+  CR3(\ref{lemma:red-neutral}). We proceed by induction on $\alpha$ and
+  $\bound{c_1} + \bound{c_2}$.
 
   We first consider the case where $c_1$ is of the form
   $\perform{\loc_e}{op}{v_p}$. Then
   $c_1 \in \redca{\Delta}{\tau_1}{\alpha}$ gives us, via reflexivity,
-  that $\loc_e \types \Sigma \in \Delta$,
-  $op \types \tau_p \rightarrowtail \tau_a \in \Sigma$ and
-  $v_p \in \redv{\cempty}{\tau_p}$, with $\tau_1 = \glob
-  \tau_a$. Reducibility at $\glob$ types does not depend on the ordinal,
-  so the hypothesis on $c_2$ gives us
-  $\forall v_a \in \redv{\Delta}{\glob \tau_a}. \; \sbst{c_2}{x}{v_a}
-  \in \redc{\Delta}{\tau_2}$, and the case follows by
-  Lemma~\ref{lemma:red-bind-intro}.
+  that $\loc_e \types S \in \Delta$,
+  $op \types P \rightarrowtail A \in S$, $v_p \in P$ and
+  $A \subseteq \redva{\Delta}{\tau_1}{\alpha}$. The hypothesis on $c_2$
+  then gives us
+  $\forall v_a \in A. \; \sbst{c_2}{x}{v_a} \in \redc{\Delta}{\tau_2}$,
+  and the case follows by Lemma~\ref{lemma:red-bind-intro}.
 
   Otherwise $\letv{x}{c_1}{c_2}$ is neutral, so we can use
   CR3(\ref{lemma:red-neutral}). There are four possibilities for a
@@ -3458,13 +3658,13 @@ Bind terms are reducible when built from reducible subterms.
   \item If $c_1$ is of the form
     $\letv{y}{\perform{\loc_e}{op}{v_p}}{c_3}$ then it can reduce by the
     commuting rule to
-    $\letv{y}{\perform{\loc_e}{op}{v_p}}{(\letv{x}{c_3}{c_2})}$. From
+    $\letv{y}{\perform{\loc_e}{op}{v_p}}{(\letv{x}{c_3}{c_2})}$, where
+    we may assume that $y$ does not occur free in $c_2$. From
     $c_1 \in \redca{\Delta}{\tau_1}{\alpha}$ we have, via reflexivity,
-    that $\loc_e \types \Sigma \in \Delta$,
-    $op \types \tau_p \rightarrowtail \tau_a \in \Sigma$ and
-    $v_p \in \redv{\cempty}{\tau_p}$, and that for any
-    $v_a \in \redv{\Delta}{\glob \tau_a}$ there is some $\beta < \alpha$
-    with $\sbst{c_3}{y}{v_a} \in \redca{\Delta}{\tau_1}{\beta}$. For any
+    that $\loc_e \types S \in \Delta$,
+    $op \types P \rightarrowtail A \in S$ and $v_p \in P$, and that
+    for any $v_a \in A$ there is some $\beta < \alpha$ with
+    $\sbst{c_3}{y}{v_a} \in \redca{\Delta}{\tau_1}{\beta}$. For any
     such $v_a$ we have
     $\sbst{(\letv{x}{c_3}{c_2})}{y}{v_a} =
     \letv{x}{\sbst{c_3}{y}{v_a}}{c_2}$, which is reducible by the
@@ -3501,18 +3701,22 @@ Run terms are reducible when built from reducible subterms.
 
 \subsection{Effect capability types}
 
+Reducibility at an effect capability type is reducibility at the
+interpretation of its signature, so we state the lemmas of this section
+in terms of semantic signatures.
+
 Location terms are reducible when they are bound in the effect context.
 \begin{lemma}
 \label{lemma:red-loc}
 \begin{align*}
-  \loc \types \Sigma \in \Delta
-  \; \implies \; \loc \in \redv{\Delta}{\yoneda{\Sigma}}
+  \loc \types S \in \Delta
+  \; \implies \; \loc \in \redy{\Delta}{S}
 \end{align*}
 \end{lemma}
 \begin{proof}
   No reduction rules apply to $\loc$, so it is strongly normalizing and
   its only reduct, via reflexivity, is $\loc$ itself, for which we have
-  $\loc \types \Sigma \in \Delta$ by hypothesis. The conditions for
+  $\loc \types S \in \Delta$ by hypothesis. The conditions for
   reducts of the forms $\outl{v}$ and $\outr{v}$ hold vacuously.
 \end{proof}
 
@@ -3520,10 +3724,10 @@ Selection terms are reducible when built from reducible subterms.
 \begin{lemma}
 \label{lemma:red-out}
 \begin{align*}
-  &v_s \in \redv{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}
-    \; \implies \; \outl{v_s} \in \redv{\Delta}{\yoneda{\Sigma_1}} \\
-  &v_s \in \redv{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}
-    \; \implies \; \outr{v_s} \in \redv{\Delta}{\yoneda{\Sigma_2}}
+  &v_s \in \redy{\Delta}{S_1 + S_2}
+    \; \implies \; \outl{v_s} \in \redy{\Delta}{S_1} \\
+  &v_s \in \redy{\Delta}{S_1 + S_2}
+    \; \implies \; \outr{v_s} \in \redy{\Delta}{S_2}
 \end{align*}
 \end{lemma}
 \begin{proof}
@@ -3537,14 +3741,14 @@ Selection terms are reducible when built from reducible subterms.
     CR2(\ref{lemma:red-reduces}), would be strongly normalizing. Since
     every reduct is strongly normalizing then so is $\outl{v_s}$.
   \item We must show, for any $v_r$ such that
-    $\outl{v_s} \reducestov \outl{v_r}$, that there are some $\Sigma$
+    $\outl{v_s} \reducestov \outl{v_r}$, that there are some $S$
     and $\beta$ with
-    $v_r \in \redva{\Delta}{\yoneda{\Sigma_1 + \Sigma}}{\beta}$. Only
+    $v_r \in \redya{\Delta}{S_1 + S}{\beta}$. Only
     the congruence reduction rule applies to $\outl{v_s}$, so
     $v_s \reducestov v_r$ and thus
-    $v_r \in \redv{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}$ by
+    $v_r \in \redy{\Delta}{S_1 + S_2}$ by
     CR2(\ref{lemma:red-reduces}), giving
-    $v_r \in \redva{\Delta}{\yoneda{\Sigma_1 + \Sigma_2}}{\beta}$ for
+    $v_r \in \redya{\Delta}{S_1 + S_2}{\beta}$ for
     some $\beta$.
   \item We must show that various properties hold for any term of the
     form $\loc$ or $\outr{v_r}$ that $\outl{v_s}$ reduces to. Only the
@@ -3558,18 +3762,20 @@ Perform terms are reducible when built from reducible subterms.
 \begin{lemma}
 \label{lemma:red-perform}
 \begin{align*}
-  &op \types \tau_p \rightarrowtail \tau_a \in \Sigma
-  \; \wedge \; v_l \in \redva{\Delta}{\yoneda{\Sigma}}{\alpha}
-  \; \wedge \; v_a \in \redv{\cempty}{\tau_p} \\
-  &\implies \; \perform{v_l}{op}{v_a} \in \redc{\Delta}{\glob \tau_a}
+  &op \types P \rightarrowtail A \in S
+  \; \wedge \; v_l \in \redya{\Delta}{S}{\alpha}
+  \; \wedge \; v_a \in P
+  \; \wedge \; A \subseteq \redv{\Delta}{\tau} \\
+  &\implies \; \perform{v_l}{op}{v_a} \in \redc{\Delta}{\tau}
 \end{align*}
 \end{lemma}
 \begin{proof}
-  By induction on $\alpha$ and $\bound{v_l} + \bound{v_a}$.
+  As $P \subseteq \snv$, $v_a$ is strongly normalizing. We proceed by
+  induction on $\alpha$ and $\bound{v_l} + \bound{v_a}$.
 
   We first consider the case where $v_l$ is a location $\loc$. Then
-  $v_l \in \redva{\Delta}{\yoneda{\Sigma}}{\alpha}$ gives us, via
-  reflexivity, that $\loc \types \Sigma \in \Delta$, and the case
+  $v_l \in \redya{\Delta}{S}{\alpha}$ gives us, via
+  reflexivity, that $\loc \types S \in \Delta$, and the case
   follows by Lemma~\ref{lemma:red-perform-intro}.
 
   Otherwise $\perform{v_l}{op}{v_a}$ is neutral, so we can use
@@ -3578,25 +3784,29 @@ Perform terms are reducible when built from reducible subterms.
   \begin{itemize}
   \item It can reduce by congruence to $\perform{v_m}{op}{v_a}$ where
     $v_l \stepstov v_m$. By CR2(\ref{lemma:red-reduces}) we have
-    $v_m \in \redva{\Delta}{\yoneda{\Sigma}}{\alpha}$, so the reduct is
+    $v_m \in \redya{\Delta}{S}{\alpha}$, so the reduct is
     reducible by the inductive hypothesis.
   \item It can reduce by congruence to $\perform{v_l}{op}{v_b}$ where
-    $v_a \stepstov v_b$. By CR2(\ref{lemma:red-reduces}) we have
-    $v_b \in \redv{\cempty}{\tau_p}$, so the reduct is reducible by the
+    $v_a \stepstov v_b$. As $P$ is closed under reduction we have
+    $v_b \in P$, so the reduct is reducible by the
     inductive hypothesis.
   \item If $v_l$ is of the form $\outl{v_m}$ then it can reduce to
     $\perform{v_m}{\mathrm{left}(op)}{v_a}$. From
-    $v_l \in \redva{\Delta}{\yoneda{\Sigma}}{\alpha}$ we have, via
-    reflexivity, some $\Sigma_2$ and $\beta < \alpha$ with
-    $v_m \in \redva{\Delta}{\yoneda{\Sigma + \Sigma_2}}{\beta}$. Since
-    $\mathrm{left}(op) \types \tau_p \rightarrowtail \tau_a \in \Sigma +
-    \Sigma_2$, the reduct is reducible by the inductive hypothesis on
+    $v_l \in \redya{\Delta}{S}{\alpha}$ we have, via
+    reflexivity, some $S_2$ and $\beta < \alpha$ with
+    $v_m \in \redya{\Delta}{S + S_2}{\beta}$. Since
+    $\mathrm{left}(op) \types P \rightarrowtail A \in S +
+    S_2$, the reduct is reducible by the inductive hypothesis on
     $\beta$.
   \item If $v_l$ is of the form $\outr{v_m}$ then it can reduce to
     $\perform{v_m}{\mathrm{right}(op)}{v_a}$, which is reducible by the
     same reasoning as the previous case.
   \end{itemize}
 \end{proof}
+As a corollary, if $op \types \tau_p \rightarrowtail \tau_a \in \Sigma$,
+$v_l \in \redv{\Delta}{\yoneda{\Sigma}}$ and
+$v_a \in \redv{\cempty}{\tau_p}$ then
+$\perform{v_l}{op}{v_a} \in \redc{\Delta}{\glob \tau_a}$.
 
 \subsection{Inductive types}
 
@@ -3636,22 +3846,30 @@ Operation terms are reducible when built from reducible subterms.
 \begin{lemma}
 \label{lemma:red-indintro}
 \begin{align*}
-  &op \types \tau_p \rightarrowtail \tau_a \in \Sigma
-   \; \wedge \; v_p \in \redv{\cempty}{\tau_p} \\
-  &\wedge \; v_k \in \redv{\Delta}{\glob \tau_a \arr \ind{\Sigma}(\tau_1)} \\
+  &op \types P \rightarrowtail A \in \redsig{\Sigma}
+   \; \wedge \; v_p \in P \\
+  &\wedge \; (\forall v_a \in A. \;
+     \app{v_k}{v_a} \in \redc{\Delta}{\ind{\Sigma}(\tau_1)}) \\
   &\implies \; \indintro{op}{v_p}{v_k} \in \redv{\Delta}{\ind{\Sigma}(\tau_1)}
 \end{align*}
 \end{lemma}
 \begin{proof}
-  By induction on $\bound{v_p} + \bound{v_k}$. We must show three
-  things:
+  By Lemma~\ref{lemma:red-sig}, $P \subseteq \snv$ and is closed under
+  reduction, and $A$ is non-empty. Thus $v_p$ is strongly normalizing,
+  and so is $v_k$, since $\app{v_k}{v_a}$ is strongly normalizing for
+  any $v_a \in A$ and any infinite chain of reductions from $v_k$ would
+  give one from $\app{v_k}{v_a}$. By induction on
+  $\bound{v_p} + \bound{v_k}$. We must show three things:
   \begin{itemize}
   \item We must show that $\indintro{op}{v_p}{v_k} \in \snv$. The only
     reduction rule that can apply to $\indintro{op}{v_p}{v_k}$ is the
     congruence rule. Thus any reduct would be of the form
     $\indintro{op}{v_q}{v_k}$ with $v_p \stepstov v_q$ or
-    $\indintro{op}{v_p}{v_l}$ with $v_k \stepstov v_l$ and so, by the
-    inductive hypothesis via CR2(\ref{lemma:red-reduces}), would be
+    $\indintro{op}{v_p}{v_l}$ with $v_k \stepstov v_l$. In the first
+    case $v_q \in P$ as $P$ is closed under reduction, and in the
+    second case each $\app{v_l}{v_a}$ is a reduct of $\app{v_k}{v_a}$
+    and so is reducible by CR2(\ref{lemma:red-reduces}). In both cases
+    the reduct is reducible by the inductive hypothesis and hence
     strongly normalizing. Since every reduct is strongly normalizing
     then so is $\indintro{op}{v_p}{v_k}$.
   \item We must show that various properties hold for any term of the
@@ -3661,138 +3879,154 @@ Operation terms are reducible when built from reducible subterms.
     condition holds vacuously.
   \item We must show, for any $v_q$ and $v_l$ such that
     $\indintro{op}{v_p}{v_k} \reducestov \indintro{op}{v_q}{v_l}$, that
-    $v_q \in \redv{\cempty}{\tau_p}$ and that for any $v_b \in \snv$
-    whose reducts of the form $\gbox{v_c}$ all have
-    $v_c \in \redv{\cempty}{\tau_a}$ there is some $\beta$ with
-    $\app{v_l}{v_b} \in \redca{\Delta}{\ind{\Sigma}(\tau_1)}{\beta}$.
+    $v_q \in P$ and that for any $v_a \in A$ there is some $\beta$ with
+    $\app{v_l}{v_a} \in \redca{\Delta}{\ind{\Sigma}(\tau_1)}{\beta}$.
     Only the congruence reduction rule applies to
     $\indintro{op}{v_p}{v_k}$, so $v_p \reducestov v_q$ and
-    $v_k \reducestov v_l$, and thus $v_q$ and $v_l$ are reducible by
-    hypothesis and CR2(\ref{lemma:red-reduces}). The condition on $v_b$
-    states precisely that $v_b \in \redv{\Delta}{\glob \tau_a}$, so from
-    $v_l \in \redv{\Delta}{\glob \tau_a \arr \ind{\Sigma}(\tau_1)}$ we
-    have $\app{v_l}{v_b} \in \redc{\Delta}{\ind{\Sigma}(\tau_1)}$, and
-    hence
-    $\app{v_l}{v_b} \in \redca{\Delta}{\ind{\Sigma}(\tau_1)}{\beta}$ for
-    some $\beta$. Taking $\alpha$ to be a strict upper bound of these
+    $v_k \reducestov v_l$. Thus $v_q \in P$ as $P$ is closed under
+    reduction, and $\app{v_l}{v_a}$ is a reduct of $\app{v_k}{v_a}$ and
+    so is in $\redc{\Delta}{\ind{\Sigma}(\tau_1)}$ by
+    CR2(\ref{lemma:red-reduces}), and hence in
+    $\redca{\Delta}{\ind{\Sigma}(\tau_1)}{\beta}$ for some
+    $\beta$. Taking $\alpha$ to be a strict upper bound of these
     $\beta$ gives
     $\indintro{op}{v_p}{v_k} \in
     \redva{\Delta}{\ind{\Sigma}(\tau_1)}{\alpha}$.
   \end{itemize}
 \end{proof}
+As a corollary, if $op \types \tau_p \rightarrowtail \tau_a \in \Sigma$,
+$v_p \in \redv{\cempty}{\tau_p}$ and
+$v_k \in \redv{\Delta}{\glob \tau_a \arr \ind{\Sigma}(\tau_1)}$ then
+$\indintro{op}{v_p}{v_k} \in \redv{\Delta}{\ind{\Sigma}(\tau_1)}$.
 
 Reification terms are reducible when built from reducible subterms.
 \begin{lemma}
 \label{lemma:red-reify}
 \begin{align*}
-  &c \in \redca{\lbind{\Delta}{\loc}{\Sigma}}{\glob \tau}{\alpha} \\
-  &\implies \; \reify{\loc}{c} \in \redca{\Delta}{\ind{\Sigma}(\tau)}{\alpha}
+  &c \in \redca{\lbind{\Delta}{\loc}{\redsig{\Sigma}}}{\glob \tau}{\alpha} \\
+  &\implies \; \reify{\loc}{c} \in \redc{\Delta}{\ind{\Sigma}(\tau)}
 \end{align*}
 \end{lemma}
 \begin{proof}
-  By induction on $\alpha$ and $\bound{c}$, assuming without loss of
-  generality that $\loc$ is not bound in $\Delta$. $\reify{\loc}{c}$ is
-  neutral so we can use CR3(\ref{lemma:red-neutral}). There are six
-  possibilities for a reduct of $\reify{\loc}{c}$:
+  By induction on $\alpha$, for all $\Delta$ and $\loc$, and then on
+  $\bound{c}$. Write $\Delta_{\loc}$ for
+  $\lbind{\Delta}{\loc}{\redsig{\Sigma}}$, and note that
+  $\Delta \subseteq \Delta_{\loc}$. $\reify{\loc}{c}$ is neutral so we
+  can use CR3(\ref{lemma:red-neutral}). There are six possibilities
+  for a reduct of $\reify{\loc}{c}$:
   \begin{itemize}
   \item It can reduce by congruence to $\reify{\loc}{c^{\prime}}$ where
     $c \stepstoc c^{\prime}$. By CR2(\ref{lemma:red-reduces}) we have
-    $c^{\prime} \in
-    \redca{\lbind{\Delta}{\loc}{\Sigma}}{\glob \tau}{\alpha}$, so the
+    $c^{\prime} \in \redca{\Delta_{\loc}}{\glob \tau}{\alpha}$, so the
     reduct is reducible by the inductive hypothesis.
   \item If $c$ is of the form $\return{(\gbox{v})}$ then it can reduce
     to $\return{\ret{v}}$. From the reducibility of $c$ we have, via
     reflexivity, that
-    $\gbox{v} \in \redv{\lbind{\Delta}{\loc}{\Sigma}}{\glob \tau}$ and
+    $\gbox{v} \in \redv{\Delta_{\loc}}{\glob \tau}$ and
     thus that $v \in \redv{\cempty}{\tau}$. The reduct is then reducible
     by Lemmas~\ref{lemma:red-ret} and \ref{lemma:red-return}.
   \item If $c$ is of the form $\perform{\loc}{op}{v}$ then it can reduce
     to
     $\return{\indintro{op}{v}{\abs{(\gbox{x})}{\return{\ret{x}}}}}$.
     From the reducibility of $c$ we have, via reflexivity, that
-    $op \types \tau_p \rightarrowtail \tau_a \in \Sigma$ and
-    $v \in \redv{\cempty}{\tau_p}$. For any
-    $v_b \in \redv{\Delta}{\glob \tau_a}$, the body of the continuation
-    with $v_b$ substituted for $x$ is reducible by
-    Lemmas~\ref{lemma:red-unbox}, \ref{lemma:red-ret} and
-    \ref{lemma:red-return}, so the continuation is reducible by
-    Lemma~\ref{lemma:red-abs}. The reduct is then reducible by
+    $op \types P \rightarrowtail A \in \redsig{\Sigma}$, as $\loc$ is
+    bound to $\redsig{\Sigma}$ in $\Delta_{\loc}$, that $v \in P$, and
+    that $A \subseteq \redva{\Delta_{\loc}}{\glob \tau}{\alpha}
+    \subseteq \redv{\Delta}{\glob \tau}$, as reducibility at global
+    types does not depend on the effect context. The continuation is in
+    $\redv{\Delta}{\glob \tau \arr \ind{\Sigma}(\tau)}$ by
+    Lemma~\ref{lemma:red-abs}, since for any
+    $\Delta^{\prime} \supseteq \Delta$ and
+    $v_b \in \redv{\Delta^{\prime}}{\glob \tau}$ its body with $v_b$
+    substituted for $x$ is in $\redc{\Delta^{\prime}}{\ind{\Sigma}(\tau)}$
+    by Lemmas~\ref{lemma:red-unbox}, \ref{lemma:red-ret} and
+    \ref{lemma:red-return}. Thus for any $v_a \in A$ the continuation
+    applied to $v_a$ is in $\redc{\Delta}{\ind{\Sigma}(\tau)}$ by
+    Lemma~\ref{lemma:red-app}, and the reduct is reducible by
     Lemmas~\ref{lemma:red-indintro} and \ref{lemma:red-return}.
   \item If $c$ is of the form $\letv{x}{\perform{\loc}{op}{v}}{c_2}$
     then it can reduce to
-    $\return{\indintro{op}{v}{\abs{x}{\reify{\loc}{c_2}}}}$. From the
-    reducibility of $c$ we have, via reflexivity, that
-    $op \types \tau_p \rightarrowtail \tau_a \in \Sigma$ and
-    $v \in \redv{\cempty}{\tau_p}$, and that for any
-    $v_b \in \redv{\Delta}{\glob \tau_a}$ there is some $\beta < \alpha$
-    with $\sbst{c_2}{x}{v_b} \in
-    \redca{\lbind{\Delta}{\loc}{\Sigma}}{\glob \tau}{\beta}$. By the
-    inductive hypothesis on $\beta$ we then have
-    $\reify{\loc}{\sbst{c_2}{x}{v_b}} =
-    \sbst{(\reify{\loc}{c_2})}{x}{v_b} \in
-    \redca{\Delta}{\ind{\Sigma}(\tau)}{\beta}$, so the continuation is
-    reducible by Lemma~\ref{lemma:red-abs}. The reduct is then reducible
-    by Lemmas~\ref{lemma:red-indintro} and \ref{lemma:red-return}.
+    $\return{\indintro{op}{v}{\abs{x}{\reify{\loc}{c_2}}}}$. As in the
+    previous case, from the reducibility of $c$ we have, via
+    reflexivity, that $op \types P \rightarrowtail A \in \redsig{\Sigma}$
+    and $v \in P$, and additionally that for any $v_b \in A$ there is
+    some $\beta < \alpha$ with $\sbst{c_2}{x}{v_b} \in
+    \redca{\Delta_{\loc}}{\glob \tau}{\beta}$. By
+    Lemma~\ref{lemma:red-indintro} it is sufficient to show that for
+    any $v_b \in A$ the continuation applied to $v_b$ is in
+    $\redc{\Delta}{\ind{\Sigma}(\tau)}$, for which, by
+    Lemma~\ref{lemma:red-beta} -- $A$ being strongly normalizing and
+    closed under reduction by Lemma~\ref{lemma:red-sig} -- it is
+    sufficient to show that
+    $\reify{\loc}{\sbst{c_2}{x}{v_b}}$, which is in
+    $\redc{\Delta}{\ind{\Sigma}(\tau)}$ by the inductive hypothesis on
+    $\beta$. The reduct is then reducible by
+    Lemmas~\ref{lemma:red-indintro} and \ref{lemma:red-return}.
   \item If $c$ is of the form $\perform{\loc_2}{op}{v}$ with
     $\loc_2 \neq \loc$ then it can reduce to
     \begin{equation*}
       \letv{(\gbox{x})}{\perform{\loc_2}{op}{v}}{\return{\ret{x}}}
     \end{equation*}
-    From
-    the reducibility of $c$ we have, via reflexivity, that
-    $\loc_2 \types \Sigma_2 \in \lbind{\Delta}{\loc}{\Sigma}$, and since
-    $\loc_2 \neq \loc$ that $\loc_2 \types \Sigma_2 \in \Delta$, along
-    with $op \types \tau_p \rightarrowtail \tau_a \in \Sigma_2$ and
-    $v \in \redv{\cempty}{\tau_p}$. For any
-    $v_b \in \redv{\Delta}{\glob \tau_a}$, the body of the binding with
-    $v_b$ substituted for $x$ is reducible by
-    Lemmas~\ref{lemma:red-unbox}, \ref{lemma:red-ret} and
-    \ref{lemma:red-return}, so the reduct is reducible by
-    Lemma~\ref{lemma:red-bind-intro}.
+    From the reducibility of $c$ we have, via reflexivity, that
+    $\loc_2 \types S \in \Delta_{\loc}$, and since $\loc_2 \neq \loc$
+    that $\loc_2 \types S \in \Delta$, along with
+    $op \types P \rightarrowtail A \in S$, $v \in P$ and
+    $A \subseteq \redva{\Delta_{\loc}}{\glob \tau}{\alpha} =
+    \redv{\Delta}{\glob \tau}$. Thus the reduct is reducible by
+    Lemmas~\ref{lemma:red-bind-intro}, \ref{lemma:red-unbox},
+    \ref{lemma:red-return} and \ref{lemma:red-ret}.
   \item If $c$ is of the form $\letv{x}{\perform{\loc_2}{op}{v}}{c_2}$
     with $\loc_2 \neq \loc$ then it can reduce to
     $\letv{x}{\perform{\loc_2}{op}{v}}{\reify{\loc}{c_2}}$. From the
     reducibility of $c$ we have, via reflexivity, that
-    $\loc_2 \types \Sigma_2 \in \Delta$,
-    $op \types \tau_p \rightarrowtail \tau_a \in \Sigma_2$ and
-    $v \in \redv{\cempty}{\tau_p}$, and that for any
-    $v_b \in \redv{\Delta}{\glob \tau_a}$ there is some $\beta < \alpha$
-    with $\sbst{c_2}{x}{v_b} \in
-    \redca{\lbind{\Delta}{\loc}{\Sigma}}{\glob \tau}{\beta}$. By the
-    inductive hypothesis on $\beta$ we then have
-    $\sbst{(\reify{\loc}{c_2})}{x}{v_b} \in
-    \redca{\Delta}{\ind{\Sigma}(\tau)}{\beta}$, so the reduct is
-    reducible by Lemma~\ref{lemma:red-bind-intro}.
+    $\loc_2 \types S \in \Delta$, $op \types P \rightarrowtail A \in S$
+    and $v \in P$, and that for any $v_a \in A$ there is some
+    $\beta < \alpha$ with
+    $\sbst{c_2}{x}{v_a} \in \redca{\Delta_{\loc}}{\glob
+      \tau}{\beta}$. By Lemma~\ref{lemma:red-bind-intro} it is
+    sufficient to show that
+    $\reify{\loc}{\sbst{c_2}{x}{v_a}} \in
+    \redc{\Delta}{\ind{\Sigma}(\tau)}$ for any $v_a \in A$, which holds
+    by the inductive hypothesis on $\beta$.
   \end{itemize}
 \end{proof}
 
-Recursion terms are reducible when built from reducible subterms.
+Recursion terms are reducible when built from reducible subterms. As
+the recursion constructs a continuation, the hypotheses for the
+operation branches quantify over extensions of the effect context.
 \begin{lemma}
 \label{lemma:red-rec}
 \begin{align*}
   &v_s \in \redva{\Delta}{\ind{\{ op_1 \types \tau_{p_1} \rightarrowtail \tau_{a_1};
       \ldots; op_n\types \tau_{p_n} \rightarrowtail \tau_{a_n} \}}(\tau_1)}{\alpha} \\
-  &\wedge \; (\forall v_r \in \redva{\cempty}{\tau_1}{\alpha}. \\
-    &\qquad \sbst{v_e}{x_r}{v_r} \in \redva{\Delta}{\tau_2}{\alpha}) \\
-  &\wedge \; (\forall v_{p_1} \in \redva{\cempty}{\tau_{p_1}}{\alpha}, \;
-      v_{k_1} \in \redva{\Delta}{\glob \tau_{a_1} \arr \tau_2}{\alpha}. \\
-    &\qquad \sbst{\sbst{v_1}{x_{p_1}}{v_{p_1}}}{x_{k_1}}{v_{k_1}} \in \redva{\Delta}{\tau_2}{\alpha}) \\
+  &\wedge \; (\forall v_r \in \redv{\cempty}{\tau_1}. \;
+      \sbst{v_e}{x_r}{v_r} \in \redv{\Delta}{\tau_2}) \\
+  &\wedge \; (\forall \Delta^{\prime} \supseteq \Delta. \;
+      \forall v_{p_1} \in \redv{\cempty}{\tau_{p_1}}, \;
+      v_{k_1} \in \redv{\Delta^{\prime}}{\glob \tau_{a_1} \arr \tau_2}. \\
+    &\qquad \sbst{\sbst{v_1}{x_{p_1}}{v_{p_1}}}{x_{k_1}}{v_{k_1}} \in \redv{\Delta^{\prime}}{\tau_2}) \\
   &\ldots \\
-  &\wedge \; (\forall v_{p_n} \in \redva{\cempty}{\tau_{p_n}}{\alpha}, \;
-      v_{k_n} \in \redva{\Delta}{\glob \tau_{a_n} \arr \tau_2}{\alpha}. \\
-    &\qquad \sbst{\sbst{v_n}{x_{p_n}}{v_{p_n}}}{x_{k_n}}{v_{k_n}} \in \redva{\Delta}{\tau_2}{\alpha}) \\
+  &\wedge \; (\forall \Delta^{\prime} \supseteq \Delta. \;
+      \forall v_{p_n} \in \redv{\cempty}{\tau_{p_n}}, \;
+      v_{k_n} \in \redv{\Delta^{\prime}}{\glob \tau_{a_n} \arr \tau_2}. \\
+    &\qquad \sbst{\sbst{v_n}{x_{p_n}}{v_{p_n}}}{x_{k_n}}{v_{k_n}} \in \redv{\Delta^{\prime}}{\tau_2}) \\
   &\implies \\
   &\indelim{v_s}{\indretcase{x_r}{v_e} \seq
             \indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} \seq \ldots \seq
             \indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}}
-    \in \redva{\Delta}{\tau_2}{\alpha}
+    \in \redv{\Delta}{\tau_2}
 \end{align*}
 \end{lemma}
 \begin{proof}
-  Write $H$ for the handler
-  $\indretcase{x_r}{v_e} \seq
-   \indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} \seq \ldots \seq
-   \indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}$. By induction on $\alpha$ and
+  Write $\Sigma$ for the signature and $H$ for the handler
+  \begin{equation*}
+    \indretcase{x_r}{v_e} \seq
+    \indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} \seq \ldots \seq
+    \indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}
+  \end{equation*}
+  Note that $v_e$ and each $v_i$ are strongly normalizing, since their
+  substitution instances with variables are reducible. We proceed by
+  induction on $\alpha$, for all $\Delta$, and then on
   $\bound{v_s} + \bound{v_e} + \bound{v_1} + \ldots +
   \bound{v_n}$. $\indelim{v_s}{H}$ is neutral so we can use
   CR3(\ref{lemma:red-neutral}). There are three kinds of reduct of
@@ -3807,7 +4041,7 @@ Recursion terms are reducible when built from reducible subterms.
   \item If $v_s$ is of the form $\ret{v_r}$ then it can reduce to
     $\sbst{v_e}{x_r}{v_r}$. From
     $v_s \in \redva{\Delta}{\ind{\Sigma}(\tau_1)}{\alpha}$ we have,
-    via reflexivity, that $v_r \in \redva{\cempty}{\tau_1}{\alpha}$, so
+    via reflexivity, that $v_r \in \redv{\cempty}{\tau_1}$, so
     the reduct is reducible by hypothesis.
   \item If $v_s$ is of the form $\indintro{op_i}{v_p}{v_k}$ then it can
     reduce to $\sbst{\sbst{v_i}{x_{p_i}}{v_p}}{x_{k_i}}{v_c}$ where
@@ -3815,27 +4049,43 @@ Recursion terms are reducible when built from reducible subterms.
       v_c =
       \abs{x_a}{\letv{x_w}{\app{v_k}{x_a}}{\return{(\indelim{x_w}{H})}}}
     \end{equation*}
-    From $v_s \in \redva{\Delta}{\ind{\Sigma}(\tau_1)}{\alpha}$ we
+    $\redsig{\Sigma}$ contains $op_i \types P \rightarrowtail A$ with
+    $P = \redv{\cempty}{\tau_{p_i}}$ and
+    $A = \redv{\cempty}{\glob \tau_{a_i}}$, so from
+    $v_s \in \redva{\Delta}{\ind{\Sigma}(\tau_1)}{\alpha}$ we
     have, via reflexivity, that
-    $v_p \in \redva{\cempty}{\tau_{p_i}}{\alpha}$ and that for any
-    $v_a \in \redv{\Delta}{\glob \tau_{a_i}}$ there is some
+    $v_p \in \redv{\cempty}{\tau_{p_i}}$ and that for any
+    $v_a \in \redv{\cempty}{\glob \tau_{a_i}}$ there is some
     $\beta < \alpha$ with
     $\app{v_k}{v_a} \in
     \redca{\Delta}{\ind{\Sigma}(\tau_1)}{\beta}$. We show that
-    $v_c \in \redva{\Delta}{\glob \tau_{a_i} \arr \tau_2}{\alpha}$,
+    $v_c \in \redv{\Delta}{\glob \tau_{a_i} \arr \tau_2}$,
     for which, by Lemma~\ref{lemma:red-abs}, it is sufficient to show
     that $\letv{x_w}{\app{v_k}{v_a}}{\return{(\indelim{x_w}{H})}}$ is
-    reducible for any $v_a \in \redv{\Delta}{\glob \tau_{a_i}}$. For
-    any $v_w \in \redva{\Delta}{\ind{\Sigma}(\tau_1)}{\beta}$ we have
-    that $\indelim{v_w}{H}$ is reducible by the inductive hypothesis on
-    $\beta$, using the monotonicity of the predicates in $\alpha$ for
-    the hypotheses on the branches, and thus
-    $\return{(\indelim{v_w}{H})}$ is reducible by
+    in $\redc{\Delta^{\prime}}{\tau_2}$ for any
+    $\Delta^{\prime} \supseteq \Delta$ and
+    $v_a \in \redv{\Delta^{\prime}}{\glob \tau_{a_i}} =
+    \redv{\cempty}{\glob \tau_{a_i}}$. Fix such a $\Delta^{\prime}$
+    and $v_a$, and let $\beta < \alpha$ be such that
+    $\app{v_k}{v_a} \in \redca{\Delta}{\ind{\Sigma}(\tau_1)}{\beta}$,
+    so that also
+    $\app{v_k}{v_a} \in \redca{\Delta^{\prime}}{\ind{\Sigma}(\tau_1)}{\beta}$
+    by effect weakening (\ref{lemma:red-weaken}). The hypotheses of
+    this lemma hold for $\Delta^{\prime}$ as well as for $\Delta$: the
+    hypothesis for the $\retname$ branch by effect weakening, and the
+    hypotheses for the operation branches because any
+    $\Delta^{\prime\prime} \supseteq \Delta^{\prime}$ also
+    satisfies $\Delta^{\prime\prime} \supseteq \Delta$. Thus for any
+    $v_w \in \redva{\Delta^{\prime}}{\ind{\Sigma}(\tau_1)}{\beta}$ we
+    have that $\indelim{v_w}{H}$ is in $\redv{\Delta^{\prime}}{\tau_2}$
+    by the inductive hypothesis on $\beta$ for $\Delta^{\prime}$, and
+    thus $\return{(\indelim{v_w}{H})}$ is in
+    $\redc{\Delta^{\prime}}{\tau_2}$ by
     Lemma~\ref{lemma:red-return}. Thus
-    $\letv{x_w}{\app{v_k}{v_a}}{\return{(\indelim{x_w}{H})}}$ is
-    reducible by Lemma~\ref{lemma:red-bind}, and so $v_c$ is
-    reducible. The reduct is then reducible by the hypothesis for the
-    $op_i$ branch.
+    $\letv{x_w}{\app{v_k}{v_a}}{\return{(\indelim{x_w}{H})}}$ is in
+    $\redc{\Delta^{\prime}}{\tau_2}$ by Lemma~\ref{lemma:red-bind},
+    and so $v_c$ is reducible. The reduct is then reducible by the
+    hypothesis for the $op_i$ branch, taking $\Delta^{\prime} = \Delta$.
   \end{itemize}
 \end{proof}
 
@@ -3847,29 +4097,36 @@ from left to right. We write $\fv{\sigma}$ for the free variables of
 the values of $\sigma$.
 
 We define a notion of reducibility for substitutions as a reducibility
-predicate $\reds{\Gamma}$ indexed by a typing context $\Gamma$. A
-reducible substitution has one entry for each variable binding of the
-context, with the values for local bindings reducible in the effect
-context containing the locations bound earlier in the context, and the
-values for global bindings reducible in the empty effect context. The
-freshness conditions ensure that the entries of a reducible
-substitution do not interact with one another, so that it behaves as a
-simultaneous substitution.
+predicate $\reds{\Delta}{\Gamma}$ indexed by an effect context and a
+typing context. A substitution in $\reds{\Delta}{\Gamma}$ should be
+thought of as an interpretation of the typing context $\Gamma$
+in the effect context $\Delta$: it has one entry for each variable
+binding of $\Gamma$, with the values for local bindings reducible in
+$\Delta$ and the values for global bindings reducible in the empty
+effect context, and it requires $\Delta$ to bind each location of
+$\Gamma$ to the interpretation of its signature. Note that $\Delta$ is
+not a context for $\Gamma$ in the sense of binding things that
+$\Gamma$ may refer to, but the effect context in which the terms of
+$\Gamma$ are interpreted. The freshness conditions ensure that the
+entries of a reducible substitution do not interact with one another,
+so that it behaves as a simultaneous substitution.
 \begin{align*}
-  &\reds{\cempty} =
+  &\reds{\Delta}{\cempty} =
     \{ \, \cempty \, \} \\
-  &\reds{\lbind{\Gamma}{x}{\tau}} =
+  &\reds{\Delta}{\lbind{\Gamma}{x}{\tau}} =
     \{ \, \sigma \cdot \sub{x}{v} \; | \;
        x \notin \fv{\sigma}
-       \; \wedge \; \sigma \in \reds{\Gamma}
-       \; \wedge \; v \in \redv{\clocs{\Gamma}}{\tau} \, \} \\
-  &\reds{\gbind{\Gamma}{x}{\tau}} =
+       \; \wedge \; \sigma \in \reds{\Delta}{\Gamma}
+       \; \wedge \; v \in \redv{\Delta}{\tau} \, \} \\
+  &\reds{\Delta}{\gbind{\Gamma}{x}{\tau}} =
     \{ \, \sigma \cdot \sub{x}{v} \; | \;
        x \notin \fv{\sigma}
-       \; \wedge \; \sigma \in \reds{\Gamma}
+       \; \wedge \; \sigma \in \reds{\Delta}{\Gamma}
        \; \wedge \; v \in \redv{\cempty}{\tau} \, \} \\
-  &\reds{\lbind{\Gamma}{\loc}{\Sigma}} =
-    \reds{\Gamma}
+  &\reds{\Delta}{\lbind{\Gamma}{\loc}{\Sigma}} =
+    \{ \, \sigma \; | \;
+       \sigma \in \reds{\Delta}{\Gamma}
+       \; \wedge \; \loc \types \redsig{\Sigma} \in \Delta \, \}
 \end{align*}
 where $\cempty$ is the empty sequence.
 
@@ -3879,33 +4136,57 @@ location bindings:
 \label{lemma:red-subst-extend}
 Providing that $x$ does not occur free in the values of $\sigma$:
 \begin{align*}
-  &\sigma \in \reds{\Gamma}
-   \; \wedge \; v \in \redv{\clocs{\Gamma}}{\tau} \\
+  &\sigma \in \reds{\Delta}{\Gamma}
+   \; \wedge \; v \in \redv{\Delta}{\tau} \\
   &\quad \implies \;
-   \sigma \cdot \sub{x}{v} \in \reds{\lbind{\Gamma}{x}{\tau}} \\
-  &\sigma \in \reds{\Gamma}
+   \sigma \cdot \sub{x}{v} \in \reds{\Delta}{\lbind{\Gamma}{x}{\tau}} \\
+  &\sigma \in \reds{\Delta}{\Gamma}
    \; \wedge \; v \in \redv{\cempty}{\tau} \\
   &\quad \implies \;
-   \sigma \cdot \sub{x}{v} \in \reds{\gbind{\Gamma}{x}{\tau}} \\
-  &\sigma \in \reds{\Gamma}
+   \sigma \cdot \sub{x}{v} \in \reds{\Delta}{\gbind{\Gamma}{x}{\tau}} \\
+  &\sigma \in \reds{\Delta}{\Gamma}
+   \; \wedge \; \loc \types \redsig{\Sigma} \in \Delta
    \; \implies \;
-   \sigma \in \reds{\lbind{\Gamma}{\loc}{\Sigma}}
+   \sigma \in \reds{\Delta}{\lbind{\Gamma}{\loc}{\Sigma}}
 \end{align*}
 \end{lemma}
 \begin{proof}
   Immediate from the definition of $\redsname$.
 \end{proof}
 
-Reducible substitutions substitute reducible values for variables:
+An interpretation in an effect context is also an interpretation in
+any extension of it:
+\begin{lemma}
+\label{lemma:red-subst-weaken}
+\begin{align*}
+  \sigma \in \reds{\Delta}{\Gamma}
+  \; \wedge \; \Delta \subseteq \Delta^{\prime}
+  \; \implies \;
+  \sigma \in \reds{\Delta^{\prime}}{\Gamma}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  By induction on $\Gamma$. The values for local bindings remain
+  reducible by effect weakening (\ref{lemma:red-weaken}), the
+  conditions on the values for global bindings do not mention the
+  effect context, and every location binding of $\Delta$ is also a
+  binding of $\Delta^{\prime}$.
+\end{proof}
+
+Reducible substitutions substitute reducible values for variables, and
+the effect context binds the locations of the typing context:
 \begin{lemma}
 \label{lemma:red-subst-var}
 \begin{align*}
-  &\sigma \in \reds{\ccons{\lbind{\Gamma_1}{x}{\tau}}{\Gamma_2}}
+  &\sigma \in \reds{\Delta}{\ccons{\lbind{\Gamma_1}{x}{\tau}}{\Gamma_2}}
     \; \implies \;
-    x[\sigma] \in \redv{\clocs{\ccons{\Gamma_1}{\Gamma_2}}}{\tau} \\
-  &\sigma \in \reds{\ccons{\gbind{\Gamma_1}{x}{\tau}}{\Gamma_2}}
+    x[\sigma] \in \redv{\Delta}{\tau} \\
+  &\sigma \in \reds{\Delta}{\ccons{\gbind{\Gamma_1}{x}{\tau}}{\Gamma_2}}
     \; \implies \;
-    x[\sigma] \in \redv{\cempty}{\tau}
+    x[\sigma] \in \redv{\Delta}{\tau} \\
+  &\sigma \in \reds{\Delta}{\ccons{\lbind{\Gamma_1}{\loc}{\Sigma}}{\Gamma_2}}
+    \; \implies \;
+    \loc \types \redsig{\Sigma} \in \Delta
 \end{align*}
 \end{lemma}
 \begin{proof}
@@ -3914,9 +4195,11 @@ Reducible substitutions substitute reducible values for variables:
   freshness conditions for the entries for the bindings after $x$
   ensure that they do not affect the value $v$ substituted for $x$, so
   $x[\sigma] = v$. For a local binding the definition gives
-  $v \in \redv{\clocs{\Gamma_1}}{\tau}$ and the result
-  follows by effect weakening (\ref{lemma:red-weaken}). For a global
-  binding the definition gives $v \in \redv{\cempty}{\tau}$ directly.
+  $v \in \redv{\Delta}{\tau}$ directly. For a global binding the
+  definition gives $v \in \redv{\cempty}{\tau}$, and the result follows
+  by effect weakening (\ref{lemma:red-weaken}). For a location binding
+  the definition gives $\loc \types \redsig{\Sigma} \in \Delta$
+  directly.
 \end{proof}
 
 Finally, reducible substitutions can be divided. We write
@@ -3925,16 +4208,19 @@ entries for the global bindings of the context.
 \begin{lemma}
 \label{lemma:red-subst-cdiv}
 \begin{align*}
-  \sigma \in \reds{\Gamma}
+  \sigma \in \reds{\Delta}{\Gamma}
   \; \implies \;
-  \cdiv{\sigma} \in \reds{\cdiv{\Gamma}}
+  \cdiv{\sigma} \in \reds{\Delta^{\prime}}{\cdiv{\Gamma}}
 \end{align*}
+for any effect context $\Delta^{\prime}$, and in particular for
+$\Delta^{\prime} = \cempty$.
 \end{lemma}
 \begin{proof}
   By induction on $\Gamma$. The entries for local bindings are dropped
-  along with their bindings, the freshness conditions for the remaining
-  entries are implied by those for $\sigma$, and the conditions on the
-  entries for global bindings are unchanged.
+  along with their bindings, the location bindings are dropped, the
+  freshness conditions for the remaining entries are implied by those
+  for $\sigma$, and the conditions on the entries for global bindings
+  do not mention the effect context.
 \end{proof}
 Note that a term typed in $\cdiv{\Gamma}$ contains no free occurrences
 of the local variables or locations of $\Gamma$, so, using the
@@ -3945,41 +4231,59 @@ $v[\sigma] = v[\cdiv{\sigma}]$.
 Well-typed terms are reducible under any reducible substitution:
 \begin{align*}
     &\Gamma \turnv v \types \tau
-      \quad \wedge \quad \sigma \in \reds{\Gamma}
-      \quad \implies \quad v[\sigma] \in \redv{\clocs{\Gamma}}{\tau} \\
+      \quad \wedge \quad \sigma \in \reds{\Delta}{\Gamma}
+      \quad \implies \quad v[\sigma] \in \redv{\Delta}{\tau} \\
     &\Gamma \turnc c \types \tau
-      \quad \wedge \quad \sigma \in \reds{\Gamma}
-      \quad \implies \quad c[\sigma] \in \redc{\clocs{\Gamma}}{\tau}
+      \quad \wedge \quad \sigma \in \reds{\Delta}{\Gamma}
+      \quad \implies \quad c[\sigma] \in \redc{\Delta}{\tau}
 \end{align*}
 \begin{proof}
-  By mutual induction on the typing derivations for $v$ and $c$.  The
-  variable cases follow from Lemma~\ref{lemma:red-subst-var}. Every
-  other case consists of applying the corresponding lemma from the
-  preceding subsections (\ref{lemma:red-pair}--\ref{lemma:red-rec}). The
-  premises of those lemmas are met as follows.
+  By mutual induction on the typing derivations for $v$ and $c$, for
+  all $\Delta$ and $\sigma$. The variable and location cases follow
+  from Lemma~\ref{lemma:red-subst-var}, using Lemma~\ref{lemma:red-loc}
+  for the latter. Every other case consists of applying the
+  corresponding lemma from the preceding subsections
+  (\ref{lemma:red-pair}--\ref{lemma:red-rec}) or its associated
+  corollary. The premises of those lemmas are met as follows.
   \begin{itemize}
-  \item Premises typed in $\Gamma$ itself use the inductive hypothesis with
-  $\sigma$ directly.
-  \item Premises typed under additional bindings use the
-  inductive hypothesis with $\sigma$ extended by the extension lemma
-  (\ref{lemma:red-subst-extend}): the reducible values quantified over
-  by the lemmas for the binding forms are exactly those required by the
-  extension lemma.
-  \item Premises typed in the divided context $\cdiv{\Gamma}$
-  use the inductive hypothesis with $\cdiv{\sigma}$ via the division
-  lemma (\ref{lemma:red-subst-cdiv}).
+  \item Premises typed in $\Gamma$ itself use the inductive hypothesis
+    with $\sigma$ directly.
+  \item Premises typed under additional variable bindings use the
+    inductive hypothesis with $\sigma$ extended by the extension lemma
+    (\ref{lemma:red-subst-extend}): the reducible values quantified over
+    by the lemmas for the binding forms are exactly those required by
+    the extension lemma.
+  \item Premises that are quantified over extensions
+    $\Delta^{\prime} \supseteq \Delta$ of the effect context first move
+    $\sigma$ to $\Delta^{\prime}$ using
+    Lemma~\ref{lemma:red-subst-weaken}, and then proceed as above with
+    $\Delta^{\prime}$ in place of $\Delta$.
+  \item Premises typed under an additional location binding
+    $\loc \types \Sigma$ first move $\sigma$ to
+    $\lbind{\Delta}{\loc}{\redsig{\Sigma}}$ using
+    Lemma~\ref{lemma:red-subst-weaken}, and then use the inductive
+    hypothesis with $\sigma$ extended by the location binding via the
+    extension lemma (\ref{lemma:red-subst-extend}).
+  \item Premises typed in the divided context $\cdiv{\Gamma}$ use the
+    inductive hypothesis with $\cdiv{\sigma}$ in the empty effect
+    context via the division lemma (\ref{lemma:red-subst-cdiv}).
   \end{itemize}
 \end{proof}
 
-As a corollary, since the substitution that replaces every variable with itself is reducible,
-we get:
+Write $\clocs{\Gamma}$ for the effect context that keeps only its
+location bindings, binding $\loc$ to $\redsig{\Sigma}$ for each location
+binding $\loc \types \Sigma$ of $\Gamma$. The substitution that replaces
+every variable of $\Gamma$ with itself is in
+$\reds{\clocs{\Gamma}}{\Gamma}$, since variables are reducible by
+CR3(\ref{lemma:red-neutral}). As a corollary we get:
 \begin{align*}
     &\Gamma \turnv v \types \tau
       \quad \implies \quad v \in \redv{\clocs{\Gamma}}{\tau} \\
     &\Gamma \turnc c \types \tau
       \quad \implies \quad c \in \redc{\clocs{\Gamma}}{\tau}
 \end{align*}
-from which it immediately follows that well-typed terms are strongly normalizing.
+from which it immediately follows by CR1(\ref{lemma:red-implies-sn})
+that well-typed terms are strongly normalizing.
 
 \section{Embedding the Simply-Typed Lambda Calculus}
 \label{apdx:embedding}
