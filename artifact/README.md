@@ -12,8 +12,11 @@ examples in the paper.
   the paper.
 - `examples/`: the effects and handlers from the paper. `state.ml`
   (integer state), `generator.ml` (integer generators), `aio.ml`
-  (asynchronous I/O over a stand-in `Deferred` monad), `gen_await.ml`
-  (generators forwarding `Await` operations, via `Sum` and `Select`).
+  (asynchronous I/O over a stand-in `Deferred` monad).
+
+The `Sum` and `Select` functors in the library implement the sums of
+signatures and the `outl`/`outr` projections of the calculus; the paper
+discusses these only in the calculus and its semantics.
 
 ## Install opam
 

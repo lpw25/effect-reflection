@@ -279,6 +279,7 @@ with such a model. Can we give a simple semantic model of algebraic
 effects that justifies our design?
 
 \subsection{Algebraic effects and effect handlers}
+\label{sec:handlers}
 Algebraic effects and effect handlers allow the programmer to
 temporarily extend the set of available effectful operations.
 
@@ -520,7 +521,7 @@ $v_k \types \glob \tau_a \arr \ind{\Sigma}(\tau)$.
   corresponding to the global modality.
 \end{example}
 
-By a theorem of Hyland et al.~\cite{hyland2006combining}, we have that:
+By Theorem~4 of Hyland et al.~\cite{hyland2006combining}, we have that:
 \begin{equation*}
 T_L(\sem{\ind{\Sigma}(\tau)}(L)) \cong T_{L+\Sigma}(\sem{\tau}(\initial))
 \end{equation*}
@@ -654,11 +655,12 @@ The reflection and reification operations are provided by the
 \begin{lstlisting}[style=oxcaml]
     val perform : 'a E.t -> Handler(E).t @ local -> 'a
 
-    val reify : (Handler(E).t @ local -> 'a) @ local -> 'a Term(E).t @ local
+    val reify :
+      (Handler(E).t @ local -> 'a) @ local -> 'a Term(E).t @ local
 \end{lstlisting}
 
 We can use this library to write an effect handler equivalent to the
-OCaml one in the opening section:
+OCaml one in Section~\ref{sec:handlers}:
 \begin{lstlisting}[style=oxcaml]
     module State = struct
       type 'a t =
@@ -667,7 +669,8 @@ OCaml one in the opening section:
     end
     module State_eff = Reflection(State)
 
-    let handle_state (i : int) (f : Handler(State).t @ local -> 'a) : 'a =
+    let handle_state (i : int)
+          (f : Handler(State).t @ local -> 'a) : 'a =
       let rec loop s : 'a Term(State).t @ local -> 'a = function
         | Return x -> x
         | Perform(Get, k) -> loop s (State_eff.continue k s)
@@ -759,7 +762,7 @@ syntax and typing rules for the base language are shown in
 Fig.\ref{fig:typing-standard}.
 \begin{figure}
 \begin{align*}
-  \mathrm{variables},&x \in& \vars \\
+  \mathrm{variables}, x \in\;& \vars \\
   \mathrm{types}, \tau ::=\;& \tau \times \tau \mid 1 \mid \tau + \tau
                               \mid \tau \arr \tau \mid \ldots \\
   \mathrm{contexts}, \Gamma ::=\;& \cempty \mid \lbind{\Gamma}{x}{\tau} \mid \ldots \\
@@ -832,20 +835,23 @@ rather than a computation. We can define a computation version as:
 
 \subsection{Locality}
 
-We track locality via a global comonadic modality $\glob$. In our
-setting, being global means not depending on the ambient monad. For
+The syntax and typing rules related to locality are shown in
+Fig.~\ref{fig:typing-locality}. We track locality via a global
+comonadic modality $\glob$. In our setting, being global means not depending on the ambient monad. For
 example, $1 \arr \tau$ represents computations that may use operations from
 the ambient monad, while $\glob (1 \arr \tau)$ contains only pure
 computations that ignore the ambient monad.
 
-When using $\gbox{v}$ to build a value with a global type, we can only
-use existing values that also have a global type. We achieve this using
-a standard approach for modal types: we extend contexts with a binding
-form that requires a global type and then we restrict the context in
-which we type $v$ to only include such bindings. The new global binding
-form is written $\gbind{\Gamma}{x}{\tau}$ and represents a value in the
-context of type $\glob \tau$. We create global bindings in the context
-using the elimination form: $\gunbox{x}{v_1}{v_2}$. As with $\casename$,
+When using $\gbox{v}$ to build a value of global type $\glob \tau$,
+the value $v$ may only refer to variables that are themselves known to
+be global. We achieve this using a standard approach for modal types:
+we extend contexts with a binding form that marks a variable as global
+and then we restrict the context in which we type $v$ to only include
+such bindings. The new global binding form is written
+$\gbind{\Gamma}{x}{\tau}$: it binds $x$ to a value of type $\tau$ that
+is available in global contexts, so it corresponds to having a value of
+type $\glob \tau$ in the context. We create global bindings in the
+context using the elimination form: $\gunbox{x}{v_1}{v_2}$. As with $\casename$,
 this elimination form is a value, but we can define a computation
 version directly in terms of it.
 
@@ -882,8 +888,6 @@ parametric in the presence or absence of the global modality. As part of
 this, the $\cdiv{\Gamma}$ operation is extended to work on modalities
 $\cmdiv{\Gamma}$ with $\cldiv{\Gamma} = \Gamma$.
 
-The syntax and typing rules related to locality are in
-Fig.\ref{fig:typing-locality}.
 \begin{figure}
 \begin{align*}
   \mathrm{types}, \tau ::=\;& \ldots \mid \glob \tau \mid \ldots \\
@@ -1050,7 +1054,7 @@ Fig.\ref{fig:typing-reflection}.
 
 \begin{figure}
 \begin{align*}
-  \mathrm{locations},&\loc \in& \locs \\
+  \mathrm{locations}, \loc \in\;& \locs \\
   \mathrm{types}, \tau ::=\;& \ldots \mid \yoneda{\Sigma} \mid \ldots \\
   \mathrm{contexts}, \Gamma ::=\;& \ldots \mid \lbind{\Gamma}{\loc}{\Sigma} \\
   \mathrm{values}, v ::=\;& \ldots \mid \loc \mid \outl{v} \mid \outr{v} \\
@@ -1189,7 +1193,7 @@ We prove subject reduction for this semantics in
 Appendix~\ref{apdx:subject-reduction} by induction on the reduction
 relations.
 \begin{theorem}
-\label{lemma:subject-reduction}
+\label{lemma:subject-reduction}[Subject reduction]
   \begin{align*}
     &\Gamma \turnv v_1 \types \tau
       \quad \wedge \quad v_1 \stepstov v_2
@@ -1202,7 +1206,7 @@ relations.
 
 These reduction relations are confluent:
 \begin{theorem}
-\label{lemma:church-rosser}
+\label{lemma:church-rosser}[Confluence]
   \begin{align*}
     &v_1 \reducestov v_2
       \quad \wedge \quad v_1 \reducestov v_3
@@ -1220,7 +1224,7 @@ parallel reduction in Appendix~\ref{apdx:church-rosser}.
 They are also strongly normalizing. We call the sets of values and
 computations for which there exist no infinite chains
 of reductions $\snv$ and $\snc$ respectively.
-\begin{theorem}
+\begin{theorem}[Strong normalization]
 \label{lemma:strong-normalization}
 \begin{align*}
     &\Gamma \turnv v \types \tau
@@ -1232,21 +1236,22 @@ of reductions $\snv$ and $\snc$ respectively.
 We prove this using logical relations in
 Appendix~\ref{apdx:strong-normalization}.
 
-Inspecting the normal forms in Fig.\ref{fig:normal}, we can see that
-$\return{\omega}$ is the only normal computation form that is
-well-typed in the empty context: the other forms all require a location
-or variable from the context. Combined with subject reduction, this
-makes effect safety a corollary of strong normalization: a well-typed
-program can never attempt to perform an effectful operation that is not
-handled.
-\begin{corollary}[Effect safety]
+In Appendix~\ref{apdx:effect-safety} we prove a progress lemma: every
+well-typed term that cannot reduce is a normal form according to
+Fig.~\ref{fig:normal}. Inspecting those normal forms, $\return{\omega}$
+is the only normal computation form that is well-typed in the empty
+context: the other forms all require a location or variable from the
+context. Combined with subject reduction and strong normalization, this
+gives effect safety: a well-typed program can never attempt to perform
+an effectful operation that is not handled.
+\begin{theorem}[Effect safety]
 \label{lemma:effect-safety}
   \begin{equation*}
     \turnc c \types \tau
     \quad \implies \quad
     \exists\, \omega. \quad c \reducestoc \return{\omega}
   \end{equation*}
-\end{corollary}
+\end{theorem}
 
 \subsection{Embedding the Simply-Typed Lambda Calculus}
 
@@ -1282,8 +1287,8 @@ use the same approach for the Ambient Monad model.
 We recall the definitions of algebraic signature, terms of a signature,
 algebraic theory and models of a theory.
 \begin{definition}[Algebraic signature]
-  An \emph{algebraic signature} is a set of operations with associated
-  arities.
+  An \emph{algebraic signature} is a set of operations, each with an
+  associated \emph{arity}.
 \end{definition}
 
 \begin{example}
@@ -1337,9 +1342,10 @@ algebraic theory and models of a theory.
   \end{align*}
 \end{example}
 
-Arities in algebraic signatures are often considered as natural numbers,
-but they can equivalently be sets. The arguments of an operator are then
-a family of terms indexed by that set. It is also convenient to allow
+Arities in algebraic signatures are often taken to be natural numbers,
+but they can be generalised to sets, with a natural number $k$
+corresponding to a $k$-element set. The arguments of an operation are
+then a family of terms indexed by that set. It is also convenient to allow
 families of operations parameterized by some set. This gives us
 signatures of the form:
 \begin{equation*}
@@ -1357,27 +1363,28 @@ parameterized by $P$ and with arity $A$.
   \end{equation*}
 \end{example}
 
-Given an algebraic theory $L$ and a set $A$ we can construct
-the free model, or \emph{free algebra}, $T_L(A)$. The values of $T_L(A)$
-are terms built using the elements of $A$ and the operations of $L$
-quotiented by the equations in $L$. $T_L$ is a monad.
+Given an algebraic theory $L$ and a set $A$ we can construct the free
+model, or \emph{free algebra}, of $L$ on $A$. We write $T_L(A)$ for its
+carrier: the set of terms built using the elements of $A$ and the
+operations of $L$, quotiented by the equations in $L$.  $T_L$ is a monad
+on $\setc$, which we call the \emph{free algebra monad} of $L$.
 
 \begin{example}
-  The free algebras of the signature of boolean state $T_{\Sigma_{bs}}$
-  are equivalent to the type:
+  The free algebra monad $T_{\Sigma_{bs}}$ of the signature of boolean
+  state is equivalent to the type:
   \begin{lstlisting}[style=oxcaml]
   type 'a t =
     | Return of 'a
     | Get of unit * (bool -> 'a t)
     | Set of bool * (unit -> 'a t)
   \end{lstlisting}
-  The free algebras of the theory of boolean state $T_{L_{bs}}$ are
-  equivalent to the above type quotiented by the equations of $L_{bs}$.
+  The free algebra monad $T_{L_{bs}}$ of the theory of boolean state is
+  the same type quotiented by the equations of $L_{bs}$.
 \end{example}
 
-For an algebraic signature $\Sigma$ the free algebra $T_{\Sigma}$ is the
-free monad of an endofunctor $F_{\Sigma}$. The values of $F_{\Sigma}(A)$
-are of the form $op(a_1, \ldots, a_k)$ where $op$ is an operation of
+Every algebraic signature $\Sigma$ yields an endofunctor $F_{\Sigma}$ on
+$\setc$ whose free monad is the free algebra monad $T_{\Sigma}$. The
+elements of $F_{\Sigma}(A)$ are of the form $op(a_1, \ldots, a_k)$ where $op$ is an operation of
 $\Sigma$ with arity $k$ and each $a_i$ is an element of $A$.
 \begin{example}
   $F_{\Sigma_{bs}}$ is equivalent to the type:
@@ -1425,12 +1432,12 @@ require more generality. In terms of effect reflection, this would
 amount to demanding, for any operation
 $op \types \tau_p \rightarrowtail \tau_a$, that $\tau_p$ and $\tau_a$ be
 finite types. This would allow for boolean state, but would not support
-$\nat$ state.
+$\nat$-valued state.
 
 In the algebraic effects literature the most common choice is to use
 algebraic signatures with countable arity. However, this is still too
-restrictive, supporting $\nat$ state but not supporting
-$\nat \rightarrow \nat$ state.
+restrictive, supporting $\nat$-valued state but not
+$(\nat \rightarrow \nat)$-valued state.
 
 We want to allow arbitrarily large types for the parameters and arities
 of our operations. However, we also wish our category of Lawvere
@@ -1475,9 +1482,10 @@ properties of $\lawc$ in Appendix~\ref{apdx:lawprops}.
 Now that we have a concrete representation for potential ambient monads,
 we can define our semantics in terms of sets indexed by such
 monads. More specifically, we can use functors $\setc^{\lawc}$ as the
-semantics of our types. By using functors rather than ordinary functions
-we ensure terms and types at a particular ambient monad can always be
-mapped naturally to a larger ambient monad. These functors have many
+semantics of our types. Using functors, rather than mere families of
+sets indexed by the objects of $\lawc$, ensures that the elements of a
+type at a particular ambient monad can always be mapped to any larger
+ambient monad, and that terms respect this mapping. These functors have many
 convenient properties because they are \emph{presheaves}.
 
 For a category $\cat$, $\psh = \setc^{\catop}$ is the category of
@@ -1573,7 +1581,7 @@ only the elements which do not depend on the ambient monad. This is very
 similar to the purity comonad of Choudhury and
 Krishnaswami~\cite{choudhury2020recovering}. In particular,
 \begin{equation*}
-  \glob \mon(P) \quad = \quad T_{\initial} \circ \glob P
+  \glob (\mon(P)) \quad = \quad T_{\initial} \circ \glob P
   \quad \cong \quad \glob P
 \end{equation*}
 as elements of the free algebras of the initial algebraic theory are
@@ -1601,7 +1609,7 @@ where $\counit{\glob}$ and $\comult{\glob}$ are the counit and
 comultiplication of $\glob$,
 $\bdiv{\Gamma} \types \Gamma \rightarrow \cdiv{\Gamma}$ is the morphism
 that projects the global bindings from $\Gamma$, and $\ununit_P$ is the
-isomorphism from $\glob \mon(P)$ to $\glob P$.
+isomorphism from $\glob (\mon(P))$ to $\glob P$.
 
 \subsection{Predicative signatures}
 \label{sec:predicative}
@@ -1774,8 +1782,8 @@ $L$ and an algebraic signature $\Sigma$, splitting out and handling
 $\Sigma$, leaving a computation in only the algebraic theory
 $T_{L}(S^\prime)$.
 
-The key to this process is the following
-lemma~\cite{hyland2006combining}.
+The key to this process is the following lemma, which is Theorem~4
+of Hyland et al.~\cite{hyland2006combining}.
 \begin{lemma}
 \label{lemma:sums}
   For any $\kappa$-bounded Lawvere theory $L$ and algebraic signature $\Sigma$
@@ -1879,7 +1887,7 @@ section we describe this API and its implementation.
 \begin{figure}
 \begin{lstlisting}[style=oxcaml]
   module type Sig = sig type 'a t end
-  module Continuation(E : Sig) : sig type ('a, 'b) t end
+  module Continuation(E : Sig) : sig type ('r, 'a) t end
   module Term (E : Sig) : sig
     type 'a t =
       | Return : 'a @@ global -> 'a t
@@ -1905,9 +1913,9 @@ The \lstinline[style=oxcaml]{Handler(E).t} type corresponds to
 $\yoneda{\Sigma}$ and represents the capability to perform operations
 from \lstinline[style=oxcaml]{E}.
 
-\lstinline[style=oxcaml]{('a, 'b) Continuation(E).t} is equivalent to
-\lstinline[style=oxcaml]{'a -> 'b Term(E).t} when global and equivalent
-to \lstinline[style=oxcaml]{'a -> 'b Term(E).t @ local} when local. This
+\lstinline[style=oxcaml]{('r, 'a) Continuation(E).t} is equivalent to
+\lstinline[style=oxcaml]{'r -> 'a Term(E).t} when global and equivalent
+to \lstinline[style=oxcaml]{'r -> 'a Term(E).t @ local} when local. This
 ensures that the global modality distributes over
 \lstinline[style=oxcaml]{Term(E).t}, which is an important property of
 $\ind{\Sigma}$. The need for this type is an artifact of OxCaml's
@@ -1925,9 +1933,10 @@ function arrow in OxCaml.
     val perform : 'a E.t -> (Handler(E).t @ local -> 'a)
 
     val continue :
-      ('a, 'b) Continuation(E).t @ local -> 'a -> 'b Term(E).t @ local
+      ('r, 'a) Continuation(E).t @ local -> 'r -> 'a Term(E).t @ local
 
-    val continue_global : ('a, 'b) Continuation(E).t -> 'a -> 'b Term(E).t
+    val continue_global :
+      ('r, 'a) Continuation(E).t -> 'r -> 'a Term(E).t
   end
 \end{lstlisting}
 \caption{Effect reflection interface}
@@ -1955,26 +1964,6 @@ OxCaml currently lacks any form of locality polymorphism.
 direction of the isomorphism. It reflects individual operations as
 opposed to full terms, which is a more convenient primitive in practice.
 
-The final piece of the interface is the support for selection from
-effect capabilities for sums of signatures (i.e. $\outlname$ and
-$\outrname$). These are provided via \lstinline[style=oxcaml]{Sum}
-and \lstinline[style=oxcaml]{Select} functors shown in Fig.~\ref{fig:ox-selection}.
-\begin{figure}
-\begin{lstlisting}[style=oxcaml]
-  module Sum (L : Sig) (R : Sig) : sig
-    type 'a t =
-      | Left : 'a L.t -> 'a t
-      | Right : 'a R.t -> 'a t
-  end
-  module Select(L : Sig) (R : Sig) : sig
-    val outl : Handler(Sum(L)(R)).t @ local -> Handler(L).t @ local
-    val outr : Handler(Sum(L)(R)).t @ local -> Handler(R).t @ local
-  end
-\end{lstlisting}
-\caption{Effect selection}
-\label{fig:ox-selection}
-\end{figure}
-
 \subsection{Effect reflection implementation}
 
 We can implement the effect reflection interface directly in terms of
@@ -1998,7 +1987,7 @@ statically.
 
 \subsection{Example: Generators}
 
-A more realistic use of effect reflection than local state is a
+A more realistic use of effect reflection than integer state is a
 \emph{generator} effect. This effect has a single operation
 \lstinline[style=oxcaml]{Gen} from \lstinline[style=oxcaml]{int} to
 \lstinline[style=oxcaml]{unit}, along with a handler that turns
@@ -2069,60 +2058,6 @@ This relies on the fact that \lstinline[style=oxcaml]{handle_state} uses
 \lstinline[style=oxcaml]{reify_global} and so is able to operate on a
 local computation that closes over the local await handler value
 \lstinline[style=oxcaml]{ah}.
-
-\subsection{Effect sums and effect forwarding}
-\label{sec:forwarding}
-
-If we tried to do something similar using our
-\lstinline[style=oxcaml]{handle_gen} handler instead of
-\lstinline[style=oxcaml]{handle_state}, then we would get an error
-complaining that the await handler \lstinline[style=oxcaml]{ah} would
-escape its scope. We could change the definition of
-\lstinline[style=oxcaml]{handle_gen} to use
-\lstinline[style=oxcaml]{reify} instead of
-\lstinline[style=oxcaml]{reify_global}, but then we would lose the
-property that the generator we produce can be passed around freely.
-
-Instead we need to build a handler that can \emph{forward} the
-\lstinline[style=oxcaml]{Await} operation to different effect handlers
-at different points in the program's execution. This more general form
-of composition requires the selection operations
-\lstinline[style=oxcaml]{outl} and \lstinline[style=oxcaml]{outr}. Using
-these we can write our desired handler for the
-\lstinline[style=oxcaml]{Gen} effect by instead writing a handler for
-\lstinline[style=oxcaml]{Sum(Await)(Gen)} that forwards all the
-\lstinline[style=oxcaml]{Await} operations on to another handler
-(Fig.~\ref{fig:gen-aio}).
-
-\begin{figure}
-\begin{lstlisting}[style=oxcaml]
-  module Eff = Reflection(Sum(Await)(Gen))
-  module Sel = Select(Await)(Gen)
-  type aints = Finished | More of int * (Handler(Await).t @ local -> aints)
-
-  let handle_gen_in_await f ah =
-    let rec loop ah : unit Term(Sum(Await)(Gen)).t -> aints = function
-      | Return () -> Finished
-      | Perform(Left op, k) ->
-          loop ah (Eff.continue_global k (Await_eff.perform op ah))
-      | Perform(Right(Gen i), k) ->
-          More(i, fun ah -> loop ah (Eff.continue_global k ()))
-    in
-    loop ah (Eff.reify_global (fun h -> f (Sel.outl h) (Sel.outr h)))
-\end{lstlisting}
-\caption{Handler for generators that can use asynchronous I/O}
-\label{fig:gen-aio}
-\end{figure}
-
-Explicit effect forwarding is required by all systems based on effect
-capabilities. This example requires that performing an
-\lstinline[style=oxcaml]{Await} operation does work proportional to the
-number of handlers it is forwarded through. Effect capabilities only
-ever do a constant amount of work to perform operations and so cannot
-handle such examples directly. Traditional effect handlers, on the other
-hand, always do work proportional to the number of nested handlers,
-allowing them to support such examples directly but paying a higher cost
-for the cases that do not need forwarding.
 
 \section{Related work}
 \label{sec:related-work}
@@ -2229,7 +2164,7 @@ capabilities -- but the typing rules, and the practical result, are the
 same.
 
 The Ambient Monad model is closely related to presheaf semantics for
-higher-order abstract syntax~\cite{hu2022category}. In both cases
+higher-order abstract syntax~\cite{fiore1999abstract, hofmann1999semantical, hu2022category}. In both cases
 presheaves are used to index the semantics of types and terms by some
 implicit notion of context, with the Yoneda embedding used to access
 this context and the global modality used to control dependence on it.
@@ -2271,6 +2206,143 @@ known to commute.
 \makeatletter
 \write\@auxout{\string\newlabel{appendix-firstpage}{{}{\thepage}{}{}{}}}
 \makeatother
+\section{Complete syntax and typing rules}
+\label{apdx:syntax}
+
+For reference, Fig.~\ref{fig:full-syntax} collects the complete syntax
+of the calculus from Figs.~\ref{fig:typing-standard}
+to~\ref{fig:typing-reflection}, and Figs.~\ref{fig:full-typing-values}
+and~\ref{fig:full-typing-computations} collect its typing rules.
+
+\begin{figure}
+\begin{align*}
+  \mathrm{variables}, x \in\;& \vars \\
+  \mathrm{locations}, \loc \in\;& \locs \\
+  \mathrm{modalities}, m ::=\;& \nothing \mid \glob \\
+  \mathrm{signatures}, \Sigma ::=\;& \{ op \types \tau \rightarrowtail \tau \seq \ldots
+                                       \seq op \types \tau \rightarrowtail \tau \}
+                                     \mid \Sigma + \Sigma \\
+  \mathrm{types}, \tau ::=\;& \tau \times \tau \mid 1 \mid \tau + \tau
+                              \mid \tau \arr \tau \mid \glob \tau
+                              \mid \ind{\Sigma}(\tau) \mid \yoneda{\Sigma} \\
+  \mathrm{contexts}, \Gamma ::=\;& \cempty \mid \lbind{\Gamma}{x}{\tau}
+                                   \mid \gbind{\Gamma}{x}{\tau}
+                                   \mid \lbind{\Gamma}{\loc}{\Sigma} \\
+  \mathrm{values}, v ::=\;& x \mid \abs{x}{c} \mid (v, v) \mid \fst{v} \mid \snd{v} \mid ()
+                           \mid \inl{v} \mid \inr{v} \\
+                        \mid& \casem{v}{x}{v}{x}{v}
+                           \mid \gbox{v} \mid \gunbox{x}{v}{v} \mid \grun{c} \\
+                        \mid& \indintro{op}{v}{v} \mid \ret{v}
+                           \mid \indelim{v}
+                           {\indretcase{x}{v} \seq
+                           \indcase{op}{x}{x}{v} \seq \ldots
+                           \seq \indcase{op}{x}{x}{v}} \\
+                        \mid& \loc \mid \outl{v} \mid \outr{v} \\
+  \mathrm{computations}, c ::=\;& \return{v} \mid \letv{x}{c}{c} \mid \app{v}{v} \\
+                              \mid& \perform{v}{op}{v} \mid \reify{\loc}{c}
+\end{align*}
+\caption{Complete syntax}
+\label{fig:full-syntax}
+\end{figure}
+
+\begin{figure}
+\begin{mathpar}
+\inferrule{\\}
+{\ccons{\mbind{\Gamma_1}{x}{\tau}}{\Gamma_2} \turnv x \types \tau}
+\and
+\inferrule{\lbind{\Gamma}{x}{\tau_1} \turnc c \types \tau_2}
+{\Gamma \turnv \abs{x}{c} \types \tau_1 \arr \tau_2}
+\and
+\inferrule{\Gamma \turnv v_1 \types \tau_1 \\ \Gamma \turnv v_2 \types \tau_2}
+{\Gamma \turnv (v_1, v_2) \types \tau_1 \times \tau_2}
+\and
+\inferrule{\Gamma \turnv v \types \tau_1 \times \tau_2}
+{\Gamma \turnv \fst{v} \types \tau_1}
+\and
+\inferrule{\Gamma \turnv v \types \tau_1 \times \tau_2}
+{\Gamma \turnv \snd{v} \types \tau_2}
+\and
+\inferrule{\\}
+{\Gamma \turnv () \types 1}
+\and
+\inferrule{\Gamma \turnv v \types \tau_1}
+{\Gamma \turnv \inl{v} \types \tau_1 + \tau_2}
+\and
+\inferrule{\Gamma \turnv v \types \tau_2}
+{\Gamma \turnv \inr{v} \types \tau_1 + \tau_2}
+\and
+\inferrule{\cmdiv{\Gamma} \turnv v_1 \types \tau_1 + \tau_2 \\
+           \mbind{\Gamma}{x_1}{\tau_1} \turnv v_2 \types \tau_3 \\
+           \mbind{\Gamma}{x_2}{\tau_2} \turnv v_3 \types \tau_3}
+{\Gamma \turnv \casem{v_1}{x_1}{v_2}{x_2}{v_3} \types \tau_3}
+\and
+\inferrule{\cdiv{\Gamma} \turnv v \types \tau}
+{\Gamma \turnv \gbox{v} \types \glob \tau}
+\and
+\inferrule{\Gamma \turnv v_1 \types \glob \tau_1 \\
+           \gbind{\Gamma}{x}{\tau_1} \turnv v_2 \types \tau_2}
+{\Gamma \turnv \gunbox{x}{v_1}{v_2} \types \tau_2}
+\and
+\inferrule{\cdiv{\Gamma} \turnc c \types \tau}
+{\Gamma \turnv \grun{c} \types \tau}
+\and
+\inferrule{op \types \tau_1 \rightarrowtail \tau_2 \in \Sigma \\
+           \cdiv{\Gamma} \turnv v_1 \types \tau_1 \\
+           \Gamma \turnv v_2 \types \glob \tau_2 \arr \ind{\Sigma}(\tau)}
+{\Gamma \turnv \indintro{op}{v_1}{v_2} \types \ind{\Sigma}(\tau)}
+\and
+\inferrule{\cdiv{\Gamma} \turnv v \types \tau}
+{\Gamma \turnv \ret{v} \types \ind{\Sigma}(\tau)}
+\and
+\inferrule{\Gamma \turnv v_s \types \ind{\Sigma}(\tau_1) \\
+           \Sigma = \{ op_1 \types \tau_{p_1} \rightarrowtail \tau_{a_1};
+             \ldots; op_n\types \tau_{p_n} \rightarrowtail \tau_{a_n} \} \\
+           \gbind{\Gamma}{x_r}{\tau_1} \turnv v_e \types \tau_2 \\
+           \lbind{\gbind{\Gamma}{x_{p_1}}{\tau_{p_1}}}{x_{k_1}}{\glob \tau_{a_1} \arr \tau_2} \turnv v_1 \types \tau_2 \\
+           \ldots \\
+           \lbind{\gbind{\Gamma}{x_{p_n}}{\tau_{p_n}}}{x_{k_n}}{\glob \tau_{a_n} \arr \tau_2} \turnv v_n \types \tau_2}
+{\Gamma \turnv \indelim{v_s}{\indretcase{x_r}{v_e} \seq
+                                   \indcase{op_1}{x_{p_1}}{x_{k_1}}{v_1} \seq \ldots \seq
+                                   \indcase{op_n}{x_{p_n}}{x_{k_n}}{v_n}} \types \tau_2}
+\and
+\inferrule{\\}
+{\ccons{\lbind{\Gamma_1}{\loc}{\Sigma}}{\Gamma_2} \turnv \loc \types \yoneda{\Sigma}}
+\and
+\inferrule{\Gamma \turnv v \types \yoneda{\Sigma_1 + \Sigma_2}}
+{\Gamma \turnv \outl{v} \types \yoneda{\Sigma_1}}
+\and
+\inferrule{\Gamma \turnv v \types \yoneda{\Sigma_1 + \Sigma_2}}
+{\Gamma \turnv \outr{v} \types \yoneda{\Sigma_2}}
+\end{mathpar}
+\caption{Complete typing rules for values}
+\label{fig:full-typing-values}
+\end{figure}
+
+\begin{figure}
+\begin{mathpar}
+\inferrule{\Gamma \turnv v \types \tau}
+{\Gamma \turnc \return{v} \types \tau}
+\and
+\inferrule{\Gamma \turnc c_1 \types \tau_1 \\
+           \lbind{\Gamma}{x}{\tau_1} \turnc c_2 \types \tau_2}
+{\Gamma \turnc \letv{x}{c_1}{c_2} \types \tau_2}
+\and
+\inferrule{\Gamma \turnv v_1 \types \tau_1 \arr \tau_2 \\
+           \Gamma \turnv v_2 \types \tau_1}
+{\Gamma \turnc \app{v_1}{v_2} \types \tau_2}
+\and
+\inferrule{\Gamma \turnv v_1 \types \yoneda{\Sigma} \\
+           op \types \tau_1 \rightarrowtail \tau_2 \in \Sigma \\
+           \cdiv{\Gamma} \turnv v_2 \types \tau_1}
+{\Gamma \turnc \; \perform{v_1}{op}{v_2} \types \glob \tau_2}
+\and
+\inferrule{\lbind{\Gamma}{\loc}{\Sigma} \turnc c \types \glob \tau}
+{\Gamma \turnc \; \reify{\loc}{c} \types \ind{\Sigma}(\tau)}
+\end{mathpar}
+\caption{Complete typing rules for computations}
+\label{fig:full-typing-computations}
+\end{figure}
+
 \section{Subject reduction}
 \label{apdx:subject-reduction}
 
@@ -2857,12 +2929,12 @@ any infinite branches. Thus, by K\H{o}nig's lemma, the whole tree is finite and
 there must be a $\bound{v}$ that bounds its height.
 \end{proof}
 
-We define three mutually defined families of logical relations:
+We define three mutually defined families of logical relations.
 $\redva{\Delta}{\tau}{\alpha}$ on values and
-$\redca{\Delta}{\tau}{\alpha}$ on computations, indexed by an effect
-context, a type and an ordinal, and $\redya{\Delta}{S}{\alpha}$ on
-values, indexed by an effect context, a semantic signature and an
-ordinal. The definitions are given in
+$\redca{\Delta}{\tau}{\alpha}$ on computations are indexed by an
+effect context, a type and an ordinal, whilst
+$\redya{\Delta}{S}{\alpha}$ on values is indexed by an effect context,
+a semantic signature and an ordinal. The definitions are given in
 Fig.~\ref{fig:reducibility-predicates}.
 
 The ordinal $\alpha$ controls the rank of the well-founded trees
@@ -2926,8 +2998,8 @@ be the supremum of the ordinals for its elements.
             &\quad \implies \;
             \exists S, P, A. \; \loc \types S \in \Delta
                             \; \wedge \; op \types P \rightarrowtail A \in S
-                            \; \wedge \; v_2 \in P
-                            \; \wedge \; A \subseteq \redva{\Delta}{\tau}{\alpha}) \\
+                            \; \wedge \; v_2 \in P \\
+                            &\qquad \quad \wedge \; A \subseteq \redva{\Delta}{\tau}{\alpha}) \\
         &\wedge \; (\forall \loc, op, v_3, c_2. \quad
            c_1 \reducestoc \letv{x}{\perform{\loc}{op}{v_3}}{c_2} \\
             &\quad \implies \;
@@ -3136,12 +3208,11 @@ For all neutral values $v_n$ and neutral computations $c_n$:
   $\outl{v_i}$ or $\outr{v_i}$ as it is neutral. Since they reduce from
   $v_r$ and $v_r \in \redya{\Delta}{S}{\alpha}$ they must
   have the required properties.
-\item[$\redcname$:] Any reduction $c_n \reducestoc \return{v_t}$,
-  $c_n \reducestoc \perform{\loc}{op}{v_p}$ or
-  $c_n \reducestoc \letv{x}{\perform{\loc}{op}{v_p}}{c_k}$ must go
-  through one of the $c_r$ because $c_n$ cannot equal $\return{v_t}$,
-  $\perform{\loc}{op}{v_p}$ or $\letv{x}{\perform{\loc}{op}{v_p}}{c_k}$
-  as it is neutral. Since they reduce from $c_r$ and
+\item[$\redcname$:] Any reduction of $c_n$ to $\return{v_t}$, to
+  $\perform{\loc}{op}{v_p}$, or to
+  $\letv{x}{\perform{\loc}{op}{v_p}}{c_k}$ must go through one of the
+  $c_r$, because $c_n$ is neutral and so cannot equal any of these
+  forms. Since they reduce from $c_r$ and
   $c_r \in \redca{\Delta}{\tau}{\alpha}$ they must have the required
   properties.
 \end{description}
@@ -3803,10 +3874,10 @@ Perform terms are reducible when built from reducible subterms.
     same reasoning as the previous case.
   \end{itemize}
 \end{proof}
-As a corollary, if $op \types \tau_p \rightarrowtail \tau_a \in \Sigma$,
+As a corollary, $\perform{v_l}{op}{v_a} \in \redc{\Delta}{\glob \tau_a}$
+whenever $op \types \tau_p \rightarrowtail \tau_a \in \Sigma$,
 $v_l \in \redv{\Delta}{\yoneda{\Sigma}}$ and
-$v_a \in \redv{\cempty}{\tau_p}$ then
-$\perform{v_l}{op}{v_a} \in \redc{\Delta}{\glob \tau_a}$.
+$v_a \in \redv{\cempty}{\tau_p}$.
 
 \subsection{Inductive types}
 
@@ -4284,6 +4355,155 @@ CR3(\ref{lemma:red-neutral}). As a corollary we get:
 \end{align*}
 from which it immediately follows by CR1(\ref{lemma:red-implies-sn})
 that well-typed terms are strongly normalizing.
+
+\subsection{Effect safety}
+\label{apdx:effect-safety}
+
+We now prove the effect safety theorem
+(Theorem~\ref{lemma:effect-safety}). We write $v \stepsnotv$ to indicate
+that $v$ has no reducts under $\stepstov$. We says such values are
+irreducible. Similarly, we write $c \stepsnotc$ for irreducible
+computations. Since the reduction relations are closed under congruence,
+every immediate subterm of an irreducible term is itself irreducible,
+including the bodies of binders.
+
+\begin{lemma}[Canonical forms]
+\label{lemma:canonical-forms}
+  If $\Gamma \turnv \omega \types \tau$ for a normal value $\omega$
+  that is not a neutral normal value $\eta$, then:
+  \begin{itemize}
+  \item if $\tau = \tau_1 \times \tau_2$ then $\omega$ is of the form
+    $(\omega_1, \omega_2)$;
+  \item if $\tau = 1$ then $\omega$ is $()$;
+  \item if $\tau = \tau_1 + \tau_2$ then $\omega$ is of the form
+    $\inl{\omega_1}$ or $\inr{\omega_1}$;
+  \item if $\tau = \tau_1 \arr \tau_2$ then $\omega$ is of the form
+    $\abs{x}{\mu}$;
+  \item if $\tau = \glob \tau_1$ then $\omega$ is of the form
+    $\gbox{\omega_1}$;
+  \item if $\tau = \ind{\Sigma}(\tau_1)$ then $\omega$ is of the form
+    $\ret{\omega_1}$ or $\indintro{op}{\omega_1}{\omega_2}$;
+  \item if $\tau = \yoneda{\Sigma}$ then $\omega$ is of the form
+    $\loc$, $\outl{\omega_1}$ or $\outr{\omega_1}$.
+  \end{itemize}
+\end{lemma}
+\begin{proof}
+  By inspection of the grammar of normal values
+  (Fig.~\ref{fig:normal}) and the typing rules: each non-neutral normal
+  value form is an introduction form, and its typing rule determines the
+  outermost type constructor of its type.
+\end{proof}
+
+\begin{lemma}[Progress]
+\label{lemma:progress}
+  Well-typed irreducible terms are normal forms:
+  \begin{align*}
+    &\Gamma \turnv v \types \tau
+      \quad \wedge \quad v \stepsnotv
+      \quad \implies \quad v \text{ is a normal value } \omega \\
+    &\Gamma \turnc c \types \tau
+      \quad \wedge \quad c \stepsnotc
+      \quad \implies \quad c \text{ is a normal computation } \mu
+  \end{align*}
+\end{lemma}
+\begin{proof}
+  By mutual induction on the typing derivations. In each case the
+  immediate subterms are irreducible and well-typed, so by the
+  inductive hypothesis they are normal values or normal computations.
+  \begin{description}
+  \item[Variables] $x$ is a neutral normal value and
+    $\loc$ is a normal value.
+  \item[Introduction] $\abs{x}{\mu}$, $(\omega_1, \omega_2)$,
+    $()$, $\inl{\omega}$, $\inr{\omega}$, $\gbox{\omega}$,
+    $\ret{\omega}$, $\indintro{op}{\omega_1}{\omega_2}$, $\outl{\omega}$
+    and $\outr{\omega}$ are all normal values by the grammar of
+    Fig.~\ref{fig:normal}.
+  \item[Projections] For $\fst{\omega}$, $\omega$ has a product type,
+    so by Lemma~\ref{lemma:canonical-forms} it is either a pair, in
+    which case $\fst{\omega}$ reduces, or neutral, in which case
+    $\fst{\omega}$ is neutral. The case for $\sndname$ is the same.
+  \item[Case] For $\casem{\omega_1}{x_1}{\omega_2}{x_2}{\omega_3}$,
+    $\omega_1$ has a sum type, so it is either an injection, in which
+    case the term reduces, or neutral, in which case the term is
+    neutral.
+  \item[Unbox] For $\gunbox{x}{\omega_1}{\omega_2}$, $\omega_1$ has a
+    global type, so it is either of the form $\gbox{\omega}$, in which
+    case the term reduces, or neutral, in which case the term is
+    neutral.
+  \item[Run] For $\grun{\mu}$, the computation $\mu$ is typed in the
+    divided context $\cdiv{\Gamma}$, which contains no location
+    bindings. The normal computation forms $\perform{\loc}{op}{\omega}$
+    and $\letv{x}{\perform{\loc}{op}{\omega}}{\mu^{\prime}}$ require a
+    binding for $\loc$ in the context, so $\mu$ is either of the form
+    $\return{\omega}$, in which case $\grun{\mu}$ reduces, or a neutral
+    normal computation $\nu$, in which case $\grun{\nu}$ is neutral.
+  \item[Recursion] For $\indelim{\omega_s}{\ldots}$, $\omega_s$ has an
+    inductive type, so it is either of the form $\ret{\omega}$ or
+    $\indintro{op}{\omega_1}{\omega_2}$, in which case the term
+    reduces, or neutral, in which case the term is neutral.
+  \item[Return] $\return{\omega}$ is a normal computation.
+  \item[Application] For $\app{\omega_1}{\omega_2}$, $\omega_1$ has a
+    function type, so it is either an abstraction, in which case the
+    term reduces, or neutral, in which case the term is neutral.
+  \item[Let] For $\letv{x}{\mu_1}{\mu_2}$ we consider the form of
+    $\mu_1$. If it is $\return{\omega}$ then the term reduces. If it is
+    $\letv{x_1}{\perform{\loc}{op}{\omega}}{\mu^{\prime}}$ then the
+    term reduces by the commuting rule. If it is
+    $\perform{\loc}{op}{\omega}$ then the term is a normal computation
+    of the form $\letv{x}{\perform{\loc}{op}{\omega}}{\mu_2}$. If it is
+    neutral then the term is neutral.
+  \item[Reflection] For $\perform{\omega_1}{op}{\omega_2}$, $\omega_1$
+    has a capability type, so by Lemma~\ref{lemma:canonical-forms} it
+    is either of the form $\outl{\omega}$ or $\outr{\omega}$, in which
+    case the term reduces, a location $\loc$, in which case the term is
+    a normal computation, or neutral, in which case the term is
+    neutral.
+  \item[Reification] For $\reify{\loc}{\mu}$ we consider the form of
+    $\mu$. If it is of the form $\perform{\loc^{\prime}}{op}{\omega}$,
+    or of the form
+    $\letv{x}{\perform{\loc^{\prime}}{op}{\omega}}{\mu^{\prime}}$, then
+    the term reduces, whether or not $\loc^{\prime} = \loc$. If it is
+    $\return{\omega}$ then $\omega$ has a global type, so it is either
+    of the form $\gbox{\omega^{\prime}}$, in which case the term
+    reduces, or neutral, in which case $\reify{\loc}{\return{\eta}}$ is
+    neutral. If $\mu$ is neutral then the term is neutral.
+  \end{description}
+\end{proof}
+
+\begin{lemma}[Closed normal forms]
+\label{lemma:closed-normal-forms}
+  Every neutral normal value $\eta$ and every neutral normal
+  computation $\nu$ has a free variable. Every normal computation $\mu$
+  that is not of the form $\return{\omega}$ has a free variable or a
+  free location.
+\end{lemma}
+\begin{proof}
+  By mutual induction on the grammar of Fig.~\ref{fig:normal}. A neutral
+  normal value is either a variable, or has an immediate subterm that is
+  a neutral normal value or neutral normal computation in a position
+  that is not under a binder (the scrutinee of a projection,
+  $\casename$, global $\letvname$ or $\indelimname$, or the body of
+  $\grunname$). A neutral normal computation similarly has such a
+  subterm in a position that is not under a variable binder: the
+  function of an application, the capability of a reflection, the bound
+  computation of a $\letvname$, or the body of a reification, which
+  binds only a location. Finally, a normal computation is either
+  neutral, of the form $\return{\omega}$, or of one of the forms
+  $\perform{\loc}{op}{\omega}$ and
+  $\letv{x}{\perform{\loc}{op}{\omega}}{\mu}$ in which $\loc$ is free.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{lemma:effect-safety}]
+  Let $\turnc c \types \tau$. By strong normalization
+  (Theorem~\ref{lemma:strong-normalization}) there is an irreducible
+  $c^{\prime}$ with $c \reducestoc c^{\prime}$, and by subject
+  reduction (Theorem~\ref{lemma:subject-reduction})
+  $\turnc c^{\prime} \types \tau$. By Lemma~\ref{lemma:progress},
+  $c^{\prime}$ is a normal computation, and since it is well-typed in
+  the empty context it has no free variables or locations. Hence by
+  Lemma~\ref{lemma:closed-normal-forms} it is of the form
+  $\return{\omega}$.
+\end{proof}
 
 \section{Embedding the Simply-Typed Lambda Calculus}
 \label{apdx:embedding}
@@ -4906,7 +5126,7 @@ Fig.~\ref{fig:denotational-reflection}.
   $\glob (A + B)$ to $(\glob A) + (\glob B)$
 \item $\bdiv{\Gamma} \types \Gamma \rightarrow \cdiv{\Gamma}$ is the morphism
 that projects the global bindings from $\Gamma$
-\item $\ununit_P$ is the isomorphism from $\glob \mon(P)$ to $\glob P$
+\item $\ununit_P$ is the isomorphism from $\glob (\mon(P))$ to $\glob P$
 \end{itemize}
 \caption{Denotational semantics: Locality}
 \label{fig:denotational-locality}
@@ -5341,14 +5561,14 @@ The denotational semantics is compositional:
 \begin{align*}
   &\sem{\Gamma_1 \turnv v_1 \types \tau_1}
     = \sem{\Gamma_1 \turnv v_2 \types \tau_1}
-  \quad \wedge \quad \ctxv{\_} \types \Gamma_1 \turnv \tau_1 \trans \Gamma_2 \turnv \tau_2
-  \quad \implies \quad
+  \quad \wedge \quad \ctxv{\_} \types \Gamma_1 \turnv \tau_1 \trans \Gamma_2 \turnv \tau_2 \\
+  &\qquad \implies \quad
   \sem{\Gamma_2 \turnv \ctxv{v_1} \types \tau_2}
   = \sem{\Gamma_2 \turnv \ctxv{v_2} \types \tau_2} \\
   &\sem{\Gamma_1 \turnv v_1 \types \tau_1}
     = \sem{\Gamma_1 \turnv v_2 \types \tau_1}
-  \quad \wedge \quad \ctxc{\_} \types \Gamma_1 \turnv \tau_1 \trans \Gamma_2 \turnc \tau_2
-  \quad \implies \quad
+  \quad \wedge \quad \ctxc{\_} \types \Gamma_1 \turnv \tau_1 \trans \Gamma_2 \turnc \tau_2 \\
+  &\qquad \implies \quad
   \sem{\Gamma_2 \turnc \ctxc{v_1} \types \tau_2}
   = \sem{\Gamma_2 \turnc \ctxc{v_2} \types \tau_2}
 \end{align*}

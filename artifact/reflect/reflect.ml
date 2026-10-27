@@ -7,7 +7,7 @@ module Term (E : Sig) = struct
 end
 
 module Continuation (E : Sig) = struct
-  type ('a, 'b) t = 'a -> 'b Term(E).t
+  type ('r, 'a) t = 'r -> 'a Term(E).t
 end
 
 module Handler (E : Sig) = struct

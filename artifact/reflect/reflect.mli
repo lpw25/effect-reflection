@@ -1,7 +1,7 @@
 module type Sig = sig type 'a t end
 
 module Continuation (E : Sig) : sig
-  type ('a, 'b) t
+  type ('r, 'a) t
 end
 
 module Term (E : Sig) : sig
@@ -23,9 +23,9 @@ module Reflection (E : Sig) : sig
   val perform : 'a E.t -> (Handler(E).t @ local -> 'a)
 
   val continue :
-    ('a, 'b) Continuation(E).t @ local -> 'a -> 'b Term(E).t @ local
+    ('r, 'a) Continuation(E).t @ local -> 'r -> 'a Term(E).t @ local
 
-  val continue_global : ('a, 'b) Continuation(E).t -> 'a -> 'b Term(E).t
+  val continue_global : ('r, 'a) Continuation(E).t -> 'r -> 'a Term(E).t
 end
 
 module Sum (L : Sig) (R : Sig) : sig
