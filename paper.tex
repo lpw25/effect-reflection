@@ -227,32 +227,24 @@
   effect systems that add complexity to the language.
 
   We introduce \emph{effect reflection}, an alternative presentation of
-  algebraic effects and handlers that provides, for any algebraic
-  signature $\Sigma$ and type $\tau$, an isomorphism:
-  \begin{equation*}
-    \ind{\Sigma}(\tau)
-    \qquad \cong \qquad
-    \yoneda{\Sigma} \arr \glob \tau
-  \end{equation*}
-  where:
-  \begin{itemize}
-  \item $\ind{\Sigma}(\tau)$ is the free algebra of $\Sigma$ at $\tau$,
-    sometimes called the \emph{freer monad} of $\Sigma$.
-  \item $\yoneda{\Sigma}$ is a type representing how to inject operations of
-    $\Sigma$ into the current \emph{ambient monad}: the monad describing
-  which effects ordinary functions can perform.
-  \item$\glob$ is a comonadic \emph{global modality} used to track which values do not
-  depend on the ambient monad.
-  \end{itemize}
-  This isomorphism emerges naturally, as a corollary of the Yoneda
-  lemma, from the \emph{Ambient Monad model}: a novel semantic model of
-  algebraic effects in terms of presheaves over Lawvere
-  theories.
+  algebraic effects and handlers. For any algebraic signature, effect
+  reflection provides an isomorphism between the free algebra of that
+  signature, sometimes called its freer monad, and the functions from
+  an effect capability for the signature to values that do not depend
+  on the ambient monad. An effect capability represents the ability to
+  inject the operations of the signature into the ambient monad: the
+  monad describing which effects ordinary functions can perform. Values
+  that do not depend on the ambient monad are tracked by a comonadic
+  global modality. This isomorphism emerges naturally, as a corollary
+  of the Yoneda lemma, from the \emph{Ambient Monad model}: a novel
+  semantic model of algebraic effects in terms of presheaves over
+  Lawvere theories.
 
-  Effect reflection provides all the expressiveness of typed algebraic
-  effects without requiring language-level support for an effect system. We
-  demonstrate this by implementing effect reflection as a library in
-  OxCaml.
+  Effect reflection supports the classic examples of algebraic effects
+  and handlers without requiring language-level support for an effect
+  system: all that is required is some way to track locality in
+  types. We demonstrate this by implementing effect reflection as a
+  library in OxCaml.
 \end{abstract}
 
 \maketitle
@@ -531,9 +523,9 @@ which, combined with (\ref{eq:yoneda}), gives us an isomorphism:
 \end{equation*}
 
 This isomorphism allows us to reify effectful computations as inductive
-types, giving the same expressive power as effect handlers. Note that it
-can be expressed with only effect capabilities, inductive types and a
-global modality.
+types, and then to handle them by ordinary recursion over those types,
+which is what effect handlers do. Note that it can be expressed with
+only effect capabilities, inductive types and a global modality.
 
 The forwards direction of the isomorphism is already provided
 by reflection of operations. We can provide the backwards direction as a
@@ -1153,8 +1145,10 @@ Fig.\ref{fig:normal}.
 \reify{\loc}{\return{(\gbox{v})}} &\stepstoc \return{\ret{v}} \\
 \reify{\loc_1}{\perform{\loc_1}{op}{v}} &\stepstoc \return{\indintro{op}{v}{\abs{(\gbox{x})}{\return{\ret{x}}}}} \\
 \reify{\loc_1}{\letv{x}{\perform{\loc_1}{op}{v}}{c}} &\stepstoc \return{\indintro{op}{v}{\abs{x}{\reify{\loc_1}{c}}}} \\
-\reify{\loc_1}{\perform{\loc_2}{op}{v}} &\stepstoc \letv{(\gbox{x})}{\perform{\loc_2}{op}{v}}{\return{\ret{x}}} \qquad (\loc_1 \neq \loc_2) \\
-\reify{\loc_1}{\letv{x}{\perform{\loc_2}{op}{v}}{c}} &\stepstoc \letv{x}{\perform{\loc_2}{op}{v}}{\reify{\loc_1}{c}} \qquad (\loc_1 \neq \loc_2)
+\reify{\loc_1}{\perform{\loc_2}{op}{v}} &\stepstoc \letv{(\gbox{x})}{\perform{\loc_2}{op}{v}}{\return{\ret{x}}} \\
+  &\qquad \qquad (\loc_1 \neq \loc_2) \\
+\reify{\loc_1}{\letv{x}{\perform{\loc_2}{op}{v}}{c}} &\stepstoc \letv{x}{\perform{\loc_2}{op}{v}}{\reify{\loc_1}{c}} \\
+  &\qquad \qquad (\loc_1 \neq \loc_2)
 \end{align*}
 \caption{Reduction relations}
 \label{fig:reduction}
@@ -1435,7 +1429,8 @@ finite types. This would allow for boolean state, but would not support
 $\nat$-valued state.
 
 In the algebraic effects literature the most common choice is to use
-algebraic signatures with countable arity. However, this is still too
+algebraic signatures with countable
+arity~\cite{power2006countable, hyland2007category}. However, this is still too
 restrictive, supporting $\nat$-valued state but not
 $(\nat \rightarrow \nat)$-valued state.
 
@@ -1451,7 +1446,9 @@ always a sufficiently large $\kappa$ available, which we prove in
 Appendix \ref{apdx:bounds}.
 
 We can extend the definition of Lawvere theory to support algebraic
-theories bounded by a regular cardinal $\kappa$:
+theories bounded by a regular cardinal $\kappa$, following the usual
+notion of $\kappa$-ary algebraic theory~\cite{adamek1994locally} but
+with an additional bound on the number of morphisms:
 \begin{definition}
   A \emph{$\kappa$-bounded Lawvere theory} is a small category with
   $\kappa$-small products, a distinguished object $X$ such that every
@@ -1566,15 +1563,21 @@ algebras monad to give us our semantics for function types.
 \subsection{The global modality}
 \label{sec:global}
 
-For any category $\cat$ with a terminal object $\terminal$, we
-can define the global modality $\glob \types [\psh, \psh]$ such that:
-$\glob(P)(L) = P(\terminal)$. In the case of $\pshlawcop$ this becomes:
+The standard interpretation of a global modality
+$\glob \types [\psh, \psh]$ in a presheaf topos $\psh$ is the global
+sections comonad, used for example to interpret the $\glob$ modality
+of guarded type theory in the topos of
+trees~\cite{birkedal2012first}. When $\cat$ has a terminal object
+$\terminal$, the global sections of $P$ are simply $P(\terminal)$, so
+that $\glob(P)(C) = P(\terminal)$ for every object $C$ of $\cat$. In
+the case of $\pshlawcop$ the terminal object of $\lawcop$ is the
+initial object $\initial$ of $\lawc$, and so:
 \begin{equation*}
 \glob(P)(L) = P(\initial)
 \end{equation*}
-$\glob$ forms a comonad on $\pshlawcop$. $\glob$ also distributes over
-both products: $\glob (P \times Q) = (\glob P) \times (\glob Q)$, and
-sums: $\glob (P + Q) = (\glob P) + (\glob Q)$.
+$\glob$ distributes over both products:
+$\glob (P \times Q) = (\glob P) \times (\glob Q)$, and sums:
+$\glob (P + Q) = (\glob P) + (\glob Q)$.
 
 Within the ambient monad model, this amounts to restricting a type to
 only the elements which do not depend on the ambient monad. This is very
@@ -1965,6 +1968,7 @@ direction of the isomorphism. It reflects individual operations as
 opposed to full terms, which is a more convenient primitive in practice.
 
 \subsection{Effect reflection implementation}
+\label{sec:implementation}
 
 We can implement the effect reflection interface directly in terms of
 OCaml's untracked effect
@@ -1977,6 +1981,13 @@ during reflection. Performing effects involves a single indirect call
 and then an underlying perform operation, so its performance is
 essentially the same as the performance of OCaml's algebraic effects.
 
+Due to an issue with stack allocation, the current release of OxCaml
+does not allow effect handlers to refer to local values, which means our
+implementation of \lstinline[style=oxcaml]{reify} does not actually
+type-check. This issue is unrelated to our use of locality and will be
+addressed in a future release, so we don't discuss it further. Our
+implementation of \lstinline[style=oxcaml]{reify_global} is unaffected.
+
 For various practical reasons, OCaml's algebraic effects only allow
 continuations to be resumed a single time. There is no fundamental
 reason for effect reflection to be so restricted, and we ignore the
@@ -1984,6 +1995,12 @@ restriction in this paper, but our actual implementation inherits it
 from OCaml. Note that OxCaml's \lstinline[style=oxcaml]{once}
 mode~\cite{lorenzen2024oxidizing} allows us to enforce this restriction
 statically.
+
+A library based on effect reflection now forms the basis of the
+algebraic effects support in OxCaml. It has been used to implement a
+number of libraries -- mostly for concurrency and parallelism -- that
+between them are used by hundreds of developers in production in an
+industrial setting.
 
 \subsection{Example: Generators}
 
@@ -2114,6 +2131,29 @@ still requires using an effect system to track which named effects are
 used by a computation. Using higher-rank polymorphism prevents global
 type inference and demands a higher annotation burden on the programmer.
 
+\subsection{Dynamic generation of effect instances}
+
+A number of systems support dynamically generating fresh instances of
+an effect at run time. This introduces the possibility of aliasing
+between effect instances, which makes tracking them in a type system
+challenging; de Vilhena and Pottier~\cite{devilhena2023type} give a
+type system for effect handlers with dynamically generated labels. The
+relationship between dynamic generation of effect instances and effect
+reflection is the relationship between \emph{gensym} and higher-order
+abstract syntax (HOAS): there is a close correspondence between
+approaches to managing binders and approaches to managing effect
+handlers. Effect reflection is analogous to HOAS, which is why the
+Ambient Monad model so closely resembles the presheaf semantics of
+HOAS~\cite{fiore1999abstract, hofmann1999semantical}. Dynamic
+generation of effect instances is analogous to gensym: it is convenient
+to work with, but by itself it does not prevent an instance from being
+accidentally captured~\cite{zhang2019abstraction} or left unhandled, in
+the same way that gensym does not prevent accidental capture or
+unbound variables. Under the hood, as can be seen in
+Appendix~\ref{apdx:implementation}, \lstinline[style=oxcaml]{reify}
+dynamically generates a fresh effect each time it is called, but the
+type system prevents that effect from escaping the scope of the call.
+
 \subsection{Monadic reflection}
 
 Effect reflection's presentation as reification and reflection
@@ -2149,9 +2189,13 @@ treated as extrinsic to the semantics~\cite{bauer2014effect}.
 Forster et al.~\cite{forster2017expressive} give a set-theoretic
 denotational semantics of a calculus with algebraic effect handlers. It
 is typed and represents effects using their free algebras. However,
-their calculus supports neither nesting effect handlers nor effect
-polymorphism, which means the handlers described are not modular or
-composable.
+their handlers are \emph{closed}: a handled computation may only use
+the operations that its handler handles, so a computation nested
+inside a handler cannot use the operations of an enclosing handler
+unless the inner handler explicitly forwards each of them. Combined
+with the absence of effect polymorphism, this means the handlers
+described are not modular or composable: a handler must be rewritten
+for each set of enclosing effects it is used within.
 
 \subsection{Comonadic purity, locality and presheaves}
 
