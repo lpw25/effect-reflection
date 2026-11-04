@@ -293,6 +293,10 @@ two additional effectful operations are available:
     let get () : int = perform Get
     let set (i : int) : unit = perform (Set i)
 \end{lstlisting}
+This is a \emph{deep} handler: when the continuation
+\lstinline[style=oxcaml]{k} is resumed the handler remains installed,
+so that any further operations performed by \lstinline[style=oxcaml]{f}
+are also handled by it.
 
 Effect handlers have a couple of key benefits compared to using an explicit monad:
 \begin{itemize}
@@ -534,93 +538,12 @@ computation $\reify{\loc}{c}$ that binds $\loc$ to an effect capability
 of type $\yoneda{\Sigma}$ in the computation $c \types \glob \tau$ and
 reifies the uses of $\loc$ in $c$ as a $\ind{\Sigma}(\tau)$.
 
-\subsection{Locality in OxCaml}
-\label{sec:locality}
-
-The Ambient Monad model suggests expressing effect reflection and
-reification only really requires a global modality, or more broadly some
-type system mechanism for tracking locality. OxCaml has support for
-tracking locality in types, which we describe here. For a full treatment
-see Lorenzen et al.~\cite{lorenzen2024oxidizing}.
-
-Values in OxCaml are associated with both a type -- which describes how
-values can be introduced and eliminated -- and a \emph{mode} -- which
-tracks properties related to operations other than introduction and
-elimination. Modes are a product of a number of different axes, tracking
-a variety of different properties, but here we are only interested in
-one of them: \emph{locality}. Ignoring the other axes, a mode is either
-\lstinline[style=oxcaml]{local} or \lstinline[style=oxcaml]{global}.
-
-Locality tracks whether a value can escape the current
-\emph{region}. By default, the current region ends when a function
-returns, so local values cannot be returned from functions.
-\begin{lstlisting}[style=oxcaml]
-  let leak_local x =
-    let (o @ local) = Some x in
-    o
-  (*@ \textcolor{red}{Error: This value escapes its region.} @*)
-\end{lstlisting}
-This tight alignment between regions and function bodies can be
-inconvenient, so there is an \lstinline[style=oxcaml]{exclave} construct
-that allows functions to return local values:
-\begin{lstlisting}[style=oxcaml]
-  let return_local x =
-    exclave
-      (let (o @ local) = Some x in
-       o)
-\end{lstlisting}
-\lstinline[style=oxcaml]{exclave e} can only appear in tail position
-within a function.  It ends the function's region early and then
-executes the expression \lstinline[style=oxcaml]{e}. Since
-\lstinline[style=oxcaml]{e} is executed within the region of the caller
-of the function, any local values created within it can be safely
-returned to that caller.
-
-Arrow types are labelled with two modes: one for the argument and one
-for the return value.
-\begin{lstlisting}[style=oxcaml]
-  val return_local : 'a @ local -> 'a option @ local
-\end{lstlisting}
-For convenience, and backwards compatibility with OCaml, either mode can
-be omitted, in which case it defaults to
-\lstinline[style=oxcaml]{global}.
-
-By default, modes are deep: a local
-\lstinline[style=oxcaml]{string list} is a local list of local
-strings. However, the depth to which a mode applies can be controlled via
-\emph{modalities}. Record fields can be annotated with the
-\lstinline[style=oxcaml]{global} modality to indicate that the contents
-of the field are global even when the surrounding record is local. For
-example:
-\begin{lstlisting}[style=oxcaml]
-  type 'a gbl = { g : 'a @@ global }
-\end{lstlisting}
-gives a record whose only field has the \lstinline[style=oxcaml]{global}
-modality. The contents of the \lstinline[style=oxcaml]{g} field are always
-global, for example:
-\begin{lstlisting}[style=oxcaml]
-  let project_global (r @ local) =
-    r.g
-\end{lstlisting}
-gives a function of type:
-\begin{lstlisting}[style=oxcaml]
-  val project_global : 'a gbl @ local -> 'a @ global
-\end{lstlisting}
-Variant constructor arguments can also be annotated with modalities.
-
-Note that, whilst there is a \lstinline[style=oxcaml]{global} modality,
-there is no \lstinline[style=oxcaml]{local} modality. It does not make
-sense for a value which has the ability to leave a region to contain a
-value which doesn't have that ability: when the first value leaves a
-region it will implicitly cause the second one to leave that region as
-well. This means the \lstinline[style=oxcaml]{global} mode is always
-deep.
-
 \subsection{Effect reflection in OxCaml}
 \label{sec:reflection-in-oxcaml}
 
-Using OxCaml's support for locality and the untracked algebraic effects
-it inherits from OCaml, we can implement effect reflection as a simple
+Using OxCaml's support for tracking locality in types (described in
+Section~\ref{sec:locality}) and the untracked algebraic effects it
+inherits from OCaml, we can implement effect reflection as a simple
 library with no specific compiler support.
 
 Given an algebraic signature represented as a module with a single type
@@ -673,7 +596,11 @@ OCaml one in Section~\ref{sec:handlers}:
 The handler calls \lstinline[style=oxcaml]{f} and passes it a local value of
 type \lstinline[style=oxcaml]{Handler(State).t}. For the duration of the
 call to \lstinline[style=oxcaml]{f} the ambient monad is extended with
-two additional effectful operations, which can be used via reflection:
+two additional effectful operations, which can be used via reflection.
+As in Section~\ref{sec:handlers} this is a deep handler: the recursive
+call to \lstinline[style=oxcaml]{loop} on the continued computation
+handles any further operations performed by
+\lstinline[style=oxcaml]{f}. The operations themselves are:
 \begin{lstlisting}[style=oxcaml]
     let get (h : Handler(State).t @ local) : int =
       State_eff.perform Get h
@@ -819,7 +746,11 @@ $x_0$ and applying the substitutions
 $\sub{x_1}{\fst{x_0}}\sub{x_2}{\snd{x_0}}$ to the body of the binding.
 
 Note that $\casename$ -- the eliminator for sum types -- is a value
-rather than a computation. We can define a computation version as:
+rather than a computation. Our values are thus the \emph{complex
+  values} of Levy~\cite{levy2004cbpv}: effect-free terms that may
+still require reduction, rather than only canonical forms, as in
+fine-grain call-by-value~\cite{levy2003modelling}. We can define a
+computation version as:
 \begin{align*}
     &\case{v}{x_1}{c_1}{x_2}{c_2} := \\
     &\qquad (\case{v}{x_1}{\abs{()}{c_1}}{x_2}{\abs{()}{c_2}}) \; ()
@@ -1115,6 +1046,19 @@ We also provide projections $\outl$ and $\outr$ that decompose an effect
 capability for $\Sigma_1 + \Sigma_2$ into effect capabilities for
 $\Sigma_1$ and $\Sigma_2$ respectively.
 
+Effect reflection splits a conventional deep effect handler into two
+parts. Reification captures each operation performed via $\loc$,
+together with its continuation, as an $\indintro{op}{v_p}{v_k}$ node of
+$\ind{\Sigma}(\tau)$. This is the capture of the surrounding
+evaluation context performed by a handler, and in our operational
+semantics it is performed by the reduction rules for $\reifyname$
+(Section~\ref{sec:operational}). The handler itself is then just a
+fold over the inductive type, written using $\indelimname$: the return
+clause of a conventional handler is the $\mathtt{ret}$ case, each
+operation clause is an $op$ case, and the recursive application of the
+fold to the result of the continuation is what makes the handler
+deep.
+
 \subsection{Operational semantics}
 \label{sec:operational}
 
@@ -1176,12 +1120,36 @@ Fig.\ref{fig:normal}.
 \label{fig:normal}
 \end{figure}
 
-Note that the reduction rules are for strong reduction, i.e. there is a
-congruence rule for abstraction:
+As in fine-grain call-by-value and
+call-by-push-value~\cite{levy2003modelling, levy2004cbpv}, the
+evaluation order is already fixed by the syntax, through the sequencing
+of computations with $\letvname$, rather than by an evaluation strategy.
+
+The rules for $\reifyname$ consume the operations performed on $\loc$
+one at a time from the front of the reified computation, turning each
+into an $\indintro{op}{v}{v_k}$ node whose continuation reifies the rest
+of the computation. The rule that commutes nested $\letvname$ bindings
+is what floats a performed operation to the front of a computation so
+that these rules can apply. Operations performed on some other location
+$\loc_2$ belong to an enclosing reification, and are instead floated out
+past the $\reifyname$. Since we use fine-grained call-by-value, this
+gives a semantics for effect handlers with no evaluation contexts and no
+side conditions about the nearest enclosing handler, just a reduction
+relation on terms.
+
+Our calculus is intended as an extension of the simply-typed lambda
+calculus (Appendix~\ref{apdx:embedding}) that preserves its metatheory,
+as such our rules are for strong reduction, i.e. there is a congruence
+rule for abstraction:
 \begin{mathpar}
 \inferrule{c_1 \stepstoc c_2}
 {\abs{x}{c_1} \stepstov \abs{x}{c_2}}
 \end{mathpar}
+This gives every well-typed term a unique normal form, with the usual
+weak call-by-value strategy as a special case. It also makes the rules
+suitable for use as definitional equalities in a dependently typed
+setting, where conversion must compare terms under binders, which is a
+direction for future work.
 
 We prove subject reduction for this semantics in
 Appendix~\ref{apdx:subject-reduction} by induction on the reduction
@@ -1565,9 +1533,9 @@ algebras monad to give us our semantics for function types.
 
 The standard interpretation of a global modality
 $\glob \types [\psh, \psh]$ in a presheaf topos $\psh$ is the global
-sections comonad, used for example to interpret the $\glob$ modality
-of guarded type theory in the topos of
-trees~\cite{birkedal2012first}. When $\cat$ has a terminal object
+sections comonad, used for example to interpret the constant
+modality of the guarded lambda calculus in the topos of
+trees~\cite{clouston2016guarded}. When $\cat$ has a terminal object
 $\terminal$, the global sections of $P$ are simply $P(\terminal)$, so
 that $\glob(P)(C) = P(\terminal)$ for every object $C$ of $\cat$. In
 the case of $\pshlawcop$ the terminal object of $\lawcop$ is the
@@ -1880,9 +1848,124 @@ prove these properties in Appendix~\ref{apdx:denotational}.
 \section{Effect reflection in practice}
 \label{sec:practice}
 
-We provide effect reflection as a simple library API in OxCaml based on
-OxCaml's support for locality (see Section~\ref{sec:locality}). In this
-section we describe this API and its implementation.
+We provide effect reflection as a simple library API in OxCaml. We first
+describe the support for locality in OxCaml and its relationship to our
+global modality, then we describe the API and its implementation.
+
+\subsection{Locality in OxCaml}
+\label{sec:locality}
+
+Our implementation relies on OxCaml's support for tracking
+\emph{locality} in types. We describe here the fragment of that support
+that effect reflection needs; for a full treatment see Lorenzen et
+al.~\cite{lorenzen2024oxidizing}.
+
+In OxCaml every value has both a type and a \emph{mode}. The type
+describes how the value can be introduced and eliminated, whilst the
+mode describes how the value may otherwise be used: for example,
+whether it may be aliased, whether it may be used more than once, or
+whether it may escape the scope in which it was created. Modes have
+several independent axes, but the only one relevant here is locality,
+so we ignore the others and treat a mode as either
+\lstinline[style=oxcaml]{local} or \lstinline[style=oxcaml]{global}.
+
+The locality mode of a value records whether it may escape the current
+\emph{region}. By default each function body is a region. A
+\lstinline[style=oxcaml]{local} value created within a function may be
+passed to other functions and stored inside other local values, but it
+may not be returned from the function, stored in a global data
+structure, or captured by a global closure. A
+\lstinline[style=oxcaml]{global} value has no such restriction. The
+compiler rejects any attempt by a local value to escape its region:
+\begin{lstlisting}[style=oxcaml]
+  let leak_local x =
+    let (o @ local) = Some x in
+    o
+  (*@ \textcolor{red}{Error: This value escapes its region.} @*)
+\end{lstlisting}
+Locality was originally introduced to allow local values to be
+allocated on the stack, since they cannot outlive the stack frame of
+their region, but the mode system itself is purely about scope.
+
+Function types record the modes of the argument and the result. For
+example, a function that accepts a local argument has a type of the
+form:
+\begin{lstlisting}[style=oxcaml]
+  val f : 'a @ local -> 'b
+\end{lstlisting}
+For convenience, and backwards compatibility with OCaml, either mode
+may be omitted, in which case it defaults to
+\lstinline[style=oxcaml]{global}. A function whose argument is local
+promises not to let that argument escape, which is what allows its
+callers to pass it local values. This is all that effect reflection
+needs from the mode system: the handler capability of type
+\lstinline[style=oxcaml]{Handler(E).t} is passed to the handled
+computation at mode \lstinline[style=oxcaml]{local}, so it can be used
+freely within that computation but can never escape the call to the
+handler.
+
+Modes are deep by default: a local \lstinline[style=oxcaml]{string list}
+is a local list of local strings. The depth to which a mode applies can
+be adjusted using \emph{modalities}. Annotating a record field or a
+constructor argument with the \lstinline[style=oxcaml]{global} modality
+states that its contents are global even when the enclosing value is
+local:
+\begin{lstlisting}[style=oxcaml]
+  type 'a gbl = { g : 'a @@ global }
+\end{lstlisting}
+so that projecting the field from a local record yields a global value:
+\begin{lstlisting}[style=oxcaml]
+  val project_global : 'a gbl @ local -> 'a @ global
+\end{lstlisting}
+A mode is a property of a particular value, whilst a modality is part of
+a type and constrains the modes of the components of every value of that
+type. We use the global modality in the definition of the
+\lstinline[style=oxcaml]{'a Term(E).t} type below, where it ensures that
+the return value and the operations recorded in a reified computation
+are global even when the computation itself is local.
+
+\subsubsection{Relation to the global modality}
+\label{sec:locality-modality}
+
+The global mode plays the role of the global modality of
+Section~\ref{sec:language}, and the correspondence is exact. The main
+presentation of OxCaml's mode system by Lorenzen et
+al.~\cite{lorenzen2024oxidizing} does not look much like
+Fig.~\ref{fig:typing-locality}, but Section~5 of that paper gives a
+translation of the mode system into a simple graded modal type
+system. Specialised to the locality axis, the rules of that system are
+precisely the rules of our global modality: a
+\lstinline[style=oxcaml]{local} binding is an ordinary binding
+$\lbind{\Gamma}{x}{\tau}$, a \lstinline[style=oxcaml]{global} binding is
+a global binding $\gbind{\Gamma}{x}{\tau}$, the
+\lstinline[style=oxcaml]{global} modality on a constructor argument is
+the type $\glob \tau$, and the requirement that a global value cannot
+refer to local variables is the context division $\cdiv{\Gamma}$.
+
+Semantically, the locality mode is not about stack allocation as such:
+it is a general modality for tracking which values may depend on the
+current region. It is also used, for example, for borrowing and for
+tracking open terms in metaprogramming. There is no pre-existing
+denotational semantics of OxCaml, but we would argue that the natural
+model of such a modality is a presheaf model over some site of interest,
+with the global modality interpreted as global sections. The Ambient
+Monad model simply makes the ambient monad a component of that site, so
+that ``depending on the current region'' includes depending on the
+effects that are currently handled.
+
+The other features of OxCaml are consistent with this reading. OxCaml
+has a higher-order heap, but references may only contain global values,
+which matches the typing of operation parameters in
+Fig.~\ref{fig:typing-reflection}: a value stored via a state effect is
+typed in the divided context $\cdiv{\Gamma}$, so a stored function can
+never capture an effect capability. This is also why the presence of
+higher-order state does not conflict with strong normalization: the
+usual construction of a fixed point via Landin's knot requires the
+stored function to perform the state effect itself, which it cannot
+do. Of course, OxCaml also has general recursion and many other features
+beyond our calculus, so the strong normalization result does not
+transfer; what does transfer is the argument that locality alone is
+sufficient to keep effects within the scope of their handlers.
 
 \subsection{Effect reflection interface}
 \label{sec:interface}
@@ -5657,8 +5740,13 @@ unchecked effects\footnote{For convenience, we use the new handler
   syntax from OCaml 5.3. However, the most recently released version of
   OxCaml is based on OCaml 5.2 so the actual implementation uses
   \lstinline[style=oxcaml]{Effect.Deep.match_with} instead.} is shown in
-Fig.~\ref{fig:implementation}. It assumes that handlers can close over
-local values to implement \lstinline[style=oxcaml]{reify} -- but not
+Fig.~\ref{fig:implementation}. It uses OxCaml's
+\lstinline[style=oxcaml]{exclave} construct, which may only appear in
+tail position within a function: it ends the function's region early
+and evaluates its body in the region of the caller, so that local values
+created within it can be returned to that caller. It assumes that
+handlers can close over local values to implement
+\lstinline[style=oxcaml]{reify} -- but not
 \lstinline[style=oxcaml]{reify_global}. Unfortunately, this is not yet
 permitted by OxCaml due to the runtime not supporting pointers to stack
 allocated values from different fibres. If stack allocation were
