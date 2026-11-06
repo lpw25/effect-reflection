@@ -2398,33 +2398,6 @@ presheaves are used to index the semantics of types and terms by some
 implicit notion of context, with the Yoneda embedding used to access
 this context and the global modality used to control dependence on it.
 
-\section{Future work}
-\label{sec:future-work}
-
-\paragraph{Reification with equations}
-
-\looseness=-1
-In this paper we only support reifying effect signatures with no
-equations as W-types. It should be possible to extend this to reifying
-arbitrary effect theories as QW-types~\cite{fiore2020constructing}. This
-would require working in a base language that can support such types,
-e.g. Observational Type Theory~\cite{altenkirch2007observational,
-  pujet2022observational}, and generally extending the scheme to
-dependent types. It would also require using something more general than
-Lemma~\ref{lemma:sums} for representing the sum of two algebraic theories.
-
-\paragraph{Separation and commuting effects}
-In addition to having a sum, $\kappa$-bounded Lawvere theories $L$ and
-$L^\prime$ also have a tensor product
-$L \otimes L^\prime$~\cite{hyland2006combining}, which gives a symmetric
-monoidal structure on $\lawc$.  Presheaves over the opposite of a
-symmetric monoidal category are the standard categorical semantics of
-the logic of Bunched Implications~\cite{o1999logic}, which is the basis
-of the assertion language in Separation Logic. We could thus use the
-Ambient Monad model as a model of languages that have a notion of
-separation. Operations on two separated effect capabilities would be
-known to commute.
-
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
 
