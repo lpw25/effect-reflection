@@ -12,3 +12,5 @@ type ints =
 val handle_gen : (Handler(Gen).t @ local -> unit) -> ints
 
 val gen : Handler(Gen).t @ local -> int -> unit
+
+val ints_of_list : int list -> ints

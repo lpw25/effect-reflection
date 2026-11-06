@@ -1999,9 +1999,17 @@ The \lstinline[style=oxcaml]{Handler(E).t} type corresponds to
 $\yoneda{\Sigma}$ and represents the capability to perform operations
 from \lstinline[style=oxcaml]{E}.
 
-\lstinline[style=oxcaml]{('r, 'a) Continuation(E).t} is equivalent to
-\lstinline[style=oxcaml]{'r -> 'a Term(E).t} when global and equivalent
-to \lstinline[style=oxcaml]{'r -> 'a Term(E).t @ local} when local. This
+The \lstinline[style=oxcaml]{('r, 'a) Continuation(E).t} type
+represents the continuation of an operation. The obvious choice would
+be \lstinline[style=oxcaml]{'r -> 'a Term(E).t}, but that is wrong
+when the value is local: a local closure of that type still promises a
+global result, whereas the continuation of a local term produces a
+local term. The library therefore keeps the type abstract and exposes
+it only through the \lstinline[style=oxcaml]{continue} and
+\lstinline[style=oxcaml]{continue_global} functions of
+Fig.~\ref{fig:ox-interface}, so that it behaves as
+\lstinline[style=oxcaml]{'r -> 'a Term(E).t} when global and as
+\lstinline[style=oxcaml]{'r -> 'a Term(E).t @ local} when local. This
 ensures that the global modality distributes over
 \lstinline[style=oxcaml]{Term(E).t}, which is an important property of
 $\ind{\Sigma}$. The need for this type is an artifact of OxCaml's
@@ -2085,79 +2093,173 @@ number of libraries -- mostly for concurrency and parallelism -- that
 between them are used by hundreds of developers in production in an
 industrial setting.
 
-\subsection{Example: Generators}
+\subsection{Examples}
+\label{sec:examples}
 
-A more realistic use of effect reflection than integer state is a
-\emph{generator} effect. This effect has a single operation
+We now give some classic examples of algebraic effects written with
+the library. For each effect the user writes exactly three things: a
+module giving the operations of the effect as a GADT, one application
+of the \lstinline[style=oxcaml]{Reflection} functor, and a handler,
+which is an ordinary recursive function over
+\lstinline[style=oxcaml]{Term(E).t}. The library provides everything
+else. All the examples resume each continuation exactly once;
+examples such as nondeterminism that resume a continuation several
+times are ruled out by OCaml's one-shot continuations rather than by
+effect reflection.
+
+\subsubsection{State}
+
+Our first example is the integer state handler of
+Section~\ref{sec:reflection-in-oxcaml}. It has the shape shared by all
+our handlers: a recursive function over the reified computation that
+returns the result in the \lstinline[style=oxcaml]{Return} case and,
+in each \lstinline[style=oxcaml]{Perform} case, resumes the
+continuation with \lstinline[style=oxcaml]{continue} and recurses on
+the result. The recursion is what makes it a deep handler, and the
+state is simply an accumulator of that recursion. Note that
+\lstinline[style=oxcaml]{get} and \lstinline[style=oxcaml]{set} name
+their handler explicitly, via the capability
+\lstinline[style=oxcaml]{h}, so there is no possibility of an
+operation being accidentally handled by some other handler that
+happens to be in scope, a well-known hazard of dynamically scoped
+handlers~\cite{zhang2019abstraction}.
+
+\subsubsection{Generators}
+
+A \emph{generator} turns a computation that produces values one at a
+time into a stream. It has a single operation
 \lstinline[style=oxcaml]{Gen} from \lstinline[style=oxcaml]{int} to
-\lstinline[style=oxcaml]{unit}, along with a handler that turns
-computations using \lstinline[style=oxcaml]{Gen} into streams of
-integers, shown in Fig.~\ref{fig:gen}.
+\lstinline[style=oxcaml]{unit}, and a handler that turns computations
+using \lstinline[style=oxcaml]{Gen} into streams of integers
+(Fig.~\ref{fig:gen}).
 \begin{figure}
 \begin{lstlisting}[style=oxcaml]
+  module Gen = struct
+    type 'a t = Gen : int -> unit t
+  end
+  module Gen_eff = Reflection(Gen)
+
   type ints = Finished | More of int * (unit -> ints)
 
-  let handle_gen f =
+  let handle_gen (f : Handler(Gen).t @ local -> unit) : ints =
     let rec loop : unit Term(Gen).t -> ints = function
       | Return () -> Finished
       | Perform(Gen i, k) ->
           More(i, fun () -> loop (Gen_eff.continue_global k ()))
     in
     loop (Gen_eff.reify_global f)
+
+  let gen h i = Gen_eff.perform (Gen i) h
 \end{lstlisting}
 \caption{Handler for integer generators}
 \label{fig:gen}
 \end{figure}
 Unlike the state handler, here we must use
 \lstinline[style=oxcaml]{reify_global} rather than
-\lstinline[style=oxcaml]{reify} because our intention is that the
-resulting stream of integers be a global value that can escape the
-current region. This in turn forces us to require that the handled
-function be global.
+\lstinline[style=oxcaml]{reify} because the handler stores each
+continuation in the resulting stream, and our intention is that the
+stream be a global value that can escape the current region. This in
+turn forces us to require that the handled function be global. The
+body of a generator is ordinary higher-order code; for example,
+\begin{lstlisting}[style=oxcaml]
+  let ints_of_list (l : int list) : ints =
+    handle_gen (fun h -> List.iter (gen h) l)
+\end{lstlisting}
+turns a list into a stream. This relies on the locality of the function
+parameter of \lstinline[style=oxcaml]{List.iter}, which allows the local
+closure \lstinline[style=oxcaml]{gen h} to be passed to it.
 
-\subsection{Example: Asynchronous I/O}
+\subsubsection{Cooperative threads}
 
-Perhaps the most common use case for algebraic effects is for
-concurrency and asynchronous I/O. Implementing asynchronous I/O from
-scratch is beyond the scope of this paper, but we can build a simple
-version on top of an existing monadic concurrency library
-(Fig.~\ref{fig:aio}). Assuming we have a monadic future type
-\lstinline[style=oxcaml]{'a Deferred.t} we can write concurrent code in
-direct style by using an effect with a single
-\lstinline[style=oxcaml]{Await} operation that waits for a future to be
-completed.
+Perhaps the most common use of algebraic effects in practice is for
+concurrency. Fig.~\ref{fig:coop} gives a cooperative thread scheduler
+in the style of Sivaramakrishnan et
+al.~\cite{Sivaramakrishnan2021retrofitting}, with operations to
+\lstinline[style=oxcaml]{Fork} a new thread and to
+\lstinline[style=oxcaml]{Yield} control to the other threads.
 \begin{figure}
 \begin{lstlisting}[style=oxcaml]
-  let handle_await f =
-    let rec loop : 'a Term(Await).t -> 'a Deferred.t = function
-      | Return x -> Deferred.return x
-      | Perform(Await d, k) ->
-          Deferred.bind d (fun x -> loop (Await_eff.continue_global k x))
+  module rec Coop : sig
+    type 'a t =
+      | Fork : (Handler(Coop).t @ local -> unit) -> unit t
+      | Yield : unit t
+  end = Coop
+  module Coop_eff = Reflection(Coop)
+
+  let run (main : Handler(Coop).t @ local -> unit) : unit =
+    let queue = Queue.create () in
+    let next () =
+      match Queue.take_opt queue with
+      | None -> ()
+      | Some thread -> thread ()
     in
-    loop (Await_eff.reify_global f)
+    let rec step : unit Term(Coop).t -> unit = function
+      | Return () -> next ()
+      | Perform(Yield, k) ->
+          Queue.push
+            (fun () -> step (Coop_eff.continue_global k ())) queue;
+          next ()
+      | Perform(Fork f, k) ->
+          Queue.push (fun () -> step (Coop_eff.reify_global f)) queue;
+          step (Coop_eff.continue_global k ())
+    in
+    step (Coop_eff.reify_global main)
+
+  let fork h f = Coop_eff.perform (Fork f) h
+  let yield h = Coop_eff.perform Yield h
 \end{lstlisting}
-\caption{Handler for Asynchronous I/O}
-\label{fig:aio}
+\caption{Handler for cooperative threads}
+\label{fig:coop}
 \end{figure}
+The handler keeps a queue of suspended threads, each a thunk that
+resumes a captured continuation. When a thread finishes it runs the
+next queued thread; on \lstinline[style=oxcaml]{Yield} it enqueues the
+current thread and then does the same; on
+\lstinline[style=oxcaml]{Fork} it enqueues the new thread and
+continues the current one. A new thread is simply another
+reification: the forked function receives its own capability from the
+call to \lstinline[style=oxcaml]{reify_global} that runs it, so all
+threads are handled by the same scheduler but hold distinct
+capabilities. Since the argument of \lstinline[style=oxcaml]{Fork}
+mentions the capability type of the effect being defined, the
+signature is a recursive module. As with the generator handler, the
+continuations outlive the region of the computation that created them,
+so \lstinline[style=oxcaml]{reify_global} is required and the handled
+functions must be global.
 
-\subsection{Nested effect handlers}
+\subsubsection{Composing effects}
+\label{sec:composition}
 
-A key feature of algebraic effects is how easily they compose. We can
-use state whilst using asynchronous I/O by simply nesting their
+A key feature of algebraic effects is how easily they compose. In our
+system a function that uses several effects simply takes the
+capability for each of them as an ordinary parameter. For example, the
+following function uses two separate pieces of integer state, swapping
+their contents:
+\begin{lstlisting}[style=oxcaml]
+  let swap (h1 : Handler(State).t @ local)
+           (h2 : Handler(State).t @ local) : unit =
+    let x = get h1 in
+    set h1 (get h2);
+    set h2 x
+\end{lstlisting}
+Its type lists the capabilities it needs, in whatever order we
+choose. There is no effect row to be kept in a canonical form, and two
+instances of the same effect are distinguished simply by being two
+different values. A caller provides the capabilities by nesting
 handlers:
 \begin{lstlisting}[style=oxcaml]
-    handle_await (fun ah ->
-      handle_state i (fun sh ->
-        List.iter (fun fl ->
-          let s = await ah (File.read fl) in
-          set sh (int_of_string s + get sh)) files;
-        get sh))
+  let swapped (a : int) (b : int) : int * int =
+    handle_state a (fun h1 ->
+      handle_state b (fun h2 ->
+        swap h1 h2;
+        (get h1, get h2)))
 \end{lstlisting}
-This relies on the fact that \lstinline[style=oxcaml]{handle_state} uses
+and the caller, not \lstinline[style=oxcaml]{swap}, decides how the
+handlers are nested. This relies on the state handler using
 \lstinline[style=oxcaml]{reify} rather than
-\lstinline[style=oxcaml]{reify_global} and so is able to operate on a
-local computation that closes over the local await handler value
-\lstinline[style=oxcaml]{ah}.
+\lstinline[style=oxcaml]{reify_global}: the inner handled computation
+closes over the local capability \lstinline[style=oxcaml]{h1} of the
+enclosing handler, and so is itself local.
 
 \section{Related work}
 \label{sec:related-work}

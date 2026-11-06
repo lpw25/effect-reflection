@@ -21,3 +21,6 @@ let handle_gen f =
 
 let gen h i =
   Gen_eff.perform (Gen i) h
+
+let ints_of_list l =
+  handle_gen (fun h -> Local_list.iter (gen h) l [@nontail])

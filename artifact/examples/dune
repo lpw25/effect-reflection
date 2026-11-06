@@ -1,4 +1,4 @@
 (library
  (name examples)
- (libraries reflect async)
+ (libraries reflect)
  (flags (:standard -warn-error -a)))

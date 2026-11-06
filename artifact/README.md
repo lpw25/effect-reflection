@@ -11,8 +11,10 @@ examples in the paper.
   on OCaml 5.2, which lacks the OCaml 5.3 `effect` match syntax used in
   the paper.
 - `examples/`: the effects and handlers from the paper. `state.ml`
-  (integer state), `generator.ml` (integer generators), `aio.ml`
-  (asynchronous I/O over a stand-in `Deferred` monad).
+  (integer state), `generator.ml` (integer generators), `scheduler.ml`
+  (cooperative threads), `swap.ml` (a function using two pieces of
+  state, with nested handlers). `local_list.ml` provides the `iter` with a local
+  function parameter that the paper assumes of `List.iter`.
 
 The `Sum` and `Select` functors in the library implement the sums of
 signatures and the `outl`/`outr` projections of the calculus; the paper
@@ -36,20 +38,27 @@ a local switch). From this directory:
     opam update --all
     opam switch create . 5.2.0+ox --repos ox=git+https://github.com/oxcaml/opam-repository.git,default
     eval $(opam env)
-    opam install dune async
+    opam install dune
 
 Creating the switch builds the OxCaml compiler, which takes a
-while. Installing async pulls in a lot of dependencies and also takes a
-long time.
+while.
 
-## Build
+## Build and run
 
     dune build
+    dune test
+
+The `test/` directory has one test program per runnable example
+(`test_state.ml`, `test_generator.ml`, `test_scheduler.ml`), each
+printing its results.
 
 ## Note on `reify`
 
 The released OxCaml runtime does not yet support effect handlers that
 close over local values, so `Reflection(E).reify` type-checks with the
 type given in the paper but is a stub that raises `Failure` if
-executed. `reify_global` is fully functional, so the generator and
-asynchronous I/O handlers run for real.
+executed. `reify_global` is fully functional. The state, generator and
+scheduler handlers in `examples/` therefore use `reify_global`, which
+is preferred here because it is runnable; `state.ml` also contains the
+paper's `reify`-based handler, which the nested two-state example in
+`swap.ml` needs and which type-checks but cannot be run.
